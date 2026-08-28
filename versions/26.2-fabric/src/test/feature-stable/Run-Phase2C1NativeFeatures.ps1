@@ -63,13 +63,18 @@ try {
                     "level-seed=$($fixture.Local)")
                 [IO.File]::WriteAllText($serverPropertiesPath, $properties)
                 $resultPath = Join-Path $resultRoot "$($fixture.Name)-$repeat.json"
+                $evidencePath = Join-Path $resultRoot "$($fixture.Name)-$repeat-evidence"
                 $env:JAVA_TOOL_OPTIONS = @(
                     "-Drandomnibble6plus24generator.phase2c1.native.masterSeed=$($fixture.Master)",
                     "-Drandomnibble6plus24generator.phase2c1.native.dimension=$($fixture.Dimension)",
                     "-Drandomnibble6plus24generator.phase2c1.native.chunkX=$($fixture.X)",
                     "-Drandomnibble6plus24generator.phase2c1.native.chunkZ=$($fixture.Z)",
-                    "-Drandomnibble6plus24generator.phase2c1.native.output=$($resultPath.Replace('\', '/'))"
+                    "-Drandomnibble6plus24generator.phase2c1.native.output=$($resultPath.Replace('\', '/'))",
+                    "-Drandomnibble6plus24generator.phase2c1.native.evidenceRoot=$($evidencePath.Replace('\', '/'))"
                 ) -join ' '
+                if ($fixture.Dimension -eq 'minecraft:overworld' -and $fixture.X -eq 0 -and $fixture.Z -eq 0) {
+                    $env:JAVA_TOOL_OPTIONS += ' -Drandomnibble6plus24generator.phase2c1.native.runBeforeInitialSpawn=true'
+                }
                 if (-not [string]::IsNullOrWhiteSpace($ReferenceSnapshot)) {
                     $referencePath = [IO.Path]::GetFullPath($ReferenceSnapshot).Replace('\', '/')
                     $env:JAVA_TOOL_OPTIONS += " -Drandomnibble6plus24generator.phase2c1.native.referenceSnapshot=$referencePath"

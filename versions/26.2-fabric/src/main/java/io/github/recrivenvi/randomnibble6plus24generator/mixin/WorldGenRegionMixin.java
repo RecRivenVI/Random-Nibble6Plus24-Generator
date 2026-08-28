@@ -11,6 +11,8 @@ import net.minecraft.server.level.WorldGenRegion;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.StaticCache2D;
 import net.minecraft.world.level.biome.BiomeManager;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.core.Holder;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ChunkSource;
@@ -30,6 +32,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.GenerationContextRegistry;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.PhysicalWorldAccessException;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.FeatureFrontierEvidence;
 
 @Mixin(WorldGenRegion.class)
 abstract class WorldGenRegionMixin {
@@ -78,9 +81,14 @@ abstract class WorldGenRegionMixin {
                     .at(this.center.getPos().getWorldPosition());
             WorldGenRegion region = (WorldGenRegion) (Object) this;
             this.biomeManager = new BiomeManager(
-                    region::getUncachedNoiseBiome,
+                    region::getNoiseBiome,
                     BiomeManager.obfuscateSeed(context.worldSeed()));
+            FeatureFrontierEvidence.captureSurfaceRegion(region, step, center, context);
         });
+        if (GenerationContextRegistry.find(cache).isEmpty()) {
+            FeatureFrontierEvidence.captureSurfaceRegion(
+                    (WorldGenRegion) (Object) this, step, center, null);
+        }
     }
 
     @Redirect(
@@ -155,5 +163,38 @@ abstract class WorldGenRegionMixin {
             // The vanilla implementation consults the physical ChunkMap directly.
             callback.setReturnValue(false);
         }
+    }
+
+    @Inject(method = "getUncachedNoiseBiome", at = @At("HEAD"), cancellable = true)
+    private void randomnibble6plus24generator$useSessionNoiseBiome(
+            int quartX,
+            int quartY,
+            int quartZ,
+            CallbackInfoReturnable<Holder<Biome>> callback) {
+        GenerationContextRegistry.find(cache).ifPresent(context -> {
+            context.recordLocalUncachedBiomeRead();
+            callback.setReturnValue(context.generator().getBiomeSource().getNoiseBiome(
+                    quartX,
+                    quartY,
+                    quartZ,
+                    context.randomState().sampler()));
+        });
+    }
+
+    @Inject(method = "getLevel", at = @At("HEAD"))
+    private void randomnibble6plus24generator$auditPhysicalLevelEscape(
+            CallbackInfoReturnable<ServerLevel> callback) {
+        GenerationContextRegistry.find(cache).ifPresent(context -> {
+            String caller = StackWalker.getInstance().walk(frames -> frames
+                    .filter(frame -> !frame.getClassName().startsWith("java."))
+                    .filter(frame -> !frame.getMethodName().contains("auditPhysicalLevelEscape"))
+                    .filter(frame -> !frame.getMethodName().startsWith("lambda$randomnibble6plus24generator"))
+                    .filter(frame -> !frame.getClassName().equals(WorldGenRegion.class.getName()))
+                    .filter(frame -> !frame.getClassName().equals(WorldGenRegionMixin.class.getName()))
+                    .findFirst()
+                    .map(frame -> frame.getClassName() + "." + frame.getMethodName())
+                    .orElse("unknown"));
+            context.recordPhysicalLevelEscape(caller);
+        });
     }
 }

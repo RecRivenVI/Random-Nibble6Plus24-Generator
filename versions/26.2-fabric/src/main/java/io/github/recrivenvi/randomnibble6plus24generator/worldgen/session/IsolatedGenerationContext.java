@@ -67,7 +67,9 @@ public final class IsolatedGenerationContext implements AutoCloseable {
     private final AtomicLong decorationSeedReads = new AtomicLong();
     private final AtomicLong featureSeedInvocationCount = new AtomicLong();
     private final AtomicLong featureSeedSequenceHash = new AtomicLong(0xcbf29ce484222325L);
+    private final AtomicLong localUncachedBiomeReads = new AtomicLong();
     private final Map<String, FeatureWriteAccumulator> featureWrites = new TreeMap<>();
+    private final Map<String, Long> physicalLevelEscapes = new TreeMap<>();
     private volatile Set<Long> expectedFeatureWriters = Set.of();
     private volatile int carverSourceChunkCount;
     private volatile int configuredCarverCount;
@@ -248,7 +250,9 @@ public final class IsolatedGenerationContext implements AutoCloseable {
                         decorationSeedReads.get(),
                         featureSeedInvocationCount.get(),
                         featureSeedSequenceHash.get(),
-                        featureWriteSummary()));
+                        localUncachedBiomeReads.get(),
+                        featureWriteSummary(),
+                        physicalLevelEscapeSummary()));
     }
 
     private GenerationResult generateTo(ChunkStatus targetStatus) {
@@ -432,6 +436,18 @@ public final class IsolatedGenerationContext implements AutoCloseable {
     public synchronized void recordFeatureWrite(String feature, BlockPos pos, BlockState state) {
         featureWrites.computeIfAbsent(feature, ignored -> new FeatureWriteAccumulator())
                 .record(pos, state);
+    }
+
+    public void recordLocalUncachedBiomeRead() {
+        localUncachedBiomeReads.incrementAndGet();
+    }
+
+    public synchronized void recordPhysicalLevelEscape(String caller) {
+        physicalLevelEscapes.merge(caller, 1L, Long::sum);
+    }
+
+    private synchronized Map<String, Long> physicalLevelEscapeSummary() {
+        return Map.copyOf(physicalLevelEscapes);
     }
 
     private synchronized Map<String, String> featureWriteSummary() {

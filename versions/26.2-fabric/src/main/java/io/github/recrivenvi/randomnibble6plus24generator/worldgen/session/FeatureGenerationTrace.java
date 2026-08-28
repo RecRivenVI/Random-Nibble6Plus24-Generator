@@ -19,12 +19,15 @@ public record FeatureGenerationTrace(
         long decorationSeedReads,
         long featureSeedInvocationCount,
         long featureSeedSequenceHash,
-        Map<String, String> featureWriteSummary) {
+        long localUncachedBiomeReads,
+        Map<String, String> featureWriteSummary,
+        Map<String, Long> physicalLevelEscapeSummary) {
 
     public FeatureGenerationTrace {
         requestedWriters = List.copyOf(requestedWriters);
         completedWriters = List.copyOf(completedWriters);
         chunksAtOrBeyondFeatures = Set.copyOf(chunksAtOrBeyondFeatures);
         featureWriteSummary = Map.copyOf(featureWriteSummary);
+        physicalLevelEscapeSummary = Map.copyOf(physicalLevelEscapeSummary);
     }
 }

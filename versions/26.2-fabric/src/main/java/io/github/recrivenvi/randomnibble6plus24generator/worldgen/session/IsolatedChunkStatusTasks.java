@@ -21,6 +21,8 @@ import net.minecraft.world.level.chunk.status.ChunkStep;
 import net.minecraft.world.level.levelgen.blending.Blender;
 import net.minecraft.world.level.levelgen.Heightmap;
 
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.FeatureFrontierEvidence;
+
 public final class IsolatedChunkStatusTasks {
 
     private IsolatedChunkStatusTasks() {
@@ -141,6 +143,12 @@ public final class IsolatedChunkStatusTasks {
             ChunkStep step,
             StaticCache2D<GenerationChunkHolder> cache,
             ChunkAccess chunk) {
+        FeatureFrontierEvidence.capture(
+                FeatureFrontierEvidence.Mode.ISOLATED,
+                context.worldGenContext(),
+                cache,
+                chunk,
+                FeatureFrontierEvidence.Phase.PRE);
         context.recordStage(ChunkStatus.FEATURES);
         context.beginFeatureWriter(chunk.getPos());
         try {
@@ -160,6 +168,12 @@ public final class IsolatedChunkStatusTasks {
                         context.structureManager().forWorldGenRegion(region));
             }
             Blender.generateBorderTicks(region, chunk);
+            FeatureFrontierEvidence.capture(
+                    FeatureFrontierEvidence.Mode.ISOLATED,
+                    context.worldGenContext(),
+                    cache,
+                    chunk,
+                    FeatureFrontierEvidence.Phase.POST);
             return CompletableFuture.completedFuture(chunk);
         } finally {
             context.completeFeatureWriter(chunk.getPos());
