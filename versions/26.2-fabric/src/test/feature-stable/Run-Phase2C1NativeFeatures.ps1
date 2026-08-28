@@ -72,7 +72,7 @@ try {
                     "-Drandomnibble6plus24generator.phase2c1.native.output=$($resultPath.Replace('\', '/'))",
                     "-Drandomnibble6plus24generator.phase2c1.native.evidenceRoot=$($evidencePath.Replace('\', '/'))"
                 ) -join ' '
-                if ($fixture.Dimension -eq 'minecraft:overworld' -and $fixture.X -eq 0 -and $fixture.Z -eq 0) {
+                if ($fixture.Dimension -eq 'minecraft:overworld') {
                     $env:JAVA_TOOL_OPTIONS += ' -Drandomnibble6plus24generator.phase2c1.native.runBeforeInitialSpawn=true'
                 }
                 if (-not [string]::IsNullOrWhiteSpace($ReferenceSnapshot)) {

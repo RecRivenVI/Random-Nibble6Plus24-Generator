@@ -13,6 +13,8 @@ import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2B
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2C1Verification;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2C1RootCauseVerification;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2C1StageBisectionHarness;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2C1FVerification;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2C1FCoverageScan;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.NativeVanillaControlHarness;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.NativeVanillaFeatureOrderProbe;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.NativeVanillaFeatureControlHarness;
@@ -45,6 +47,8 @@ abstract class MinecraftServerMixin {
         Phase2C1Verification.runIfRequested((MinecraftServer) (Object) this);
         Phase2C1RootCauseVerification.runIfRequested((MinecraftServer) (Object) this);
         Phase2C1StageBisectionHarness.runIsolatedIfRequested((MinecraftServer) (Object) this);
+        Phase2C1FVerification.runIfRequested((MinecraftServer) (Object) this);
+        Phase2C1FCoverageScan.runIfRequested((MinecraftServer) (Object) this);
         NativeVanillaControlHarness.completeIfRequested((MinecraftServer) (Object) this);
         NativeVanillaFeatureOrderProbe.runIfRequested((MinecraftServer) (Object) this);
         NativeVanillaFeatureControlHarness.runIfRequested((MinecraftServer) (Object) this);

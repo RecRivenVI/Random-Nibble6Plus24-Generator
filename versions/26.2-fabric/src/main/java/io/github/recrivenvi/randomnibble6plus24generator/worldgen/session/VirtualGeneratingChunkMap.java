@@ -2,6 +2,7 @@ package io.github.recrivenvi.randomnibble6plus24generator.worldgen.session;
 
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -12,6 +13,7 @@ import net.minecraft.util.StaticCache2D;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ProtoChunk;
+import net.minecraft.world.level.chunk.LightChunk;
 import net.minecraft.world.level.chunk.UpgradeData;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.level.chunk.status.ChunkStep;
@@ -79,11 +81,33 @@ final class VirtualGeneratingChunkMap implements GeneratingChunkMap {
         return holder == null ? null : holder.getChunkIfPresentUnchecked(status);
     }
 
+    LightChunk chunkForLighting(int x, int z) {
+        VirtualGenerationChunkHolder holder = holders.get(ChunkPos.pack(x, z));
+        if (holder == null || holder.getLatestStatus() == null) {
+            throw new PhysicalWorldAccessException("virtual light lookup outside generated frontier: "
+                    + new ChunkPos(x, z));
+        }
+        ChunkAccess chunk = holder.getChunkIfPresentUnchecked(holder.getLatestStatus());
+        if (chunk == null) {
+            throw new IllegalStateException("Missing virtual light chunk " + new ChunkPos(x, z));
+        }
+        return chunk;
+    }
+
     Set<ChunkPos> chunksAtOrBeyond(ChunkStatus status) {
         return holders.values().stream()
                 .filter(holder -> holder.getLatestStatus() != null && holder.getLatestStatus().isOrAfter(status))
                 .map(GenerationChunkHolder::getPos)
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
+    }
+
+    Map<String, Integer> statusDistribution() {
+        Map<String, Integer> distribution = new TreeMap<>();
+        for (VirtualGenerationChunkHolder holder : holders.values()) {
+            ChunkStatus status = holder.getLatestStatus();
+            distribution.merge(status == null ? "null" : status.toString(), 1, Integer::sum);
+        }
+        return Map.copyOf(distribution);
     }
 
     private ProtoChunk createEmptyChunk(ChunkPos pos) {

@@ -20,6 +20,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -160,7 +161,39 @@ public final class FeatureFrontierEvidence {
         }
         session.requireComplete();
         finalSnapshot.write(session.root.resolve("final-feature-stable.bin.gz"));
+        writeFeatureWrites(session.root.resolve("feature-writes.bin.gz"), session.featureWrites);
         ACTIVE.compareAndSet(session, null);
+    }
+
+    public static void recordFeatureWrite(
+            Mode mode,
+            String feature,
+            BlockPos pos,
+            net.minecraft.world.level.block.state.BlockState state) {
+        Session session = ACTIVE.get();
+        if (session != null && session.mode == mode) {
+            session.featureWrites.add(new FeatureWrite(
+                    feature, pos.getX(), pos.getY(), pos.getZ(), state.toString()));
+        }
+    }
+
+    public static String firstFeatureWriteDivergence(Path nativeRoot, Path isolatedRoot) {
+        List<FeatureWrite> nativeWrites = readFeatureWrites(nativeRoot.resolve("feature-writes.bin.gz"));
+        List<FeatureWrite> isolatedWrites = readFeatureWrites(isolatedRoot.resolve("feature-writes.bin.gz"));
+        int common = Math.min(nativeWrites.size(), isolatedWrites.size());
+        for (int index = 0; index < common; index++) {
+            FeatureWrite nativeWrite = nativeWrites.get(index);
+            FeatureWrite isolatedWrite = isolatedWrites.get(index);
+            if (!nativeWrite.equals(isolatedWrite)) {
+                return "index=" + index + ",native=" + nativeWrite + ",isolated=" + isolatedWrite;
+            }
+        }
+        return nativeWrites.size() == isolatedWrites.size()
+                ? "none"
+                : "common=" + common + ",nativeSize=" + nativeWrites.size()
+                        + ",isolatedSize=" + isolatedWrites.size()
+                        + ",nextNative=" + (common < nativeWrites.size() ? nativeWrites.get(common) : "none")
+                        + ",nextIsolated=" + (common < isolatedWrites.size() ? isolatedWrites.get(common) : "none");
     }
 
     public static void abort(Mode mode) {
@@ -422,6 +455,38 @@ public final class FeatureFrontierEvidence {
                 phase.name().toLowerCase(java.util.Locale.ROOT)));
     }
 
+    private static void writeFeatureWrites(Path path, List<FeatureWrite> writes) {
+        try {
+            Files.createDirectories(path.toAbsolutePath().normalize().getParent());
+            try (DataOutputStream output = new DataOutputStream(new BufferedOutputStream(
+                    new GZIPOutputStream(Files.newOutputStream(path))))) {
+                output.writeInt(writes.size());
+                for (FeatureWrite write : writes) {
+                    output.writeUTF(write.feature());
+                    output.writeInt(write.x()); output.writeInt(write.y()); output.writeInt(write.z());
+                    output.writeUTF(write.state());
+                }
+            }
+        } catch (IOException exception) {
+            throw new IllegalStateException("Unable to write FEATURES write trace " + path, exception);
+        }
+    }
+
+    private static List<FeatureWrite> readFeatureWrites(Path path) {
+        try (DataInputStream input = new DataInputStream(new BufferedInputStream(
+                new GZIPInputStream(Files.newInputStream(path))))) {
+            int count = input.readInt();
+            List<FeatureWrite> writes = new ArrayList<>(count);
+            for (int index = 0; index < count; index++) {
+                writes.add(new FeatureWrite(
+                        input.readUTF(), input.readInt(), input.readInt(), input.readInt(), input.readUTF()));
+            }
+            return List.copyOf(writes);
+        } catch (IOException exception) {
+            throw new IllegalStateException("Unable to read FEATURES write trace " + path, exception);
+        }
+    }
+
     private static Checkpoint snapshot(
             Session session,
             int writerIndex,
@@ -601,6 +666,13 @@ public final class FeatureFrontierEvidence {
         return List.copyOf(result);
     }
 
+    public static String featureVisibleBiomeSignature(
+            StaticCache2D<GenerationChunkHolder> cache,
+            ChunkPos writer,
+            RegistryAccess registryAccess) {
+        return writer + "=" + featureVisibleBiomes(cache, writer, registryAccess);
+    }
+
     private static String heightmapHash(ChunkAccess chunk) {
         MessageDigest digest = digest();
         Map<String, long[]> values = new TreeMap<>();
@@ -695,6 +767,9 @@ public final class FeatureFrontierEvidence {
     }
 
     private record BiomeEvidence(String hash, int mismatchCount, String firstMismatch) {
+    }
+
+    private record FeatureWrite(String feature, int x, int y, int z, String state) {
     }
 
     private record ChunkEvidence(
@@ -869,6 +944,7 @@ public final class FeatureFrontierEvidence {
         private final ChunkPos target;
         private final Map<Long, Integer> writerIndices = new TreeMap<>();
         private final boolean[][] captured;
+        private final List<FeatureWrite> featureWrites = new CopyOnWriteArrayList<>();
         private final ChunkPos stageProbe;
         private final BlockPos blockProbe;
 

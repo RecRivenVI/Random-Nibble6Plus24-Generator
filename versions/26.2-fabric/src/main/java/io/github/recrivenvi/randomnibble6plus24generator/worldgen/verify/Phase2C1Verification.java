@@ -28,6 +28,12 @@ import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.Isolat
 public final class Phase2C1Verification {
 
     public static final String VERIFY_PROPERTY = "randomnibble6plus24generator.phase2c1.verify";
+    /** Minecraft 26.2, Mosaic format V2, Seed V1, Feature Ordering V1. */
+    public static final String FEATURES_ORIGIN_GOLDEN =
+            "5c246f0529e1ae1388cdaf11d42a5a17cf4cb5fbf65f862db62b2dc9bd29edae";
+    /** Root-cause non-origin anchor under the same frozen versions. */
+    public static final String FEATURES_NON_ORIGIN_GOLDEN =
+            "44cff6725fa04145cd8e0917f9bbecc578fe5479b2590db869b90c163d7edbf5";
     private static final Set<ChunkStatus> EXPECTED_STAGES = Set.of(
             ChunkStatus.EMPTY,
             ChunkStatus.STRUCTURE_STARTS,
@@ -187,7 +193,7 @@ public final class Phase2C1Verification {
         }
     }
 
-    private static List<Fixture> matrixFixtures() {
+    static List<Fixture> matrixFixtures() {
         List<Fixture> fixtures = new ArrayList<>(72);
         long[] originSeeds = {
             0L, 1L, -1L, 123456789L, -987654321L,
@@ -298,10 +304,20 @@ public final class Phase2C1Verification {
                 fixture.dimension().identifier().toString(),
                 run.targetChunk(),
                 level.registryAccess());
+        if (fixture.masterSeed() == 123456789L
+                && fixture.dimension().equals(Level.OVERWORLD)
+                && fixture.target().equals(ChunkPos.ZERO)) {
+            assertHash(FEATURES_ORIGIN_GOLDEN, snapshot.hash(), "FEATURES origin golden");
+        }
+        if (fixture.masterSeed() == 123456789L
+                && fixture.dimension().equals(Level.OVERWORLD)
+                && fixture.target().equals(new ChunkPos(125, -37))) {
+            assertHash(FEATURES_NON_ORIGIN_GOLDEN, snapshot.hash(), "FEATURES non-origin golden");
+        }
         return new Result(localSeed, run, snapshot);
     }
 
-    private record Fixture(long masterSeed, ResourceKey<Level> dimension, ChunkPos target) {
+    record Fixture(long masterSeed, ResourceKey<Level> dimension, ChunkPos target) {
     }
 
     private record Result(long localSeed, FeatureStableGenerationRun run, FeatureStableSnapshot snapshot) {

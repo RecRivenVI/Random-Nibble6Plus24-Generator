@@ -67,7 +67,10 @@ public final class NativeVanillaFeatureControlHarness {
                 Integer.parseInt(requireProperty("chunkX")),
                 Integer.parseInt(requireProperty("chunkZ")));
         Path output = Path.of(requireProperty("output")).toAbsolutePath().normalize();
-        Path evidenceRoot = Path.of(requireProperty("evidenceRoot")).toAbsolutePath().normalize();
+        String evidenceRootText = System.getProperty(PREFIX + "evidenceRoot");
+        Path evidenceRoot = evidenceRootText == null || evidenceRootText.isBlank()
+                ? null
+                : Path.of(evidenceRootText).toAbsolutePath().normalize();
         MosaicWorldProfile profile = MosaicWorldProfile.current();
         String directLocalSeed = System.getProperty(PREFIX + "directLocalSeed");
         long localSeed = directLocalSeed == null
@@ -88,12 +91,15 @@ public final class NativeVanillaFeatureControlHarness {
 
         FeatureOrderingPlan plan = FeatureOrderingPlan.targetLocalZxRowMajorV1(target);
         long started = System.nanoTime();
-        FeatureFrontierEvidence.begin(
-                FeatureFrontierEvidence.Mode.NATIVE,
-                evidenceRoot,
-                dimension,
-                target,
-                plan.writers());
+        NativeFeatureExecutionTrace.begin(plan.writers());
+        if (evidenceRoot != null) {
+            FeatureFrontierEvidence.begin(
+                    FeatureFrontierEvidence.Mode.NATIVE,
+                    evidenceRoot,
+                    dimension,
+                    target,
+                    plan.writers());
+        }
         try {
             for (ChunkPos writer : plan.writers()) {
                 ChunkAccess writerChunk = level.getChunk(writer.x(), writer.z(), ChunkStatus.FEATURES, true);
@@ -104,9 +110,14 @@ public final class NativeVanillaFeatureControlHarness {
                 }
             }
             ChunkAccess targetChunk = level.getChunk(target.x(), target.z(), ChunkStatus.FEATURES, false);
+            long generationFinished = System.nanoTime();
             FeatureStableSnapshot nativeSnapshot = FeatureStableSnapshot.capture(
                     dimension.identifier().toString(), targetChunk, level.registryAccess());
-            FeatureFrontierEvidence.finish(FeatureFrontierEvidence.Mode.NATIVE, nativeSnapshot);
+            long snapshotFinished = System.nanoTime();
+            if (evidenceRoot != null) {
+                FeatureFrontierEvidence.finish(FeatureFrontierEvidence.Mode.NATIVE, nativeSnapshot);
+            }
+            NativeFeatureExecutionTrace.Result trace = NativeFeatureExecutionTrace.finish();
             String snapshotOutput = System.getProperty(PREFIX + "snapshotOutput");
             if (snapshotOutput != null && !snapshotOutput.isBlank()) {
                 nativeSnapshot.write(Path.of(snapshotOutput));
@@ -130,8 +141,30 @@ public final class NativeVanillaFeatureControlHarness {
                     + ",\"chunkZ\":" + target.z()
                     + ",\"featureHash\":\"" + nativeSnapshot.hash()
                     + "\",\"writers\":" + plan.writers().size()
-                    + ",\"evidenceRoot\":\"" + evidenceRoot.toString().replace('\\', '/')
-                    + "\",\"runtimeMs\":" + (System.nanoTime() - started) / 1_000_000L + "}";
+                    + ",\"requestedWriters\":\"" + escape(trace.requestedWriters().toString()) + "\""
+                    + ",\"completedWriters\":\"" + escape(trace.completedWriters().toString()) + "\""
+                    + ",\"maxConcurrentFeatureWriters\":" + trace.maxConcurrentFeatureWriters()
+                    + ",\"decorationSeedReads\":" + trace.decorationSeedReads()
+                    + ",\"featureSeedInvocationCount\":" + trace.featureSeedInvocationCount()
+                    + ",\"featureSeedSequenceHash\":\""
+                    + Long.toUnsignedString(trace.featureSeedSequenceHash(), 16) + "\""
+                    + ",\"featureVisibleBiomeSequence\":\""
+                    + escape(trace.featureVisibleBiomeSequence().toString()) + "\""
+                    + ",\"blockEntities\":" + nativeSnapshot.blockEntityCount()
+                    + ",\"instantiatedBlockEntities\":" + nativeSnapshot.instantiatedBlockEntityCount()
+                    + ",\"pendingBlockEntityNbt\":" + nativeSnapshot.pendingBlockEntityNbtCount()
+                    + ",\"blockTicks\":" + nativeSnapshot.blockTickCount()
+                    + ",\"fluidTicks\":" + nativeSnapshot.fluidTickCount()
+                    + ",\"postProcessing\":" + nativeSnapshot.postProcessingCount()
+                    + ",\"entities\":" + nativeSnapshot.entityCount()
+                    + ",\"rawEntityNbt\":\"" + escape(nativeSnapshot.rawEntityNbt().toString()) + "\""
+                    + ",\"canonicalEntityNbt\":\"" + escape(nativeSnapshot.canonicalEntityNbt().toString()) + "\""
+                    + ",\"blockEntityNbt\":\"" + escape(nativeSnapshot.blockEntityNbt().toString()) + "\""
+                    + ",\"structureStarts\":\"" + escape(nativeSnapshot.structureStartData().toString()) + "\""
+                    + ",\"evidenceRoot\":\"" + (evidenceRoot == null ? "" : evidenceRoot.toString().replace('\\', '/'))
+                    + "\",\"generationRuntimeMs\":" + (generationFinished - started) / 1_000_000L
+                    + ",\"snapshotCostMs\":" + (snapshotFinished - generationFinished) / 1_000_000L
+                    + ",\"runtimeMs\":" + (System.nanoTime() - started) / 1_000_000L + "}";
             write(output, json);
             RandomNibble6Plus24Generator.LOGGER.info(
                     "Native FEATURES evidence producer PASS dimension={} localSeed={} target={} hash={} writers={} evidenceRoot={} runtimeMs={}",
@@ -139,6 +172,7 @@ public final class NativeVanillaFeatureControlHarness {
                     plan.writers().size(), evidenceRoot, (System.nanoTime() - started) / 1_000_000L);
         } catch (RuntimeException exception) {
             FeatureFrontierEvidence.abort(FeatureFrontierEvidence.Mode.NATIVE);
+            NativeFeatureExecutionTrace.abort();
             throw exception;
         }
         if (allowAutoStop && Boolean.parseBoolean(System.getProperty(PREFIX + "autoStop", "true"))) {
@@ -161,5 +195,10 @@ public final class NativeVanillaFeatureControlHarness {
         } catch (IOException exception) {
             throw new IllegalStateException("Unable to write native FEATURES result " + output, exception);
         }
+    }
+
+    private static String escape(String value) {
+        return value.replace("\\", "\\\\").replace("\"", "\\\"")
+                .replace("\r", "\\r").replace("\n", "\\n");
     }
 }

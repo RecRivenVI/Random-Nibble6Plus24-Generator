@@ -89,7 +89,7 @@ try {
         if ($DirectLocalSeed) {
             $env:JAVA_TOOL_OPTIONS += " -Drandomnibble6plus24generator.phase2c1.native.directLocalSeed=$localSeed"
         }
-        if ($dimension -eq 'minecraft:overworld' -and $chunkX -eq 0 -and $chunkZ -eq 0) {
+        if ($dimension -eq 'minecraft:overworld') {
             $env:JAVA_TOOL_OPTIONS += ' -Drandomnibble6plus24generator.phase2c1.native.runBeforeInitialSpawn=true'
         }
         & (Join-Path $repositoryRoot 'gradlew.bat') ':versions:26.2-fabric:runServer' "--args=nogui --world $nativeWorld"
@@ -116,6 +116,19 @@ try {
     & (Join-Path $repositoryRoot 'gradlew.bat') ':versions:26.2-fabric:runServer' "--args=nogui --world $isolatedWorld"
     if ($LASTEXITCODE -ne 0) { throw "Isolated evidence process failed: $LASTEXITCODE" }
 
+    $nativeSummary = Get-Content -LiteralPath $nativeResult -Raw | ConvertFrom-Json
+    $isolatedSummary = Get-Content -LiteralPath $isolatedResult -Raw | ConvertFrom-Json
+    $traceMismatch = ($isolatedSummary.status -ne 'MATCH') `
+            -or ($nativeSummary.featureSeedInvocationCount -ne $isolatedSummary.featureSeedInvocationCount) `
+            -or ($nativeSummary.featureSeedSequenceHash -ne $isolatedSummary.featureSeedSequenceHash) `
+            -or ($nativeSummary.decorationSeedReads -ne $isolatedSummary.decorationSeedReads) `
+            -or ($nativeSummary.featureVisibleBiomeSequence -ne $isolatedSummary.featureVisibleBiomeSequence) `
+            -or ($nativeSummary.requestedWriters -ne $isolatedSummary.requestedWriters) `
+            -or ($nativeSummary.completedWriters -ne $isolatedSummary.completedWriters) `
+            -or ($nativeSummary.maxConcurrentFeatureWriters -ne $isolatedSummary.maxConcurrentFeatureWriters)
+    if ($traceMismatch) {
+        throw "Phase 2C1R/2C1F native-isolated trace mismatch: native=$nativeSummary isolated=$isolatedSummary"
+    }
     Get-Content -LiteralPath $nativeResult
     Get-Content -LiteralPath $isolatedResult
 } finally {

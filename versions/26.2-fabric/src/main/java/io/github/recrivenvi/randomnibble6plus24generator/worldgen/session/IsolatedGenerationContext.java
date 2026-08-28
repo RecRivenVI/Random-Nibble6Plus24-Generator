@@ -26,12 +26,14 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.chunk.ChunkGeneratorStructureState;
+import net.minecraft.world.level.chunk.LightChunkGetter;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.level.chunk.status.WorldGenContext;
 import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
 import net.minecraft.world.level.levelgen.RandomState;
 import net.minecraft.world.level.levelgen.WorldOptions;
 import net.minecraft.world.level.levelgen.structure.StructureCheck;
+import net.minecraft.world.level.lighting.LevelLightEngine;
 
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.generator.MosaicChunkGenerator;
 
@@ -51,6 +53,7 @@ public final class IsolatedGenerationContext implements AutoCloseable {
     private final BiomeManager biomeManager;
     private final WorldGenContext worldGenContext;
     private final VirtualGeneratingChunkMap chunkMap;
+    private final LevelLightEngine localLightEngine;
     private final long contextSetupNanos;
     private final long structureStateNanos;
     private final Set<ChunkStatus> executedStages = Collections.newSetFromMap(new ConcurrentHashMap<>());
@@ -60,6 +63,7 @@ public final class IsolatedGenerationContext implements AutoCloseable {
     private final AtomicReference<Long> observedFeatureSeed = new AtomicReference<>();
     private final List<ChunkPos> requestedFeatureWriters = new CopyOnWriteArrayList<>();
     private final List<ChunkPos> completedFeatureWriters = new CopyOnWriteArrayList<>();
+    private final List<String> featureVisibleBiomeSequence = new CopyOnWriteArrayList<>();
     private final AtomicInteger activeFeatureWriters = new AtomicInteger();
     private final AtomicInteger maxConcurrentFeatureWriters = new AtomicInteger();
     private final AtomicLong paleMossGeneratorRedirects = new AtomicLong();
@@ -136,6 +140,18 @@ public final class IsolatedGenerationContext implements AutoCloseable {
                 ignored -> {
                 });
         this.chunkMap = new VirtualGeneratingChunkMap(this);
+        this.localLightEngine = new LevelLightEngine(new LightChunkGetter() {
+            @Override
+            public net.minecraft.world.level.chunk.LightChunk getChunkForLighting(int x, int z) {
+                return chunkMap.chunkForLighting(x, z);
+            }
+
+            @Override
+            public net.minecraft.world.level.BlockGetter getLevel() {
+                // The engine uses this as the dimension height accessor. No physical chunk lookup is delegated.
+                return hostLevel;
+            }
+        }, true, hostLevel.dimensionType().hasSkyLight());
         GenerationContextRegistry.bind(worldGenContext, this);
         this.contextSetupNanos = System.nanoTime() - setupStarted;
     }
@@ -251,6 +267,8 @@ public final class IsolatedGenerationContext implements AutoCloseable {
                         featureSeedInvocationCount.get(),
                         featureSeedSequenceHash.get(),
                         localUncachedBiomeReads.get(),
+                        featureVisibleBiomeSequence,
+                        chunkMap.statusDistribution(),
                         featureWriteSummary(),
                         physicalLevelEscapeSummary()));
     }
@@ -339,6 +357,10 @@ public final class IsolatedGenerationContext implements AutoCloseable {
         return worldGenContext;
     }
 
+    public LevelLightEngine localLightEngine() {
+        return localLightEngine;
+    }
+
     public Set<ChunkStatus> executedStages() {
         return Set.copyOf(executedStages);
     }
@@ -403,6 +425,10 @@ public final class IsolatedGenerationContext implements AutoCloseable {
         if (observedFeatureSeed.get() != seed) {
             throw new IllegalStateException("Conflicting FEATURES world seeds in one session");
         }
+    }
+
+    public void recordFeatureVisibleBiomes(String signature) {
+        featureVisibleBiomeSequence.add(signature);
     }
 
     public void recordPaleMossGeneratorRedirect() {

@@ -6,6 +6,8 @@ import java.nio.file.Path;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.ChunkAccess;
+import net.minecraft.world.level.chunk.ProtoChunk;
+import java.util.Map;
 
 /**
  * Canonical FEATURES snapshot. Entity UUID values remain available as raw
@@ -16,10 +18,18 @@ public final class FeatureStableSnapshot {
 
     private final FeatureStageSnapshot canonical;
     private final List<String> rawEntityNbt;
+    private final int instantiatedBlockEntityCount;
+    private final int pendingBlockEntityNbtCount;
 
-    private FeatureStableSnapshot(FeatureStageSnapshot canonical, List<String> rawEntityNbt) {
+    private FeatureStableSnapshot(
+            FeatureStageSnapshot canonical,
+            List<String> rawEntityNbt,
+            int instantiatedBlockEntityCount,
+            int pendingBlockEntityNbtCount) {
         this.canonical = canonical;
         this.rawEntityNbt = List.copyOf(rawEntityNbt);
+        this.instantiatedBlockEntityCount = instantiatedBlockEntityCount;
+        this.pendingBlockEntityNbtCount = pendingBlockEntityNbtCount;
     }
 
     public static FeatureStableSnapshot capture(
@@ -31,7 +41,12 @@ public final class FeatureStableSnapshot {
                 dimension,
                 chunk,
                 registryAccess);
-        return new FeatureStableSnapshot(canonical, raw.entityNbt());
+        ProtoChunk protoChunk = (ProtoChunk) chunk;
+        return new FeatureStableSnapshot(
+                canonical,
+                raw.entityNbt(),
+                protoChunk.getBlockEntities().size(),
+                protoChunk.getBlockEntityNbts().size());
     }
 
     public FeatureStageSnapshot.Diff diff(FeatureStableSnapshot other) {
@@ -47,7 +62,7 @@ public final class FeatureStableSnapshot {
     }
 
     public static FeatureStableSnapshot read(Path path) {
-        return new FeatureStableSnapshot(FeatureStageSnapshot.read(path), List.of());
+        return new FeatureStableSnapshot(FeatureStageSnapshot.read(path), List.of(), -1, -1);
     }
 
     public String hash() {
@@ -84,5 +99,29 @@ public final class FeatureStableSnapshot {
 
     public List<String> rawEntityNbt() {
         return rawEntityNbt;
+    }
+
+    public int instantiatedBlockEntityCount() {
+        return instantiatedBlockEntityCount;
+    }
+
+    public int pendingBlockEntityNbtCount() {
+        return pendingBlockEntityNbtCount;
+    }
+
+    public Map<String, String> blockEntityNbt() {
+        return canonical.blockEntityNbt();
+    }
+
+    public List<String> blockTickData() {
+        return canonical.blockTickData();
+    }
+
+    public List<String> fluidTickData() {
+        return canonical.fluidTickData();
+    }
+
+    public Map<String, String> structureStartData() {
+        return canonical.structureStartData();
     }
 }

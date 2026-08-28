@@ -18,6 +18,7 @@ import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ChunkSource;
 import net.minecraft.world.level.chunk.status.ChunkStep;
 import net.minecraft.world.level.levelgen.RandomState;
+import net.minecraft.world.level.lighting.LevelLightEngine;
 
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -142,7 +143,14 @@ abstract class WorldGenRegionMixin {
         GenerationContextRegistry.find(cache).ifPresent(context -> {
             String feature = currentlyGenerating == null ? "<structure-or-unspecified>" : currentlyGenerating.get();
             context.recordFeatureWrite(feature, pos, state);
+            FeatureFrontierEvidence.recordFeatureWrite(
+                    FeatureFrontierEvidence.Mode.ISOLATED, feature, pos, state);
         });
+        if (GenerationContextRegistry.find(cache).isEmpty()) {
+            String feature = currentlyGenerating == null ? "<structure-or-unspecified>" : currentlyGenerating.get();
+            FeatureFrontierEvidence.recordFeatureWrite(
+                    FeatureFrontierEvidence.Mode.NATIVE, feature, pos, state);
+        }
     }
 
     @Inject(method = "getChunkSource", at = @At("HEAD"))
@@ -179,6 +187,13 @@ abstract class WorldGenRegionMixin {
                     quartZ,
                     context.randomState().sampler()));
         });
+    }
+
+    @Inject(method = "getLightEngine", at = @At("HEAD"), cancellable = true)
+    private void randomnibble6plus24generator$useSessionLightEngine(
+            CallbackInfoReturnable<LevelLightEngine> callback) {
+        GenerationContextRegistry.find(cache).ifPresent(context ->
+                callback.setReturnValue(context.localLightEngine()));
     }
 
     @Inject(method = "getLevel", at = @At("HEAD"))

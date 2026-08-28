@@ -18,6 +18,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.GenerationContextRegistry;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.IsolatedChunkStatusTasks;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.FeatureFrontierEvidence;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.NativeFeatureExecutionTrace;
 
 @Mixin(ChunkStatusTasks.class)
 abstract class ChunkStatusTasksMixin {
@@ -105,10 +106,18 @@ abstract class ChunkStatusTasksMixin {
         captureStage(worldGenContext, net.minecraft.world.level.chunk.status.ChunkStatus.CARVERS, chunk);
         var isolated = GenerationContextRegistry.find(worldGenContext);
         if (isolated.isPresent()) {
+            isolated.get().recordFeatureVisibleBiomes(FeatureFrontierEvidence.featureVisibleBiomeSignature(
+                    cache, chunk.getPos(), worldGenContext.level().registryAccess()));
             callback.setReturnValue(IsolatedChunkStatusTasks.generateFeatures(
                     isolated.get(), step, cache, chunk));
             return;
         }
+        if (NativeFeatureExecutionTrace.active()) {
+            NativeFeatureExecutionTrace.recordFeatureVisibleBiomes(
+                    FeatureFrontierEvidence.featureVisibleBiomeSignature(
+                            cache, chunk.getPos(), worldGenContext.level().registryAccess()));
+        }
+        NativeFeatureExecutionTrace.beginWriter(chunk.getPos());
         FeatureFrontierEvidence.capture(
                 FeatureFrontierEvidence.Mode.NATIVE,
                 worldGenContext,
@@ -124,8 +133,9 @@ abstract class ChunkStatusTasksMixin {
             StaticCache2D<GenerationChunkHolder> cache,
             ChunkAccess chunk,
             CallbackInfoReturnable<CompletableFuture<ChunkAccess>> callback) {
-        if (!FeatureFrontierEvidence.active(FeatureFrontierEvidence.Mode.NATIVE)
-                || GenerationContextRegistry.find(worldGenContext).isPresent()) {
+        if (GenerationContextRegistry.find(worldGenContext).isPresent()
+                || (!FeatureFrontierEvidence.active(FeatureFrontierEvidence.Mode.NATIVE)
+                        && !NativeFeatureExecutionTrace.active())) {
             return;
         }
         callback.setReturnValue(callback.getReturnValue().thenApply(generated -> {
@@ -135,6 +145,7 @@ abstract class ChunkStatusTasksMixin {
                     cache,
                     generated,
                     FeatureFrontierEvidence.Phase.POST);
+            NativeFeatureExecutionTrace.completeWriter(generated.getPos());
             return generated;
         }));
     }

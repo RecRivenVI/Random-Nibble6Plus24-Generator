@@ -12,6 +12,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.GenerationContextRegistry;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.NativeFeatureExecutionTrace;
 
 /** Makes the Vanilla decoration-seed read an explicit, audited isolated boundary. */
 @Mixin(ChunkGenerator.class)
@@ -30,6 +31,7 @@ abstract class ChunkGeneratorMixin {
                 return context.get().worldSeed();
             }
         }
+        NativeFeatureExecutionTrace.recordDecorationSeedRead();
         return level.getSeed();
     }
 
@@ -49,6 +51,10 @@ abstract class ChunkGeneratorMixin {
         if (level instanceof WorldGenRegion region) {
             GenerationContextRegistry.find(region).ifPresent(context ->
                     context.recordFeatureSeed(decorationSeed, featureIndex, step));
+        }
+        if (!(level instanceof WorldGenRegion region)
+                || GenerationContextRegistry.find(region).isEmpty()) {
+            NativeFeatureExecutionTrace.recordFeatureSeed(decorationSeed, featureIndex, step);
         }
         random.setFeatureSeed(decorationSeed, featureIndex, step);
     }

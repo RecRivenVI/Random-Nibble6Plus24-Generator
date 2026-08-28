@@ -65,6 +65,8 @@ public final class Phase2C1RootCauseVerification {
 
         String frontierState = System.getProperty(PREFIX + "hostFrontierState", "empty");
         preparePhysicalFrontier(level, target, frontierState);
+        Phase2C1FVerification.PhysicalHostSnapshot physicalBefore =
+                Phase2C1FVerification.PhysicalHostSnapshot.capture(level, target);
 
         FeatureOrderingPlan plan = FeatureOrderingPlan.targetLocalZxRowMajorV1(target);
         long started = System.nanoTime();
@@ -80,6 +82,13 @@ public final class Phase2C1RootCauseVerification {
                     : generateDirectFeatures(level, localSeed, target);
             FeatureStableSnapshot isolatedSnapshot = FeatureStableSnapshot.capture(
                     dimension.identifier().toString(), run.targetChunk(), level.registryAccess());
+            Phase2C1FVerification.PhysicalHostSnapshot physicalAfter =
+                    Phase2C1FVerification.PhysicalHostSnapshot.capture(level, target);
+            if (!physicalBefore.equals(physicalAfter)) {
+                throw new IllegalStateException(
+                        "Physical host side effect during root-cause fixture: before="
+                                + physicalBefore + ", after=" + physicalAfter);
+            }
             FeatureFrontierEvidence.finish(FeatureFrontierEvidence.Mode.ISOLATED, isolatedSnapshot);
 
             FeatureFrontierEvidence.Divergence first = FeatureFrontierEvidence.firstDivergence(
@@ -90,6 +99,8 @@ public final class Phase2C1RootCauseVerification {
                     ? java.util.List.of()
                     : FeatureFrontierEvidence.checkpointDifferences(
                             nativeRoot, isolatedRoot, first.writerIndex(), first.phase());
+            String firstFeatureWriteDivergence = FeatureFrontierEvidence.firstFeatureWriteDivergence(
+                    nativeRoot, isolatedRoot);
             FeatureStableSnapshot nativeSnapshot = FeatureStableSnapshot.read(
                     nativeRoot.resolve("final-feature-stable.bin.gz"));
             FeatureStageSnapshot.Diff finalDiff = nativeSnapshot.diff(isolatedSnapshot);
@@ -107,15 +118,27 @@ public final class Phase2C1RootCauseVerification {
                     + "\",\"firstCheckpointDivergence\":\"" + escape(String.valueOf(first))
                     + "\",\"firstStageDivergence\":\"" + escape(String.valueOf(firstStage))
                     + "\",\"checkpointDifferences\":\"" + escape(checkpointDifferences.toString())
-                    + "\",\"physicalLevelEscapes\":\"" + escape(run.featureTrace().physicalLevelEscapeSummary().toString())
+                    + "\",\"firstFeatureWriteDivergence\":\"" + escape(firstFeatureWriteDivergence)
+                    + "\",\"requestedWriters\":\"" + escape(run.featureTrace().requestedWriters().toString())
+                    + "\",\"completedWriters\":\"" + escape(run.featureTrace().completedWriters().toString())
+                    + "\",\"maxConcurrentFeatureWriters\":" + run.featureTrace().maxConcurrentFeatureWriters()
+                    + ",\"decorationSeedReads\":" + run.featureTrace().decorationSeedReads()
+                    + ",\"featureSeedInvocationCount\":" + run.featureTrace().featureSeedInvocationCount()
+                    + ",\"featureSeedSequenceHash\":\""
+                    + Long.toUnsignedString(run.featureTrace().featureSeedSequenceHash(), 16)
+                    + "\",\"featureVisibleBiomeSequence\":\""
+                    + escape(run.featureTrace().featureVisibleBiomeSequence().toString())
+                    + "\",\"paleMossRouteHits\":" + run.featureTrace().paleMossGeneratorRedirects()
+                    + ",\"cappedProcessorRouteHits\":" + run.featureTrace().cappedProcessorSeedRedirects()
+                    + ",\"physicalLevelEscapes\":\"" + escape(run.featureTrace().physicalLevelEscapeSummary().toString())
                     + "\",\"finalFirstDifference\":\"" + escape(String.valueOf(finalDiff.firstDifference()))
                     + "\",\"finalDifferingBlocks\":" + finalDiff.differingBlocks()
                     + ",\"runtimeMs\":" + (System.nanoTime() - started) / 1_000_000L + "}";
             write(summaryOutput, json);
             RandomNibble6Plus24Generator.LOGGER.info(
-                    "Phase 2C1R isolated evidence {} hostSeed={} hostFrontierState={} localSeed={} target={} nativeHash={} isolatedHash={} firstCheckpointDivergence={} firstStageDivergence={} checkpointDifferences={} physicalLevelEscapes={} localUncachedBiomeReads={} finalFirstDifference={} differingBlocks={} evidenceRoot={}",
+                    "Phase 2C1R isolated evidence {} hostSeed={} hostFrontierState={} localSeed={} target={} nativeHash={} isolatedHash={} firstCheckpointDivergence={} firstStageDivergence={} checkpointDifferences={} firstFeatureWriteDivergence={} physicalLevelEscapes={} localUncachedBiomeReads={} finalFirstDifference={} differingBlocks={} evidenceRoot={}",
                     status, hostSeed, frontierState, localSeed, target, nativeSnapshot.hash(), isolatedSnapshot.hash(),
-                    first, firstStage, checkpointDifferences,
+                    first, firstStage, checkpointDifferences, firstFeatureWriteDivergence,
                     run.featureTrace().physicalLevelEscapeSummary(),
                     run.featureTrace().localUncachedBiomeReads(),
                     finalDiff.firstDifference(), finalDiff.differingBlocks(), isolatedRoot);

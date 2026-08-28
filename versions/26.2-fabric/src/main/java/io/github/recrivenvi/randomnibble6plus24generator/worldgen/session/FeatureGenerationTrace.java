@@ -20,6 +20,8 @@ public record FeatureGenerationTrace(
         long featureSeedInvocationCount,
         long featureSeedSequenceHash,
         long localUncachedBiomeReads,
+        List<String> featureVisibleBiomeSequence,
+        Map<String, Integer> virtualStatusDistribution,
         Map<String, String> featureWriteSummary,
         Map<String, Long> physicalLevelEscapeSummary) {
 
@@ -27,6 +29,8 @@ public record FeatureGenerationTrace(
         requestedWriters = List.copyOf(requestedWriters);
         completedWriters = List.copyOf(completedWriters);
         chunksAtOrBeyondFeatures = Set.copyOf(chunksAtOrBeyondFeatures);
+        featureVisibleBiomeSequence = List.copyOf(featureVisibleBiomeSequence);
+        virtualStatusDistribution = Map.copyOf(virtualStatusDistribution);
         featureWriteSummary = Map.copyOf(featureWriteSummary);
         physicalLevelEscapeSummary = Map.copyOf(physicalLevelEscapeSummary);
     }

@@ -328,6 +328,22 @@ public final class FeatureStageSnapshot {
         return postProcessing.values().stream().mapToInt(values -> values.length).sum();
     }
 
+    public Map<String, String> blockEntityNbt() {
+        return blockEntities;
+    }
+
+    public List<String> blockTickData() {
+        return blockTicks;
+    }
+
+    public List<String> fluidTickData() {
+        return fluidTicks;
+    }
+
+    public Map<String, String> structureStartData() {
+        return structureStarts;
+    }
+
     private String firstMetaDifference(FeatureStageSnapshot other) {
         if (!dimension.equals(other.dimension)) return "Dimension " + dimension + " != " + other.dimension;
         if (!chunkPos.equals(other.chunkPos)) return "ChunkPos " + chunkPos + " != " + other.chunkPos;
