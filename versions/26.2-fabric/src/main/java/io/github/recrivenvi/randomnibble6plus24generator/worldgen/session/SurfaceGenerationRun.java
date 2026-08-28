@@ -7,6 +7,6 @@ import net.minecraft.world.level.chunk.status.ChunkStatus;
 
 public record SurfaceGenerationRun(
         ChunkAccess targetChunk,
-        SurfaceGenerationMetrics metrics,
+        IsolatedGenerationMetrics metrics,
         Set<ChunkStatus> executedStages) {
 }

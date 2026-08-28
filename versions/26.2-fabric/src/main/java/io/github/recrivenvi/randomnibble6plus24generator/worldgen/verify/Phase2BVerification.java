@@ -30,7 +30,7 @@ import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.Carver
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.CarverTrace;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.GenerationContextRegistry;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.IsolatedGenerationSession;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.SurfaceGenerationMetrics;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.IsolatedGenerationMetrics;
 
 /** Explicit CARVERS development harness; never runs unless its JVM property is set. */
 public final class Phase2BVerification {
@@ -501,7 +501,7 @@ public final class Phase2BVerification {
 
     private record FixtureResult(
             String hash,
-            SurfaceGenerationMetrics metrics,
+            IsolatedGenerationMetrics metrics,
             CarverTrace trace) {
     }
 

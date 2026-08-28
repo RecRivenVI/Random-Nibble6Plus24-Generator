@@ -24,8 +24,8 @@ public final class IsolatedGenerationSession {
                 masterSeed,
                 hostLevel.dimension(),
                 target);
-        try (SurfaceGenerationContext context = SurfaceGenerationContext.create(
-                SurfaceGenerationMode.ISOLATED_MOSAIC,
+        try (IsolatedGenerationContext context = IsolatedGenerationContext.create(
+                IsolatedGenerationMode.ISOLATED_MOSAIC,
                 hostLevel,
                 localWorldSeed,
                 target)) {
@@ -41,8 +41,8 @@ public final class IsolatedGenerationSession {
                 masterSeed,
                 hostLevel.dimension(),
                 target);
-        try (SurfaceGenerationContext context = SurfaceGenerationContext.create(
-                SurfaceGenerationMode.ISOLATED_MOSAIC,
+        try (IsolatedGenerationContext context = IsolatedGenerationContext.create(
+                IsolatedGenerationMode.ISOLATED_MOSAIC,
                 hostLevel,
                 localWorldSeed,
                 target)) {

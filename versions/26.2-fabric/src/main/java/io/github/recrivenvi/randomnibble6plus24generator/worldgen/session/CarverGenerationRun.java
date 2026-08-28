@@ -7,7 +7,7 @@ import net.minecraft.world.level.chunk.status.ChunkStatus;
 
 public record CarverGenerationRun(
         ChunkAccess targetChunk,
-        SurfaceGenerationMetrics metrics,
+        IsolatedGenerationMetrics metrics,
         Set<ChunkStatus> executedStages,
         CarverTrace carverTrace) {
 }

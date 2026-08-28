@@ -24,7 +24,7 @@ public final class IsolatedChunkStatusTasks {
     }
 
     public static CompletableFuture<ChunkAccess> generateStructureStarts(
-            SurfaceGenerationContext context,
+            IsolatedGenerationContext context,
             ChunkStep step,
             StaticCache2D<GenerationChunkHolder> cache,
             ChunkAccess chunk) {
@@ -43,7 +43,7 @@ public final class IsolatedChunkStatusTasks {
     }
 
     public static CompletableFuture<ChunkAccess> generateStructureReferences(
-            SurfaceGenerationContext context,
+            IsolatedGenerationContext context,
             ChunkStep step,
             StaticCache2D<GenerationChunkHolder> cache,
             ChunkAccess chunk) {
@@ -57,7 +57,7 @@ public final class IsolatedChunkStatusTasks {
     }
 
     public static CompletableFuture<ChunkAccess> generateBiomes(
-            SurfaceGenerationContext context,
+            IsolatedGenerationContext context,
             ChunkStep step,
             StaticCache2D<GenerationChunkHolder> cache,
             ChunkAccess chunk) {
@@ -72,7 +72,7 @@ public final class IsolatedChunkStatusTasks {
     }
 
     public static CompletableFuture<ChunkAccess> generateNoise(
-            SurfaceGenerationContext context,
+            IsolatedGenerationContext context,
             ChunkStep step,
             StaticCache2D<GenerationChunkHolder> cache,
             ChunkAccess chunk) {
@@ -86,7 +86,7 @@ public final class IsolatedChunkStatusTasks {
     }
 
     public static CompletableFuture<ChunkAccess> generateSurface(
-            SurfaceGenerationContext context,
+            IsolatedGenerationContext context,
             ChunkStep step,
             StaticCache2D<GenerationChunkHolder> cache,
             ChunkAccess chunk) {
@@ -101,7 +101,7 @@ public final class IsolatedChunkStatusTasks {
     }
 
     public static CompletableFuture<ChunkAccess> generateCarvers(
-            SurfaceGenerationContext context,
+            IsolatedGenerationContext context,
             ChunkStep step,
             StaticCache2D<GenerationChunkHolder> cache,
             ChunkAccess chunk) {
@@ -134,7 +134,7 @@ public final class IsolatedChunkStatusTasks {
     }
 
     private static WorldGenRegion region(
-            SurfaceGenerationContext context,
+            IsolatedGenerationContext context,
             ChunkStep step,
             StaticCache2D<GenerationChunkHolder> cache,
             ChunkAccess chunk) {
@@ -143,7 +143,7 @@ public final class IsolatedChunkStatusTasks {
     }
 
     private static int countConfiguredCarvers(
-            SurfaceGenerationContext context,
+            IsolatedGenerationContext context,
             WorldGenRegion region,
             ChunkAccess target) {
         int count = 0;

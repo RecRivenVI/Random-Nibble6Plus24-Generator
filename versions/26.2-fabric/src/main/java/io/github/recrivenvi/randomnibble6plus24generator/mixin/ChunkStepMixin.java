@@ -17,6 +17,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.NativeVanillaControlHarness;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.NativeVanillaFeatureOrderProbe;
 
 @Mixin(ChunkStep.class)
 abstract class ChunkStepMixin {
@@ -31,12 +32,21 @@ abstract class ChunkStepMixin {
             StaticCache2D<GenerationChunkHolder> cache,
             ChunkAccess chunk,
             CallbackInfoReturnable<CompletableFuture<ChunkAccess>> callback) {
-        if (!NativeVanillaControlHarness.shouldCapture(worldGenContext, targetStatus, chunk)) {
-            return;
+        CompletableFuture<ChunkAccess> future = callback.getReturnValue();
+        if (NativeVanillaControlHarness.shouldCapture(worldGenContext, targetStatus, chunk)) {
+            future = future.thenApply(generated -> {
+                NativeVanillaControlHarness.capture(worldGenContext, targetStatus, generated);
+                return generated;
+            });
         }
-        callback.setReturnValue(callback.getReturnValue().thenApply(generated -> {
-            NativeVanillaControlHarness.capture(worldGenContext, targetStatus, generated);
-            return generated;
-        }));
+        if (NativeVanillaFeatureOrderProbe.shouldObserve(worldGenContext, targetStatus, chunk)) {
+            future = future.thenApply(generated -> {
+                NativeVanillaFeatureOrderProbe.observe(worldGenContext, targetStatus, generated);
+                return generated;
+            });
+        }
+        if (future != callback.getReturnValue()) {
+            callback.setReturnValue(future);
+        }
     }
 }

@@ -28,7 +28,7 @@ import io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile.Mosaic
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.seed.MosaicSeedResolver;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.GenerationContextRegistry;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.IsolatedGenerationSession;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.SurfaceGenerationMetrics;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.IsolatedGenerationMetrics;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.SurfaceGenerationRun;
 
 /** Explicit development harness; never runs unless the JVM property is set. */
@@ -463,8 +463,8 @@ public final class Phase2AVerification {
 
     private record FixtureResult(
             String hash,
-            SurfaceGenerationMetrics isolatedMetrics,
-            SurfaceGenerationMetrics controlMetrics) {
+            IsolatedGenerationMetrics isolatedMetrics,
+            IsolatedGenerationMetrics controlMetrics) {
     }
 
     private record IsolatedResult(

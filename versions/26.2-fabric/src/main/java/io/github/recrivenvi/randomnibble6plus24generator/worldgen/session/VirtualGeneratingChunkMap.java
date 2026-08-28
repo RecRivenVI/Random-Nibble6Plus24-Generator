@@ -17,10 +17,10 @@ import net.minecraft.world.level.chunk.status.ChunkStep;
 
 final class VirtualGeneratingChunkMap implements GeneratingChunkMap {
 
-    private final SurfaceGenerationContext context;
+    private final IsolatedGenerationContext context;
     private final Map<Long, VirtualGenerationChunkHolder> holders = new ConcurrentHashMap<>();
 
-    VirtualGeneratingChunkMap(SurfaceGenerationContext context) {
+    VirtualGeneratingChunkMap(IsolatedGenerationContext context) {
         this.context = context;
     }
 

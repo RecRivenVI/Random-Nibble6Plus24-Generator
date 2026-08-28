@@ -28,9 +28,9 @@ import net.minecraft.world.level.levelgen.structure.StructureCheck;
 
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.generator.MosaicChunkGenerator;
 
-public final class SurfaceGenerationContext implements AutoCloseable {
+public final class IsolatedGenerationContext implements AutoCloseable {
 
-    private final SurfaceGenerationMode mode;
+    private final IsolatedGenerationMode mode;
     private final ServerLevel hostLevel;
     private final ResourceKey<Level> dimension;
     private final ChunkPos target;
@@ -56,8 +56,8 @@ public final class SurfaceGenerationContext implements AutoCloseable {
     private volatile int carvingMaskBitCount;
     private boolean closed;
 
-    private SurfaceGenerationContext(
-            SurfaceGenerationMode mode,
+    private IsolatedGenerationContext(
+            IsolatedGenerationMode mode,
             ServerLevel hostLevel,
             long worldSeed,
             ChunkPos target) {
@@ -119,12 +119,12 @@ public final class SurfaceGenerationContext implements AutoCloseable {
         this.contextSetupNanos = System.nanoTime() - setupStarted;
     }
 
-    public static SurfaceGenerationContext create(
-            SurfaceGenerationMode mode,
+    public static IsolatedGenerationContext create(
+            IsolatedGenerationMode mode,
             ServerLevel hostLevel,
             long worldSeed,
             ChunkPos target) {
-        return new SurfaceGenerationContext(mode, hostLevel, worldSeed, target);
+        return new IsolatedGenerationContext(mode, hostLevel, worldSeed, target);
     }
 
     public SurfaceGenerationRun generate() {
@@ -171,7 +171,7 @@ public final class SurfaceGenerationContext implements AutoCloseable {
         long elapsed = System.nanoTime() - started;
         return new GenerationResult(
                 targetChunk,
-                new SurfaceGenerationMetrics(
+                new IsolatedGenerationMetrics(
                         contextSetupNanos,
                         structureStateNanos,
                         elapsed,
@@ -183,7 +183,7 @@ public final class SurfaceGenerationContext implements AutoCloseable {
                 executedStages());
     }
 
-    public SurfaceGenerationMode mode() {
+    public IsolatedGenerationMode mode() {
         return mode;
     }
 
@@ -298,7 +298,7 @@ public final class SurfaceGenerationContext implements AutoCloseable {
 
     private record GenerationResult(
             ChunkAccess targetChunk,
-            SurfaceGenerationMetrics metrics,
+            IsolatedGenerationMetrics metrics,
             Set<ChunkStatus> executedStages) {
     }
 

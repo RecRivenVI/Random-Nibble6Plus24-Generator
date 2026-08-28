@@ -1,6 +1,6 @@
 package io.github.recrivenvi.randomnibble6plus24generator.worldgen.session;
 
-public record SurfaceGenerationMetrics(
+public record IsolatedGenerationMetrics(
         long contextSetupNanos,
         long structureStateNanos,
         long elapsedNanos,

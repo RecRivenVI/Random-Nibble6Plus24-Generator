@@ -11,6 +11,7 @@ import io.github.recrivenvi.randomnibble6plus24generator.worldgen.identity.Mosai
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2AVerification;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2BVerification;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.NativeVanillaControlHarness;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.NativeVanillaFeatureOrderProbe;
 
 @Mixin(MinecraftServer.class)
 abstract class MinecraftServerMixin {
@@ -18,6 +19,7 @@ abstract class MinecraftServerMixin {
     @Inject(method = "createLevels", at = @At("HEAD"))
     private void randomnibble6plus24generator$armNativeControlBeforePhysicalGeneration(CallbackInfo callbackInfo) {
         NativeVanillaControlHarness.armIfRequested((MinecraftServer) (Object) this);
+        NativeVanillaFeatureOrderProbe.armIfRequested((MinecraftServer) (Object) this);
     }
 
     @Inject(method = "createLevels", at = @At("RETURN"))
@@ -26,5 +28,6 @@ abstract class MinecraftServerMixin {
         Phase2AVerification.runIfRequested((MinecraftServer) (Object) this);
         Phase2BVerification.runIfRequested((MinecraftServer) (Object) this);
         NativeVanillaControlHarness.completeIfRequested((MinecraftServer) (Object) this);
+        NativeVanillaFeatureOrderProbe.runIfRequested((MinecraftServer) (Object) this);
     }
 }
