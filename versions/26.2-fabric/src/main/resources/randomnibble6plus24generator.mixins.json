@@ -2,9 +2,12 @@
   "required": true,
   "package": "io.github.recrivenvi.randomnibble6plus24generator.mixin",
   "mixins": [
+    "CappedProcessorMixin",
+    "ChunkGeneratorMixin",
     "ChunkStatusTasksMixin",
     "ChunkStepMixin",
     "MinecraftServerMixin",
+    "PaleMossDecoratorMixin",
     "SeedCommandMixin",
     "WorldGenRegionMixin"
   ],

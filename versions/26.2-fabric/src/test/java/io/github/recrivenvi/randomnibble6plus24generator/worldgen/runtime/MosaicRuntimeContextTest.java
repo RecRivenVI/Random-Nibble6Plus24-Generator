@@ -26,8 +26,8 @@ class MosaicRuntimeContextTest {
         long masterSeed = Long.MIN_VALUE;
         WorldGenSettings settings = MosaicTestWorlds.mosaicSettings(
                 masterSeed,
-                MosaicWorldProfile.version1());
-        MosaicRuntimeContext context = new MosaicRuntimeContext(settings, MosaicWorldProfile.version1());
+                MosaicWorldProfile.current());
+        MosaicRuntimeContext context = new MosaicRuntimeContext(settings, MosaicWorldProfile.current());
 
         assertEquals(settings.options().seed(), context.masterSeed());
         assertEquals(masterSeed, context.masterSeed());
@@ -37,7 +37,7 @@ class MosaicRuntimeContextTest {
     void runtimeBridgeMatchesPhaseOneAGoldenResolverSemantics() {
         long masterSeed = 123456789L;
         ChunkPos chunkPos = new ChunkPos(125, -37);
-        MosaicWorldProfile profile = MosaicWorldProfile.version1();
+        MosaicWorldProfile profile = MosaicWorldProfile.current();
         WorldGenSettings settings = MosaicTestWorlds.mosaicSettings(masterSeed, profile);
         MosaicRuntimeContext context = new MosaicRuntimeContext(settings, profile);
         MosaicSeedResolver directResolver = new MosaicSeedResolver(profile);
@@ -53,7 +53,7 @@ class MosaicRuntimeContextTest {
     @Test
     void runtimeBridgePreservesOriginContract() {
         long masterSeed = -987654321L;
-        MosaicWorldProfile profile = MosaicWorldProfile.version1();
+        MosaicWorldProfile profile = MosaicWorldProfile.current();
         MosaicRuntimeContext context = new MosaicRuntimeContext(
                 MosaicTestWorlds.mosaicSettings(masterSeed, profile),
                 profile);

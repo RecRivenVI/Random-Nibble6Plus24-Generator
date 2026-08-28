@@ -179,7 +179,7 @@ public final class Phase2AVerification {
 
     private static FixtureResult runFixture(MinecraftServer server, Fixture fixture) {
         ServerLevel hostLevel = requireLevel(server, fixture.dimension());
-        MosaicWorldProfile profile = MosaicWorldProfile.version1();
+        MosaicWorldProfile profile = MosaicWorldProfile.current();
         long localSeed = new MosaicSeedResolver(profile).resolveLocalWorldSeed(
                 fixture.masterSeed(),
                 fixture.dimension(),
@@ -370,7 +370,7 @@ public final class Phase2AVerification {
 
     private static IsolatedResult runIsolated(MinecraftServer server, Fixture fixture) {
         ServerLevel hostLevel = requireLevel(server, fixture.dimension());
-        MosaicWorldProfile profile = MosaicWorldProfile.version1();
+        MosaicWorldProfile profile = MosaicWorldProfile.current();
         long localSeed = new MosaicSeedResolver(profile).resolveLocalWorldSeed(
                 fixture.masterSeed(),
                 fixture.dimension(),

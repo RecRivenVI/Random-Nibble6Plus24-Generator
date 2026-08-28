@@ -85,4 +85,15 @@ abstract class ChunkStatusTasksMixin {
         GenerationContextRegistry.find(worldGenContext).ifPresent(context -> callback.setReturnValue(
                 IsolatedChunkStatusTasks.generateCarvers(context, step, cache, chunk)));
     }
+
+    @Inject(method = "generateFeatures", at = @At("HEAD"), cancellable = true)
+    private static void randomnibble6plus24generator$routeFeatures(
+            WorldGenContext worldGenContext,
+            ChunkStep step,
+            StaticCache2D<GenerationChunkHolder> cache,
+            ChunkAccess chunk,
+            CallbackInfoReturnable<CompletableFuture<ChunkAccess>> callback) {
+        GenerationContextRegistry.find(worldGenContext).ifPresent(context -> callback.setReturnValue(
+                IsolatedChunkStatusTasks.generateFeatures(context, step, cache, chunk)));
+    }
 }

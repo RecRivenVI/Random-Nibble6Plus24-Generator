@@ -19,17 +19,21 @@ import net.minecraft.world.level.Level;
 public record MosaicWorldProfile(
         int formatVersion,
         int seedDerivationAlgorithmVersion,
+        int featureOrderingAlgorithmVersion,
         int presentationAlgorithmVersion,
         ResourceKey<Level> primaryDimension) {
 
-    public static final int FORMAT_VERSION_V1 = 1;
+    public static final int FORMAT_VERSION_V2 = 2;
     public static final int SEED_DERIVATION_ALGORITHM_V1 = 1;
+    public static final int FEATURE_ORDERING_ALGORITHM_V1 = 1;
     public static final int PRESENTATION_ALGORITHM_V1 = 1;
 
     private static final Codec<MosaicWorldProfile> RAW_CODEC = RecordCodecBuilder.create(instance -> instance.group(
             Codec.INT.fieldOf("format_version").forGetter(MosaicWorldProfile::formatVersion),
             Codec.INT.fieldOf("seed_derivation_algorithm_version")
                     .forGetter(MosaicWorldProfile::seedDerivationAlgorithmVersion),
+            Codec.INT.fieldOf("feature_ordering_algorithm_version")
+                    .forGetter(MosaicWorldProfile::featureOrderingAlgorithmVersion),
             Codec.INT.fieldOf("presentation_algorithm_version")
                     .forGetter(MosaicWorldProfile::presentationAlgorithmVersion),
             ResourceKey.codec(Registries.DIMENSION)
@@ -48,16 +52,20 @@ public record MosaicWorldProfile(
         if (seedDerivationAlgorithmVersion < 1) {
             throw new IllegalArgumentException("seedDerivationAlgorithmVersion must be positive");
         }
+        if (featureOrderingAlgorithmVersion < 1) {
+            throw new IllegalArgumentException("featureOrderingAlgorithmVersion must be positive");
+        }
         if (presentationAlgorithmVersion < 1) {
             throw new IllegalArgumentException("presentationAlgorithmVersion must be positive");
         }
         Objects.requireNonNull(primaryDimension, "primaryDimension");
     }
 
-    public static MosaicWorldProfile version1() {
+    public static MosaicWorldProfile current() {
         return new MosaicWorldProfile(
-                FORMAT_VERSION_V1,
+                FORMAT_VERSION_V2,
                 SEED_DERIVATION_ALGORITHM_V1,
+                FEATURE_ORDERING_ALGORITHM_V1,
                 PRESENTATION_ALGORITHM_V1,
                 Level.OVERWORLD);
     }
@@ -68,12 +76,16 @@ public record MosaicWorldProfile(
     }
 
     private static DataResult<MosaicWorldProfile> validateSupported(MosaicWorldProfile profile) {
-        if (profile.formatVersion() != FORMAT_VERSION_V1) {
+        if (profile.formatVersion() != FORMAT_VERSION_V2) {
             return DataResult.error(() -> "Unsupported Mosaic format version: " + profile.formatVersion());
         }
         if (profile.seedDerivationAlgorithmVersion() != SEED_DERIVATION_ALGORITHM_V1) {
             return DataResult.error(() -> "Unsupported Mosaic seed derivation algorithm version: "
                     + profile.seedDerivationAlgorithmVersion());
+        }
+        if (profile.featureOrderingAlgorithmVersion() != FEATURE_ORDERING_ALGORITHM_V1) {
+            return DataResult.error(() -> "Unsupported Mosaic feature ordering algorithm version: "
+                    + profile.featureOrderingAlgorithmVersion());
         }
         if (profile.presentationAlgorithmVersion() != PRESENTATION_ALGORITHM_V1) {
             return DataResult.error(() -> "Unsupported Mosaic presentation algorithm version: "

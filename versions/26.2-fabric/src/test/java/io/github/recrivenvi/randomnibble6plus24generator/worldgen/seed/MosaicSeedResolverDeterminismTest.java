@@ -39,8 +39,8 @@ class MosaicSeedResolverDeterminismTest {
     @Test
     void repeatedCallsAndDifferentResolverInstancesAgree() {
         Query query = new Query(0x13579BDF2468ACE0L, Level.OVERWORLD, new ChunkPos(25_000, -40_000));
-        MosaicSeedResolver first = new MosaicSeedResolver(MosaicWorldProfile.version1());
-        MosaicSeedResolver second = new MosaicSeedResolver(MosaicWorldProfile.version1());
+        MosaicSeedResolver first = new MosaicSeedResolver(MosaicWorldProfile.current());
+        MosaicSeedResolver second = new MosaicSeedResolver(MosaicWorldProfile.current());
         long expected = first.resolveLocalWorldSeed(query.masterSeed(), query.dimension(), query.chunkPos());
 
         for (int i = 0; i < 10_000; i++) {
@@ -52,7 +52,7 @@ class MosaicSeedResolverDeterminismTest {
     @Test
     void forwardReverseAndShuffledQueryOrdersAgree() {
         List<Query> queries = queries(512);
-        MosaicSeedResolver resolver = new MosaicSeedResolver(MosaicWorldProfile.version1());
+        MosaicSeedResolver resolver = new MosaicSeedResolver(MosaicWorldProfile.current());
         long[] expected = resolveAll(resolver, queries);
 
         List<Query> reversed = new ArrayList<>(queries);
@@ -70,7 +70,7 @@ class MosaicSeedResolverDeterminismTest {
     @Timeout(30)
     void concurrentQueriesAgreeAcrossWorkerCounts() throws Exception {
         List<Query> queries = queries(1_024);
-        MosaicSeedResolver resolver = new MosaicSeedResolver(MosaicWorldProfile.version1());
+        MosaicSeedResolver resolver = new MosaicSeedResolver(MosaicWorldProfile.current());
         long[] expected = resolveAll(resolver, queries);
 
         for (int workers : new int[] {1, 2, 4, 8}) {

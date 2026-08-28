@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import net.minecraft.server.level.GenerationChunkHolder;
+import net.minecraft.server.level.WorldGenRegion;
 import net.minecraft.util.StaticCache2D;
 import net.minecraft.world.level.chunk.status.WorldGenContext;
 
@@ -33,6 +34,14 @@ public final class GenerationContextRegistry {
     public static synchronized Optional<IsolatedGenerationContext> find(
             StaticCache2D<GenerationChunkHolder> cache) {
         return Optional.ofNullable(CONTEXTS.get(cache));
+    }
+
+    public static synchronized void bind(WorldGenRegion region, IsolatedGenerationContext context) {
+        bindIdentity(region, context);
+    }
+
+    public static synchronized Optional<IsolatedGenerationContext> find(WorldGenRegion region) {
+        return Optional.ofNullable(CONTEXTS.get(region));
     }
 
     public static synchronized void unbind(IsolatedGenerationContext context) {

@@ -81,7 +81,7 @@ class MosaicSeedCommandIntegrationTest {
     void mosaicFeedbackUsesTheRuntimeResolverForNonOriginChunk() {
         long masterSeed = 123456789L;
         ChunkPos chunkPos = new ChunkPos(125, -37);
-        MosaicWorldProfile profile = MosaicWorldProfile.version1();
+        MosaicWorldProfile profile = MosaicWorldProfile.current();
         MosaicRuntimeContext runtime = new MosaicRuntimeContext(
                 MosaicTestWorlds.mosaicSettings(masterSeed, profile),
                 profile);
@@ -102,7 +102,7 @@ class MosaicSeedCommandIntegrationTest {
     @Test
     void originFeedbackUsesWorldOptionsSeedThroughTheRuntimeBridge() {
         long masterSeed = -987654321L;
-        MosaicWorldProfile profile = MosaicWorldProfile.version1();
+        MosaicWorldProfile profile = MosaicWorldProfile.current();
         MosaicRuntimeContext runtime = new MosaicRuntimeContext(
                 MosaicTestWorlds.mosaicSettings(masterSeed, profile),
                 profile);

@@ -31,7 +31,7 @@ class MosaicIdentityValidatorTest {
 
     @Test
     void matchingGeneratorAndPersistedProfileProduceMosaicIdentity() {
-        MosaicWorldProfile profile = MosaicWorldProfile.version1();
+        MosaicWorldProfile profile = MosaicWorldProfile.current();
         WorldDimensions dimensions = MosaicTestWorlds.mosaicSettings(123L, profile).dimensions();
 
         assertEquals(
@@ -43,7 +43,7 @@ class MosaicIdentityValidatorTest {
     void generatorWithoutProfileFailsClosed() {
         WorldDimensions dimensions = MosaicTestWorlds.mosaicSettings(
                 123L,
-                MosaicWorldProfile.version1()).dimensions();
+                MosaicWorldProfile.current()).dimensions();
 
         MosaicIdentityValidationException exception = assertThrows(
                 MosaicIdentityValidationException.class,
@@ -58,7 +58,7 @@ class MosaicIdentityValidatorTest {
                 MosaicIdentityValidationException.class,
                 () -> MosaicIdentityValidator.validate(
                         MosaicTestWorlds.normalDimensions(),
-                        Optional.of(MosaicWorldProfile.version1()),
+                        Optional.of(MosaicWorldProfile.current()),
                         true));
         assertTrue(exception.getMessage().contains("no serialized Mosaic generator"));
     }
@@ -76,8 +76,8 @@ class MosaicIdentityValidatorTest {
 
     @Test
     void mismatchedGeneratorAndPersistedProfilesFailClosed() {
-        MosaicWorldProfile generatorProfile = MosaicWorldProfile.version1();
-        MosaicWorldProfile persistedProfile = new MosaicWorldProfile(1, 1, 1, Level.NETHER);
+        MosaicWorldProfile generatorProfile = MosaicWorldProfile.current();
+        MosaicWorldProfile persistedProfile = new MosaicWorldProfile(2, 1, 1, 1, Level.NETHER);
         WorldDimensions dimensions = MosaicTestWorlds.mosaicSettings(123L, generatorProfile).dimensions();
 
         MosaicIdentityValidationException exception = assertThrows(
@@ -88,7 +88,7 @@ class MosaicIdentityValidatorTest {
 
     @Test
     void primaryDimensionMustContainAMosaicGenerator() {
-        MosaicWorldProfile profile = MosaicWorldProfile.version1();
+        MosaicWorldProfile profile = MosaicWorldProfile.current();
         WorldDimensions normal = MosaicTestWorlds.normalDimensions();
         Map<ResourceKey<LevelStem>, LevelStem> dimensions = new LinkedHashMap<>(normal.dimensions());
         LevelStem nether = dimensions.get(LevelStem.NETHER);
@@ -107,8 +107,8 @@ class MosaicIdentityValidatorTest {
 
     @Test
     void serializedMosaicGeneratorsMustAgreeOnProfile() {
-        MosaicWorldProfile overworldProfile = MosaicWorldProfile.version1();
-        MosaicWorldProfile netherProfile = new MosaicWorldProfile(1, 1, 1, Level.NETHER);
+        MosaicWorldProfile overworldProfile = MosaicWorldProfile.current();
+        MosaicWorldProfile netherProfile = new MosaicWorldProfile(2, 1, 1, 1, Level.NETHER);
         WorldDimensions normal = MosaicTestWorlds.normalDimensions();
         Map<ResourceKey<LevelStem>, LevelStem> dimensions = new LinkedHashMap<>(normal.dimensions());
         LevelStem overworld = dimensions.get(LevelStem.OVERWORLD);
@@ -135,7 +135,7 @@ class MosaicIdentityValidatorTest {
 
     @Test
     void anyMixedGeneratorMosaicWorldFailsClosed() {
-        MosaicWorldProfile profile = MosaicWorldProfile.version1();
+        MosaicWorldProfile profile = MosaicWorldProfile.current();
         WorldDimensions normal = MosaicTestWorlds.normalDimensions();
         Map<ResourceKey<LevelStem>, LevelStem> dimensions = new LinkedHashMap<>(normal.dimensions());
         LevelStem overworld = dimensions.get(LevelStem.OVERWORLD);

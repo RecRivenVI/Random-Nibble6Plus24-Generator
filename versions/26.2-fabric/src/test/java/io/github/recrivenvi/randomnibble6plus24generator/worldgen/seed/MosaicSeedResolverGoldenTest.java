@@ -36,7 +36,7 @@ class MosaicSeedResolverGoldenTest {
 
     @Test
     void authoritativeV1GoldenVectorsRemainStable() {
-        MosaicSeedResolver resolver = new MosaicSeedResolver(MosaicWorldProfile.version1());
+        MosaicSeedResolver resolver = new MosaicSeedResolver(MosaicWorldProfile.current());
         List<FinalVector> vectors = List.of(
                 new FinalVector(0L, "minecraft:overworld", 0, 0, 0L),
                 new FinalVector(1L, "minecraft:overworld", 0, 0, 1L),
@@ -68,7 +68,7 @@ class MosaicSeedResolverGoldenTest {
 
     @Test
     void presentationV1GoldenVectorsRemainStable() {
-        MosaicSeedResolver resolver = new MosaicSeedResolver(MosaicWorldProfile.version1());
+        MosaicSeedResolver resolver = new MosaicSeedResolver(MosaicWorldProfile.current());
         List<PreviewVector> vectors = List.of(
                 new PreviewVector(0L, "minecraft:overworld", 0, 0, 0L, 5092727292455797900L),
                 new PreviewVector(0L, "minecraft:overworld", 0, 0, 1L, 5092727292455797899L),

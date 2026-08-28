@@ -45,7 +45,7 @@ class MosaicSeedResolverDomainIndependenceTest {
 
     @Test
     void tenThousandPreviewQueriesDoNotChangeAuthoritativeResult() {
-        MosaicSeedResolver resolver = new MosaicSeedResolver(MosaicWorldProfile.version1());
+        MosaicSeedResolver resolver = new MosaicSeedResolver(MosaicWorldProfile.current());
         long masterSeed = -0x123456789ABCDEFL;
         ChunkPos chunkPos = new ChunkPos(125, -37);
         long before = resolver.resolveLocalWorldSeed(masterSeed, Level.OVERWORLD, chunkPos);
@@ -59,7 +59,7 @@ class MosaicSeedResolverDomainIndependenceTest {
 
     @Test
     void previewQueryOrderDoesNotChangePreviewOrAuthoritativeResults() {
-        MosaicSeedResolver resolver = new MosaicSeedResolver(MosaicWorldProfile.version1());
+        MosaicSeedResolver resolver = new MosaicSeedResolver(MosaicWorldProfile.current());
         long masterSeed = 0x1020304050607080L;
         ChunkPos chunkPos = new ChunkPos(-50_000, 75_000);
         long authoritative = resolver.resolveLocalWorldSeed(masterSeed, Level.END, chunkPos);
@@ -83,7 +83,7 @@ class MosaicSeedResolverDomainIndependenceTest {
     @Test
     @Timeout(30)
     void concurrentPreviewQueriesDoNotChangeAuthoritativeResult() throws Exception {
-        MosaicSeedResolver resolver = new MosaicSeedResolver(MosaicWorldProfile.version1());
+        MosaicSeedResolver resolver = new MosaicSeedResolver(MosaicWorldProfile.current());
         long masterSeed = Long.MIN_VALUE;
         ChunkPos chunkPos = new ChunkPos(Integer.MAX_VALUE, Integer.MIN_VALUE);
         long authoritative = resolver.resolveLocalWorldSeed(masterSeed, Level.NETHER, chunkPos);

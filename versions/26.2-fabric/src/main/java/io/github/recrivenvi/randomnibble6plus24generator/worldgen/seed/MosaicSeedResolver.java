@@ -32,9 +32,7 @@ public final class MosaicSeedResolver {
 
     public MosaicSeedResolver(MosaicWorldProfile profile) {
         this.profile = Objects.requireNonNull(profile, "profile");
-        if (profile.formatVersion() != MosaicWorldProfile.FORMAT_VERSION_V1) {
-            throw new IllegalArgumentException("Unsupported Mosaic format version: " + profile.formatVersion());
-        }
+        profile.requireSupported();
     }
 
     /**

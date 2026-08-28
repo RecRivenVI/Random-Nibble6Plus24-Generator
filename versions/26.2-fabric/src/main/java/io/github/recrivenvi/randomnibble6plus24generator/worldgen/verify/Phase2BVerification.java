@@ -79,7 +79,7 @@ public final class Phase2BVerification {
 
     private static void runSmoke(MinecraftServer server) {
         ServerLevel level = requireLevel(server, Level.OVERWORLD);
-        MosaicWorldProfile profile = MosaicWorldProfile.version1();
+        MosaicWorldProfile profile = MosaicWorldProfile.current();
         long localSeed = new MosaicSeedResolver(profile).resolveLocalWorldSeed(
                 SMOKE_FIXTURE.masterSeed(),
                 SMOKE_FIXTURE.dimension(),
@@ -205,7 +205,7 @@ public final class Phase2BVerification {
             Fixture fixture,
             boolean log) {
         ServerLevel level = requireLevel(server, fixture.dimension());
-        MosaicWorldProfile profile = MosaicWorldProfile.version1();
+        MosaicWorldProfile profile = MosaicWorldProfile.current();
         long localSeed = new MosaicSeedResolver(profile).resolveLocalWorldSeed(
                 fixture.masterSeed(),
                 fixture.dimension(),
@@ -270,7 +270,7 @@ public final class Phase2BVerification {
 
     private static IsolatedResult runIsolated(MinecraftServer server, Fixture fixture) {
         ServerLevel level = requireLevel(server, fixture.dimension());
-        MosaicWorldProfile profile = MosaicWorldProfile.version1();
+        MosaicWorldProfile profile = MosaicWorldProfile.current();
         long localSeed = new MosaicSeedResolver(profile).resolveLocalWorldSeed(
                 fixture.masterSeed(), fixture.dimension(), fixture.target());
         CarverGenerationRun run = new IsolatedGenerationSession(profile)

@@ -1,9 +1,12 @@
 package io.github.recrivenvi.randomnibble6plus24generator.mixin;
 
+import java.util.function.Supplier;
+
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.GenerationChunkHolder;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.server.level.WorldGenRegion;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.StaticCache2D;
@@ -12,6 +15,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ChunkSource;
 import net.minecraft.world.level.chunk.status.ChunkStep;
+import net.minecraft.world.level.levelgen.RandomState;
 
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -57,6 +61,9 @@ abstract class WorldGenRegionMixin {
     @Mutable
     private BiomeManager biomeManager;
 
+    @Shadow
+    private Supplier<String> currentlyGenerating;
+
     @Inject(method = "<init>", at = @At("RETURN"))
     private void randomnibble6plus24generator$installSessionSeedState(
             ServerLevel level,
@@ -77,6 +84,29 @@ abstract class WorldGenRegionMixin {
     }
 
     @Redirect(
+            method = "<init>",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/server/level/ServerLevel;getSeed()J"))
+    private long randomnibble6plus24generator$useSessionSeedDuringConstruction(ServerLevel level) {
+        return GenerationContextRegistry.find(cache)
+                .map(context -> context.worldSeed())
+                .orElseGet(level::getSeed);
+    }
+
+    @Redirect(
+            method = "<init>",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/server/level/ServerChunkCache;randomState()Lnet/minecraft/world/level/levelgen/RandomState;"))
+    private RandomState randomnibble6plus24generator$useSessionRandomStateDuringConstruction(
+            ServerChunkCache chunkSource) {
+        return GenerationContextRegistry.find(cache)
+                .map(context -> context.randomState())
+                .orElseGet(chunkSource::randomState);
+    }
+
+    @Redirect(
             method = "setBlock",
             at = @At(
                     value = "INVOKE",
@@ -92,6 +122,19 @@ abstract class WorldGenRegionMixin {
             return;
         }
         level.updatePOIOnBlockStateChange(pos, oldState, newState);
+    }
+
+    @Inject(method = "setBlock", at = @At("HEAD"))
+    private void randomnibble6plus24generator$traceFeatureWrite(
+            BlockPos pos,
+            BlockState state,
+            int flags,
+            int recursionLeft,
+            CallbackInfoReturnable<Boolean> callback) {
+        GenerationContextRegistry.find(cache).ifPresent(context -> {
+            String feature = currentlyGenerating == null ? "<structure-or-unspecified>" : currentlyGenerating.get();
+            context.recordFeatureWrite(feature, pos, state);
+        });
     }
 
     @Inject(method = "getChunkSource", at = @At("HEAD"))

@@ -27,7 +27,7 @@ public final class MosaicWorldProfileData extends SavedData {
 
     public static final SavedDataType<MosaicWorldProfileData> TYPE = new SavedDataType<>(
             ID,
-            () -> new MosaicWorldProfileData(MosaicWorldProfile.version1()),
+            () -> new MosaicWorldProfileData(MosaicWorldProfile.current()),
             CODEC,
             null);
 

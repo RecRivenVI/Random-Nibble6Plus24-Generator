@@ -1,6 +1,7 @@
 package io.github.recrivenvi.randomnibble6plus24generator.worldgen.session;
 
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -71,6 +72,18 @@ final class VirtualGeneratingChunkMap implements GeneratingChunkMap {
 
     int virtualChunkCount() {
         return holders.size();
+    }
+
+    ChunkAccess chunkAt(ChunkPos pos, ChunkStatus status) {
+        VirtualGenerationChunkHolder holder = holders.get(ChunkPos.pack(pos.x(), pos.z()));
+        return holder == null ? null : holder.getChunkIfPresentUnchecked(status);
+    }
+
+    Set<ChunkPos> chunksAtOrBeyond(ChunkStatus status) {
+        return holders.values().stream()
+                .filter(holder -> holder.getLatestStatus() != null && holder.getLatestStatus().isOrAfter(status))
+                .map(GenerationChunkHolder::getPos)
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
     }
 
     private ProtoChunk createEmptyChunk(ChunkPos pos) {

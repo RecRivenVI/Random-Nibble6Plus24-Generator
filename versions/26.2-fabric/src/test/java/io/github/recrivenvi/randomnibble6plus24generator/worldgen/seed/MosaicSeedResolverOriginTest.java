@@ -22,7 +22,7 @@ class MosaicSeedResolverOriginTest {
 
     @Test
     void protectedOriginReturnsMasterSeedBitForBit() {
-        MosaicSeedResolver resolver = new MosaicSeedResolver(MosaicWorldProfile.version1());
+        MosaicSeedResolver resolver = new MosaicSeedResolver(MosaicWorldProfile.current());
         long[] masterSeeds = {
             0L,
             1L,
@@ -42,7 +42,7 @@ class MosaicSeedResolverOriginTest {
 
     @Test
     void protectedOriginHoldsForManyDeterministicRandomMasterSeeds() {
-        MosaicSeedResolver resolver = new MosaicSeedResolver(MosaicWorldProfile.version1());
+        MosaicSeedResolver resolver = new MosaicSeedResolver(MosaicWorldProfile.current());
         SplittableRandom inputs = new SplittableRandom(0x4F524947494E5F31L);
 
         for (int i = 0; i < 10_000; i++) {
@@ -55,7 +55,7 @@ class MosaicSeedResolverOriginTest {
 
     @Test
     void originPreservationAppliesOnlyToThePrimaryDimension() {
-        MosaicSeedResolver resolver = new MosaicSeedResolver(MosaicWorldProfile.version1());
+        MosaicSeedResolver resolver = new MosaicSeedResolver(MosaicWorldProfile.current());
         long masterSeed = 123456789L;
 
         assertEquals(masterSeed, resolver.resolveLocalWorldSeed(masterSeed, Level.OVERWORLD, ChunkPos.ZERO));

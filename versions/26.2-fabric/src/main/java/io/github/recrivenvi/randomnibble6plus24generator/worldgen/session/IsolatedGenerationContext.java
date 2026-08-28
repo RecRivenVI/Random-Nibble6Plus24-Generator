@@ -1,12 +1,18 @@
 package io.github.recrivenvi.randomnibble6plus24generator.worldgen.session;
 
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import net.minecraft.core.RegistryAccess;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
@@ -16,6 +22,7 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.StructureManager;
 import net.minecraft.world.level.biome.BiomeManager;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.chunk.ChunkGeneratorStructureState;
@@ -50,6 +57,18 @@ public final class IsolatedGenerationContext implements AutoCloseable {
     private final AtomicLong suppressedPhysicalPoiUpdates = new AtomicLong();
     private final AtomicLong carverStageInvocationCount = new AtomicLong();
     private final AtomicReference<Long> observedCarverSeed = new AtomicReference<>();
+    private final AtomicReference<Long> observedFeatureSeed = new AtomicReference<>();
+    private final List<ChunkPos> requestedFeatureWriters = new CopyOnWriteArrayList<>();
+    private final List<ChunkPos> completedFeatureWriters = new CopyOnWriteArrayList<>();
+    private final AtomicInteger activeFeatureWriters = new AtomicInteger();
+    private final AtomicInteger maxConcurrentFeatureWriters = new AtomicInteger();
+    private final AtomicLong paleMossGeneratorRedirects = new AtomicLong();
+    private final AtomicLong cappedProcessorSeedRedirects = new AtomicLong();
+    private final AtomicLong decorationSeedReads = new AtomicLong();
+    private final AtomicLong featureSeedInvocationCount = new AtomicLong();
+    private final AtomicLong featureSeedSequenceHash = new AtomicLong(0xcbf29ce484222325L);
+    private final Map<String, FeatureWriteAccumulator> featureWrites = new TreeMap<>();
+    private volatile Set<Long> expectedFeatureWriters = Set.of();
     private volatile int carverSourceChunkCount;
     private volatile int configuredCarverCount;
     private volatile int carverChangedBlockCount;
@@ -151,8 +170,93 @@ public final class IsolatedGenerationContext implements AutoCloseable {
                         carvingMaskBitCount));
     }
 
+    /**
+     * Completes the finite V1 writer frontier in its frozen absolute Z/X order.
+     * A plain single-center generate-to-FEATURES operation is intentionally not exposed.
+     */
+    public FeatureStableGenerationRun generateFeaturesStable() {
+        ensureOpen();
+        FeatureOrderingPlan plan = FeatureOrderingPlan.targetLocalZxRowMajorV1(target);
+        expectedFeatureWriters = plan.packedWriterSet();
+        requestedFeatureWriters.clear();
+        completedFeatureWriters.clear();
+        requestedFeatureWriters.addAll(plan.writers());
+
+        long started = System.nanoTime();
+        long physicalSeedBefore = hostLevel.getSeed();
+        int loadedChunksBefore = hostLevel.getChunkSource().getLoadedChunksCount();
+        for (ChunkPos writer : plan.writers()) {
+            ChunkGenerationTask task = chunkMap.scheduleGenerationTask(ChunkStatus.FEATURES, writer);
+            CompletableFutureDriver.runToCompletion(task);
+            ChunkAccess writerChunk = task.getCenter().getChunkIfPresentUnchecked(ChunkStatus.FEATURES);
+            if (writerChunk == null || !writerChunk.getPersistedStatus().isOrAfter(ChunkStatus.FEATURES)) {
+                throw new IllegalStateException("FEATURES writer did not reach FEATURES: " + writer);
+            }
+        }
+
+        ChunkAccess targetChunk = chunkMap.chunkAt(target, ChunkStatus.FEATURES);
+        if (targetChunk == null || targetChunk.getPersistedStatus() != ChunkStatus.FEATURES) {
+            throw new IllegalStateException("Stable target did not stop at FEATURES: " + target);
+        }
+        Set<ChunkPos> actualFeatureChunks = chunkMap.chunksAtOrBeyond(ChunkStatus.FEATURES);
+        Set<ChunkPos> expectedFeatureChunks = plan.writers().stream()
+                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+        if (!actualFeatureChunks.equals(expectedFeatureChunks)) {
+            throw new IllegalStateException(
+                    "FeatureOrderingAlgorithmVersion 1 frontier violation; expected="
+                            + expectedFeatureChunks + ", actual=" + actualFeatureChunks);
+        }
+        if (!completedFeatureWriters.equals(plan.writers())) {
+            throw new IllegalStateException(
+                    "FEATURES execution order violation; requested=" + plan.writers()
+                            + ", completed=" + completedFeatureWriters);
+        }
+        Long observedSeed = observedFeatureSeed.get();
+        if (observedSeed == null || observedSeed != worldSeed) {
+            throw new PhysicalWorldAccessException(
+                    "FEATURES did not observe local world seed " + worldSeed + "; observed=" + observedSeed);
+        }
+        if (hostLevel.getSeed() != physicalSeedBefore) {
+            throw new PhysicalWorldAccessException("physical ServerLevel seed mutation during FEATURES");
+        }
+
+        int loadedChunksAfter = hostLevel.getChunkSource().getLoadedChunksCount();
+        long elapsed = System.nanoTime() - started;
+        IsolatedGenerationMetrics metrics = new IsolatedGenerationMetrics(
+                contextSetupNanos,
+                structureStateNanos,
+                elapsed,
+                chunkMap.virtualChunkCount(),
+                chunkScanAccess.scanCount(),
+                suppressedPhysicalPoiUpdates.get(),
+                loadedChunksBefore,
+                loadedChunksAfter);
+        return new FeatureStableGenerationRun(
+                targetChunk,
+                metrics,
+                executedStages(),
+                new FeatureGenerationTrace(
+                        plan.algorithmVersion(),
+                        plan.blockStateWriteRadius(),
+                        requestedFeatureWriters,
+                        completedFeatureWriters,
+                        actualFeatureChunks,
+                        maxConcurrentFeatureWriters.get(),
+                        observedSeed,
+                        paleMossGeneratorRedirects.get(),
+                        cappedProcessorSeedRedirects.get(),
+                        decorationSeedReads.get(),
+                        featureSeedInvocationCount.get(),
+                        featureSeedSequenceHash.get(),
+                        featureWriteSummary()));
+    }
+
     private GenerationResult generateTo(ChunkStatus targetStatus) {
         ensureOpen();
+        if (targetStatus.isOrAfter(ChunkStatus.FEATURES)) {
+            throw new IllegalArgumentException(
+                    "FEATURES requires generateFeaturesStable() and its complete ordered writer frontier");
+        }
         long started = System.nanoTime();
         long physicalSeedBefore = hostLevel.getSeed();
         int loadedChunksBefore = hostLevel.getChunkSource().getLoadedChunksCount();
@@ -266,6 +370,78 @@ public final class IsolatedGenerationContext implements AutoCloseable {
         this.carvingMaskBitCount = carvingMaskBitCount;
     }
 
+    public void beginFeatureWriter(ChunkPos writer) {
+        long packed = ChunkPos.pack(writer.x(), writer.z());
+        if (!expectedFeatureWriters.contains(packed)) {
+            throw new IllegalStateException("Unexpected FEATURES writer outside V1 frontier: " + writer);
+        }
+        int active = activeFeatureWriters.incrementAndGet();
+        maxConcurrentFeatureWriters.accumulateAndGet(active, Math::max);
+        if (active != 1) {
+            throw new IllegalStateException("Concurrent FEATURES writers inside one isolated session: " + active);
+        }
+    }
+
+    public void completeFeatureWriter(ChunkPos writer) {
+        completedFeatureWriters.add(writer);
+        int active = activeFeatureWriters.decrementAndGet();
+        if (active != 0) {
+            throw new IllegalStateException("FEATURES writer accounting imbalance after " + writer + ": " + active);
+        }
+    }
+
+    public void recordFeatureWorldSeed(long seed) {
+        if (seed != worldSeed) {
+            throw new PhysicalWorldAccessException(
+                    "FEATURES received world seed " + seed + " instead of local world seed " + worldSeed);
+        }
+        observedFeatureSeed.compareAndSet(null, seed);
+        if (observedFeatureSeed.get() != seed) {
+            throw new IllegalStateException("Conflicting FEATURES world seeds in one session");
+        }
+    }
+
+    public void recordPaleMossGeneratorRedirect() {
+        paleMossGeneratorRedirects.incrementAndGet();
+    }
+
+    public void recordCappedProcessorSeedRedirect() {
+        cappedProcessorSeedRedirects.incrementAndGet();
+    }
+
+    public void recordDecorationSeedRead(long seed) {
+        if (seed != worldSeed) {
+            throw new PhysicalWorldAccessException(
+                    "FEATURES decoration seed " + seed + " != local world seed " + worldSeed);
+        }
+        decorationSeedReads.incrementAndGet();
+    }
+
+    public void recordFeatureSeed(long decorationSeed, int featureIndex, int step) {
+        featureSeedInvocationCount.incrementAndGet();
+        featureSeedSequenceHash.updateAndGet(current -> {
+            long mixed = current ^ decorationSeed;
+            mixed *= 0x100000001b3L;
+            mixed ^= Integer.toUnsignedLong(featureIndex);
+            mixed *= 0x100000001b3L;
+            mixed ^= Integer.toUnsignedLong(step);
+            return mixed * 0x100000001b3L;
+        });
+    }
+
+    public synchronized void recordFeatureWrite(String feature, BlockPos pos, BlockState state) {
+        featureWrites.computeIfAbsent(feature, ignored -> new FeatureWriteAccumulator())
+                .record(pos, state);
+    }
+
+    private synchronized Map<String, String> featureWriteSummary() {
+        Map<String, String> summary = new TreeMap<>();
+        featureWrites.forEach((feature, accumulator) -> summary.put(
+                feature,
+                accumulator.count + "@" + Long.toUnsignedString(accumulator.hash, 16)));
+        return summary;
+    }
+
     @Override
     public void close() {
         if (!closed) {
@@ -276,7 +452,7 @@ public final class IsolatedGenerationContext implements AutoCloseable {
 
     private void ensureOpen() {
         if (closed) {
-            throw new IllegalStateException("Surface generation context is closed");
+            throw new IllegalStateException("Isolated generation context is closed");
         }
     }
 
@@ -292,7 +468,7 @@ public final class IsolatedGenerationContext implements AutoCloseable {
                     mosaicGenerator.generatorSettings());
         }
         throw new IllegalArgumentException(
-                "Isolated generation through CARVERS requires a noise-based generator configuration, found "
+                "Isolated generation through FEATURES requires a noise-based generator configuration, found "
                         + generator.getClass().getName());
     }
 
@@ -314,6 +490,19 @@ public final class IsolatedGenerationContext implements AutoCloseable {
                 }
                 wait.join();
             }
+        }
+    }
+
+    private static final class FeatureWriteAccumulator {
+        private long count;
+        private long hash = 0xcbf29ce484222325L;
+
+        private void record(BlockPos pos, BlockState state) {
+            count++;
+            hash ^= pos.asLong();
+            hash *= 0x100000001b3L;
+            hash ^= state.toString().hashCode();
+            hash *= 0x100000001b3L;
         }
     }
 }

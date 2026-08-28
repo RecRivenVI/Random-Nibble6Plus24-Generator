@@ -31,7 +31,7 @@ class MosaicChunkGeneratorTest {
 
     @Test
     void directCodecRoundTripsIdentityAndConfiguration() {
-        MosaicChunkGenerator generator = MosaicTestWorlds.serializableMosaicGenerator(MosaicWorldProfile.version1());
+        MosaicChunkGenerator generator = MosaicTestWorlds.serializableMosaicGenerator(MosaicWorldProfile.current());
         RegistryOps<JsonElement> ops = RegistryOps.create(JsonOps.INSTANCE, MosaicTestWorlds.registries());
         JsonElement encoded = MosaicChunkGenerator.CODEC.codec().encodeStart(ops, generator).getOrThrow();
         JsonObject object = encoded.getAsJsonObject();
@@ -51,7 +51,7 @@ class MosaicChunkGeneratorTest {
 
     @Test
     void harmlessDimensionIntrospectionComesFromSerializedSettings() {
-        MosaicChunkGenerator generator = MosaicTestWorlds.mosaicGenerator(MosaicWorldProfile.version1());
+        MosaicChunkGenerator generator = MosaicTestWorlds.mosaicGenerator(MosaicWorldProfile.current());
 
         assertEquals(generator.generatorSettings().value().noiseSettings().height(), generator.getGenDepth());
         assertEquals(generator.generatorSettings().value().noiseSettings().minY(), generator.getMinY());
@@ -60,7 +60,7 @@ class MosaicChunkGeneratorTest {
 
     @Test
     void everyVanillaGenerationStageFailsBeforeUsingItsArguments() {
-        MosaicChunkGenerator generator = MosaicTestWorlds.mosaicGenerator(MosaicWorldProfile.version1());
+        MosaicChunkGenerator generator = MosaicTestWorlds.mosaicGenerator(MosaicWorldProfile.current());
 
         assertUnavailable("createBiomes", () -> generator.createBiomes(null, null, null, null));
         assertUnavailable("createStructures", () -> generator.createStructures(null, null, null, null, null, null));

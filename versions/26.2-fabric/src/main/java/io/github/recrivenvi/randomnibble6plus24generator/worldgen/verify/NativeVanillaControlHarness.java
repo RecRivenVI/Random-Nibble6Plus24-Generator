@@ -47,7 +47,7 @@ public final class NativeVanillaControlHarness {
         ChunkPos target = new ChunkPos(
                 Integer.parseInt(requireProperty("chunkX")),
                 Integer.parseInt(requireProperty("chunkZ")));
-        long localSeed = new MosaicSeedResolver(MosaicWorldProfile.version1())
+        long localSeed = new MosaicSeedResolver(MosaicWorldProfile.current())
                 .resolveLocalWorldSeed(masterSeed, dimension, target);
         long physicalSeed = server.getWorldGenSettings().options().seed();
         if (physicalSeed != localSeed) {
@@ -128,7 +128,7 @@ public final class NativeVanillaControlHarness {
             SurfaceStageSnapshot nativeSurface = request.requireSurface();
             CarverStageSnapshot nativeCarvers = request.requireCarvers();
 
-            MosaicWorldProfile profile = MosaicWorldProfile.version1();
+            MosaicWorldProfile profile = MosaicWorldProfile.current();
             var isolatedSurfaceRun = new IsolatedGenerationSession(profile)
                     .generateSurface(level, request.masterSeed, request.target);
             var virtualSurfaceRun = new VanillaSurfaceControl()

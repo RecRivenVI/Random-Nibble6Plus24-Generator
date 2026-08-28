@@ -31,7 +31,7 @@ class MosaicSeedResolverSpecificationTest {
 
     @Test
     void authoritativeResolverMatchesTheFrozenNativePrimitiveCallChain() {
-        MosaicSeedResolver resolver = new MosaicSeedResolver(MosaicWorldProfile.version1());
+        MosaicSeedResolver resolver = new MosaicSeedResolver(MosaicWorldProfile.current());
 
         for (Query query : queries()) {
             long expected = deriveFinalSeedV1BySpecification(
@@ -46,7 +46,7 @@ class MosaicSeedResolverSpecificationTest {
 
     @Test
     void presentationResolverMatchesTheFrozenNativePrimitiveCallChain() {
-        MosaicSeedResolver resolver = new MosaicSeedResolver(MosaicWorldProfile.version1());
+        MosaicSeedResolver resolver = new MosaicSeedResolver(MosaicWorldProfile.current());
 
         for (Query query : queries()) {
             for (long previewIndex : new long[] {-1L, 0L, 1L, 17L, 10_000L, Long.MAX_VALUE}) {

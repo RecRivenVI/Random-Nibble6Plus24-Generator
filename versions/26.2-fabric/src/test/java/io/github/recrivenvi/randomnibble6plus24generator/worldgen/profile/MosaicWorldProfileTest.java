@@ -22,11 +22,12 @@ class MosaicWorldProfileTest {
     }
 
     @Test
-    void versionOneUsesTheFrozenSeedCoreVersionsAndOverworldPrimaryDimension() {
-        MosaicWorldProfile profile = MosaicWorldProfile.version1();
+    void currentProfileUsesFormatTwoAndAllFrozenAlgorithmVersions() {
+        MosaicWorldProfile profile = MosaicWorldProfile.current();
 
-        assertEquals(1, profile.formatVersion());
+        assertEquals(2, profile.formatVersion());
         assertEquals(1, profile.seedDerivationAlgorithmVersion());
+        assertEquals(1, profile.featureOrderingAlgorithmVersion());
         assertEquals(1, profile.presentationAlgorithmVersion());
         assertEquals(Level.OVERWORLD, profile.primaryDimension());
     }
@@ -39,27 +40,28 @@ class MosaicWorldProfileTest {
 
     @Test
     void profileRejectsNonPositiveVersionNumbers() {
-        assertThrows(IllegalArgumentException.class, () -> new MosaicWorldProfile(0, 1, 1, Level.OVERWORLD));
-        assertThrows(IllegalArgumentException.class, () -> new MosaicWorldProfile(1, 0, 1, Level.OVERWORLD));
-        assertThrows(IllegalArgumentException.class, () -> new MosaicWorldProfile(1, 1, 0, Level.OVERWORLD));
+        assertThrows(IllegalArgumentException.class, () -> new MosaicWorldProfile(0, 1, 1, 1, Level.OVERWORLD));
+        assertThrows(IllegalArgumentException.class, () -> new MosaicWorldProfile(2, 0, 1, 1, Level.OVERWORLD));
+        assertThrows(IllegalArgumentException.class, () -> new MosaicWorldProfile(2, 1, 0, 1, Level.OVERWORLD));
+        assertThrows(IllegalArgumentException.class, () -> new MosaicWorldProfile(2, 1, 1, 0, Level.OVERWORLD));
     }
 
     @Test
     void resolverRejectsUnsupportedVersions() {
         assertThrows(
                 IllegalArgumentException.class,
-                () -> new MosaicSeedResolver(new MosaicWorldProfile(2, 1, 1, Level.OVERWORLD)));
+                () -> new MosaicSeedResolver(new MosaicWorldProfile(1, 1, 1, 1, Level.OVERWORLD)));
 
-        MosaicSeedResolver unsupportedSeedAlgorithm = new MosaicSeedResolver(
-                new MosaicWorldProfile(1, 2, 1, Level.OVERWORLD));
         assertThrows(
                 IllegalArgumentException.class,
-                () -> unsupportedSeedAlgorithm.resolveLocalWorldSeed(0L, Level.OVERWORLD, new net.minecraft.world.level.ChunkPos(1, 0)));
+                () -> new MosaicSeedResolver(new MosaicWorldProfile(2, 2, 1, 1, Level.OVERWORLD)));
 
-        MosaicSeedResolver unsupportedPresentationAlgorithm = new MosaicSeedResolver(
-                new MosaicWorldProfile(1, 1, 2, Level.OVERWORLD));
         assertThrows(
                 IllegalArgumentException.class,
-                () -> unsupportedPresentationAlgorithm.resolvePreviewSeed(0L, Level.OVERWORLD, net.minecraft.world.level.ChunkPos.ZERO, 0L));
+                () -> new MosaicSeedResolver(new MosaicWorldProfile(2, 1, 1, 2, Level.OVERWORLD)));
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new MosaicWorldProfile(2, 1, 2, 1, Level.OVERWORLD).requireSupported());
     }
 }

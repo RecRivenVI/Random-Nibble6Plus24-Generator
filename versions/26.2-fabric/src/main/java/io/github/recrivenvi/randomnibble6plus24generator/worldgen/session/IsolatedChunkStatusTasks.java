@@ -2,7 +2,9 @@ package io.github.recrivenvi.randomnibble6plus24generator.worldgen.session;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.BitSet;
+import java.util.EnumSet;
 
+import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.QuartPos;
 import net.minecraft.server.level.GenerationChunkHolder;
@@ -17,6 +19,7 @@ import net.minecraft.world.level.biome.BiomeGenerationSettings;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.level.chunk.status.ChunkStep;
 import net.minecraft.world.level.levelgen.blending.Blender;
+import net.minecraft.world.level.levelgen.Heightmap;
 
 public final class IsolatedChunkStatusTasks {
 
@@ -133,13 +136,45 @@ public final class IsolatedChunkStatusTasks {
         return CompletableFuture.completedFuture(chunk);
     }
 
+    public static CompletableFuture<ChunkAccess> generateFeatures(
+            IsolatedGenerationContext context,
+            ChunkStep step,
+            StaticCache2D<GenerationChunkHolder> cache,
+            ChunkAccess chunk) {
+        context.recordStage(ChunkStatus.FEATURES);
+        context.beginFeatureWriter(chunk.getPos());
+        try {
+            Heightmap.primeHeightmaps(
+                    chunk,
+                    EnumSet.of(
+                            Heightmap.Types.MOTION_BLOCKING,
+                            Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                            Heightmap.Types.OCEAN_FLOOR,
+                            Heightmap.Types.WORLD_SURFACE));
+            WorldGenRegion region = region(context, step, cache, chunk);
+            context.recordFeatureWorldSeed(region.getSeed());
+            if (!SharedConstants.DEBUG_DISABLE_FEATURES) {
+                context.generator().applyBiomeDecoration(
+                        region,
+                        chunk,
+                        context.structureManager().forWorldGenRegion(region));
+            }
+            Blender.generateBorderTicks(region, chunk);
+            return CompletableFuture.completedFuture(chunk);
+        } finally {
+            context.completeFeatureWriter(chunk.getPos());
+        }
+    }
+
     private static WorldGenRegion region(
             IsolatedGenerationContext context,
             ChunkStep step,
             StaticCache2D<GenerationChunkHolder> cache,
             ChunkAccess chunk) {
         GenerationContextRegistry.bind(cache, context);
-        return new WorldGenRegion(context.hostLevel(), cache, step, chunk);
+        WorldGenRegion region = new WorldGenRegion(context.hostLevel(), cache, step, chunk);
+        GenerationContextRegistry.bind(region, context);
+        return region;
     }
 
     private static int countConfiguredCarvers(

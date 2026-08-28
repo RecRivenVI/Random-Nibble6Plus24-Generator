@@ -118,6 +118,21 @@ public final class FeatureStageSnapshot {
             String dimension,
             ChunkAccess chunk,
             RegistryAccess registryAccess) {
+        return capture(dimension, chunk, registryAccess, false);
+    }
+
+    static FeatureStageSnapshot captureWithCanonicalEntityUuids(
+            String dimension,
+            ChunkAccess chunk,
+            RegistryAccess registryAccess) {
+        return capture(dimension, chunk, registryAccess, true);
+    }
+
+    private static FeatureStageSnapshot capture(
+            String dimension,
+            ChunkAccess chunk,
+            RegistryAccess registryAccess,
+            boolean normalizeEntityUuids) {
         if (!(chunk instanceof ProtoChunk protoChunk)) {
             throw new IllegalArgumentException(
                     "Stage-exact FEATURES snapshot requires ProtoChunk, found " + chunk.getClass().getName());
@@ -168,7 +183,7 @@ public final class FeatureStageSnapshot {
             }
         }
         List<String> entities = protoChunk.getEntities().stream()
-                .map(FeatureStageSnapshot::canonicalTag)
+                .map(tag -> canonicalTag(tag, normalizeEntityUuids, true))
                 .toList();
 
         return new FeatureStageSnapshot(
@@ -305,6 +320,10 @@ public final class FeatureStageSnapshot {
         return entities.size();
     }
 
+    public List<String> entityNbt() {
+        return entities;
+    }
+
     public int postProcessingCount() {
         return postProcessing.values().stream().mapToInt(values -> values.length).sum();
     }
@@ -334,6 +353,10 @@ public final class FeatureStageSnapshot {
         if (shortDifference != null) return shortDifference;
         if (!entities.equals(other.entities)) return "ProtoChunk entities differ";
         return null;
+    }
+
+    public String deterministicMetadataDifference(FeatureStageSnapshot other) {
+        return firstMetaDifference(other) != null ? firstMetaDifference(other) : firstNonBlockDifference(other);
     }
 
     private String calculateHash() {
@@ -431,13 +454,22 @@ public final class FeatureStageSnapshot {
     }
 
     private static String canonicalTag(Tag tag) {
+        return canonicalTag(tag, false, false);
+    }
+
+    private static String canonicalTag(Tag tag, boolean normalizeEntityUuids, boolean entityRoot) {
         if (tag instanceof CompoundTag compound) {
             StringBuilder builder = new StringBuilder("{");
             boolean first = true;
             for (String key : new TreeSet<>(compound.keySet())) {
                 if (!first) builder.append(',');
                 first = false;
-                builder.append(key).append(':').append(canonicalTag(compound.get(key)));
+                builder.append(key).append(':');
+                if (normalizeEntityUuids && entityRoot && isEntityUuidKey(key)) {
+                    builder.append("<excluded-entity-uuid>");
+                } else {
+                    builder.append(canonicalTag(compound.get(key), normalizeEntityUuids, false));
+                }
             }
             return builder.append('}').toString();
         }
@@ -445,11 +477,15 @@ public final class FeatureStageSnapshot {
             StringBuilder builder = new StringBuilder("[");
             for (int index = 0; index < list.size(); index++) {
                 if (index > 0) builder.append(',');
-                builder.append(canonicalTag(list.get(index)));
+                builder.append(canonicalTag(list.get(index), normalizeEntityUuids, false));
             }
             return builder.append(']').toString();
         }
         return tag.getId() + ":" + tag;
+    }
+
+    private static boolean isEntityUuidKey(String key) {
+        return key.equals("UUID") || key.equals("UUIDMost") || key.equals("UUIDLeast");
     }
 
     private static String normalizeBlockTick(SavedTick<net.minecraft.world.level.block.Block> tick) {

@@ -10,8 +10,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.identity.MosaicWorldIdentity;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2AVerification;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2BVerification;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2C1Verification;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.NativeVanillaControlHarness;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.NativeVanillaFeatureOrderProbe;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.NativeVanillaFeatureControlHarness;
 
 @Mixin(MinecraftServer.class)
 abstract class MinecraftServerMixin {
@@ -27,7 +29,9 @@ abstract class MinecraftServerMixin {
         MosaicWorldIdentity.validateServerAfterLevelCreation((MinecraftServer) (Object) this);
         Phase2AVerification.runIfRequested((MinecraftServer) (Object) this);
         Phase2BVerification.runIfRequested((MinecraftServer) (Object) this);
+        Phase2C1Verification.runIfRequested((MinecraftServer) (Object) this);
         NativeVanillaControlHarness.completeIfRequested((MinecraftServer) (Object) this);
         NativeVanillaFeatureOrderProbe.runIfRequested((MinecraftServer) (Object) this);
+        NativeVanillaFeatureControlHarness.runIfRequested((MinecraftServer) (Object) this);
     }
 }

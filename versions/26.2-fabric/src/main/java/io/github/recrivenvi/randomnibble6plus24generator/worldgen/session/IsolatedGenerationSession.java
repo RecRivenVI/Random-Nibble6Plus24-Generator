@@ -50,6 +50,24 @@ public final class IsolatedGenerationSession {
         }
     }
 
+    public FeatureStableGenerationRun generateFeaturesStable(
+            ServerLevel hostLevel,
+            long masterSeed,
+            ChunkPos target) {
+        profile.requireSupported();
+        long localWorldSeed = seedResolver.resolveLocalWorldSeed(
+                masterSeed,
+                hostLevel.dimension(),
+                target);
+        try (IsolatedGenerationContext context = IsolatedGenerationContext.create(
+                IsolatedGenerationMode.ISOLATED_MOSAIC,
+                hostLevel,
+                localWorldSeed,
+                target)) {
+            return context.generateFeaturesStable();
+        }
+    }
+
     public MosaicWorldProfile profile() {
         return profile;
     }
