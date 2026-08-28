@@ -20,12 +20,13 @@ import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.Isolat
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.FeatureFrontierEvidence;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.NativeFeatureExecutionTrace;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicPhysicalMaterializer;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicPhysicalPoiReconciler;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.PhysicalMosaicTrace;
 
 @Mixin(ChunkStatusTasks.class)
 abstract class ChunkStatusTasksMixin {
 
-    @Inject(method = {"initializeLight", "light", "generateSpawn", "full"}, at = @At("HEAD"))
+    @Inject(method = {"generateSpawn", "full"}, at = @At("HEAD"))
     private static void randomnibble6plus24generator$rejectPostFeaturesPhysicalMosaic(
             WorldGenContext worldGenContext,
             ChunkStep step,
@@ -36,6 +37,43 @@ abstract class ChunkStatusTasksMixin {
                 && MosaicPhysicalMaterializer.isPhysicalMosaic(worldGenContext.level())) {
             PhysicalMosaicTrace.rejectForbiddenStatus(step.targetStatus());
         }
+    }
+
+    @Inject(method = "initializeLight", at = @At("HEAD"), cancellable = true)
+    private static void randomnibble6plus24generator$preparePhysicalMosaicInitializeLight(
+            WorldGenContext worldGenContext,
+            ChunkStep step,
+            StaticCache2D<GenerationChunkHolder> cache,
+            ChunkAccess chunk,
+            CallbackInfoReturnable<CompletableFuture<ChunkAccess>> callback) {
+        if (GenerationContextRegistry.find(worldGenContext).isPresent()
+                || !MosaicPhysicalMaterializer.isPhysicalMosaic(worldGenContext.level())) return;
+        boolean physicalEngine = worldGenContext.lightEngine()
+                == worldGenContext.level().getChunkSource().getLightEngine();
+        try {
+            PhysicalMosaicTrace.beginPhysicalStage(
+                    worldGenContext.level(), ChunkStatus.INITIALIZE_LIGHT, chunk, physicalEngine);
+            MosaicPhysicalPoiReconciler.reconcile(worldGenContext.level(), chunk);
+        } catch (RuntimeException exception) {
+            CompletableFuture<ChunkAccess> failed = new CompletableFuture<>();
+            failed.completeExceptionally(exception);
+            callback.setReturnValue(failed);
+        }
+    }
+
+    @Inject(method = "light", at = @At("HEAD"))
+    private static void randomnibble6plus24generator$observePhysicalMosaicLight(
+            WorldGenContext worldGenContext,
+            ChunkStep step,
+            StaticCache2D<GenerationChunkHolder> cache,
+            ChunkAccess chunk,
+            CallbackInfoReturnable<CompletableFuture<ChunkAccess>> callback) {
+        if (GenerationContextRegistry.find(worldGenContext).isPresent()
+                || !MosaicPhysicalMaterializer.isPhysicalMosaic(worldGenContext.level())) return;
+        boolean physicalEngine = worldGenContext.lightEngine()
+                == worldGenContext.level().getChunkSource().getLightEngine();
+        PhysicalMosaicTrace.beginPhysicalStage(
+                worldGenContext.level(), ChunkStatus.LIGHT, chunk, physicalEngine);
     }
 
     @Inject(method = "generateStructureStarts", at = @At("HEAD"), cancellable = true)

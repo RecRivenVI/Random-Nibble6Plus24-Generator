@@ -44,10 +44,27 @@ abstract class ChunkMapMixin {
             ChunkStep step,
             StaticCache2D<GenerationChunkHolder> cache,
             CallbackInfoReturnable<CompletableFuture<ChunkAccess>> callback) {
-        if (step.targetStatus() != ChunkStatus.EMPTY && MosaicPhysicalMaterializer.isPhysicalMosaic(level)) {
-            callback.setReturnValue(MosaicPhysicalMaterializer.passThroughPhysicalStep(
-                    holder, step.targetStatus()));
+        if (!MosaicPhysicalMaterializer.isPhysicalMosaic(level) || step.targetStatus() == ChunkStatus.EMPTY) return;
+        ChunkStatus target = step.targetStatus();
+        if (target.isOrBefore(ChunkStatus.FEATURES)) {
+            callback.setReturnValue(MosaicPhysicalMaterializer.passThroughPhysicalStep(level, holder, target));
+            return;
         }
+        if (target == ChunkStatus.INITIALIZE_LIGHT) return;
+        if (target == ChunkStatus.LIGHT) {
+            try {
+                io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.PhysicalMosaicTrace
+                        .beforeLightStep(level, holder);
+            } catch (RuntimeException exception) {
+                CompletableFuture<ChunkAccess> failed = new CompletableFuture<>();
+                failed.completeExceptionally(exception);
+                callback.setReturnValue(MosaicPhysicalMaterializer.onPhysicalStepFuture(
+                        level, holder, target, failed));
+            }
+            return;
+        }
+        io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.PhysicalMosaicTrace
+                .rejectForbiddenStatus(target);
     }
 
     @Inject(method = "applyStep", at = @At("RETURN"), cancellable = true)
@@ -58,9 +75,14 @@ abstract class ChunkMapMixin {
             CallbackInfoReturnable<CompletableFuture<ChunkAccess>> callback) {
         if (step.targetStatus() == ChunkStatus.EMPTY
                 && MosaicPhysicalMaterializer.isPhysicalMosaic(level)
-                && MosaicPhysicalMaterializer.isRequestedTarget(level, holder.getPos())) {
+                && MosaicPhysicalMaterializer.hasMaterializationObligation(level, holder.getPos())) {
             callback.setReturnValue(MosaicPhysicalMaterializer.materializeLoadedTarget(
                     level, holder, callback.getReturnValue()));
+        } else if ((step.targetStatus() == ChunkStatus.INITIALIZE_LIGHT
+                        || step.targetStatus() == ChunkStatus.LIGHT)
+                && MosaicPhysicalMaterializer.isPhysicalMosaic(level)) {
+            callback.setReturnValue(MosaicPhysicalMaterializer.onPhysicalStepFuture(
+                    level, holder, step.targetStatus(), callback.getReturnValue()));
         }
     }
 }

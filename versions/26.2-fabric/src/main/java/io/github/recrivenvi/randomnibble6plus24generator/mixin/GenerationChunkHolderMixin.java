@@ -1,18 +1,40 @@
 package io.github.recrivenvi.randomnibble6plus24generator.mixin;
 
+import java.util.concurrent.CompletableFuture;
+
+import net.minecraft.server.level.ChunkResult;
 import net.minecraft.server.level.GenerationChunkHolder;
+import net.minecraft.server.level.GeneratingChunkMap;
+import net.minecraft.util.StaticCache2D;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
+import net.minecraft.world.level.chunk.status.ChunkStep;
 
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicPhysicalMaterializer;
 
 @Mixin(GenerationChunkHolder.class)
 abstract class GenerationChunkHolderMixin {
+
+    @Shadow
+    private volatile ChunkStatus highestAllowedStatus;
+
+    @Inject(method = "applyStep", at = @At("HEAD"))
+    private void randomnibble6plus24generator$allowExplicitPhysicalDerivedStep(
+            ChunkStep step,
+            GeneratingChunkMap chunkMap,
+            StaticCache2D<GenerationChunkHolder> cache,
+            CallbackInfoReturnable<CompletableFuture<ChunkResult<ChunkAccess>>> callback) {
+        GenerationChunkHolder self = (GenerationChunkHolder) (Object) this;
+        ChunkStatus allowance = MosaicPhysicalMaterializer.physicalStepAllowance(chunkMap, self.getPos());
+        if (allowance != null && step.targetStatus().isOrBefore(allowance)) highestAllowedStatus = allowance;
+    }
 
     @Inject(method = "completeFuture", at = @At("RETURN"))
     private void randomnibble6plus24generator$observeAtomicPhysicalPublish(

@@ -38,10 +38,11 @@ class FabricMetadataTest {
         JsonObject mixins = resourceJson("/randomnibble6plus24generator.mixins.json");
 
         assertTrue(mixins.get("required").getAsBoolean());
-        assertEquals(13, mixins.getAsJsonArray("mixins").size());
+        assertEquals(15, mixins.getAsJsonArray("mixins").size());
         assertTrue(mixins.getAsJsonArray("mixins").contains(new com.google.gson.JsonPrimitive("CappedProcessorMixin")));
         assertTrue(mixins.getAsJsonArray("mixins").contains(new com.google.gson.JsonPrimitive("ChunkGeneratorMixin")));
         assertTrue(mixins.getAsJsonArray("mixins").contains(new com.google.gson.JsonPrimitive("ChunkMapMixin")));
+        assertTrue(mixins.getAsJsonArray("mixins").contains(new com.google.gson.JsonPrimitive("ChunkMapInvoker")));
         assertTrue(mixins.getAsJsonArray("mixins").contains(new com.google.gson.JsonPrimitive("ChunkStatusTasksMixin")));
         assertTrue(mixins.getAsJsonArray("mixins").contains(new com.google.gson.JsonPrimitive("ChunkStepMixin")));
         assertTrue(mixins.getAsJsonArray("mixins").contains(new com.google.gson.JsonPrimitive("GenerationChunkHolderMixin")));
@@ -51,6 +52,7 @@ class FabricMetadataTest {
         assertTrue(mixins.getAsJsonArray("mixins").contains(new com.google.gson.JsonPrimitive("SerializableChunkDataInvoker")));
         assertTrue(mixins.getAsJsonArray("mixins").contains(new com.google.gson.JsonPrimitive("SerializableChunkDataMixin")));
         assertTrue(mixins.getAsJsonArray("mixins").contains(new com.google.gson.JsonPrimitive("SeedCommandMixin")));
+        assertTrue(mixins.getAsJsonArray("mixins").contains(new com.google.gson.JsonPrimitive("ServerChunkCacheMixin")));
         assertTrue(mixins.getAsJsonArray("mixins").contains(new com.google.gson.JsonPrimitive("WorldGenRegionMixin")));
     }
 

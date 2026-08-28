@@ -5,6 +5,7 @@
     "CappedProcessorMixin",
     "ChunkGeneratorMixin",
     "ChunkMapMixin",
+    "ChunkMapInvoker",
     "ChunkStatusTasksMixin",
     "ChunkStepMixin",
     "GenerationChunkHolderMixin",
@@ -14,6 +15,7 @@
     "SerializableChunkDataInvoker",
     "SerializableChunkDataMixin",
     "SeedCommandMixin",
+    "ServerChunkCacheMixin",
     "WorldGenRegionMixin"
   ],
   "injectors": {

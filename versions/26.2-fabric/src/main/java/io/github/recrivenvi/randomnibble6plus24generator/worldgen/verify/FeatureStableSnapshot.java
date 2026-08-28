@@ -69,6 +69,10 @@ public final class FeatureStableSnapshot {
         return canonical.hash();
     }
 
+    public String worldgenDataHash() {
+        return canonical.worldgenDataHash();
+    }
+
     public ChunkPos chunkPos() {
         return canonical.chunkPos();
     }

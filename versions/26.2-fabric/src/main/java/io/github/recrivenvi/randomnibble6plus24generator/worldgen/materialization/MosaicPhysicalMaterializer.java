@@ -3,7 +3,6 @@ package io.github.recrivenvi.randomnibble6plus24generator.worldgen.materializati
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -12,6 +11,7 @@ import java.util.function.Consumer;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.GenerationChunkHolder;
+import net.minecraft.server.level.GeneratingChunkMap;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Util;
 import net.minecraft.world.level.ChunkPos;
@@ -36,7 +36,17 @@ import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.Isolat
  */
 public final class MosaicPhysicalMaterializer {
 
-    private static final ConcurrentHashMap<GenerationKey, ChunkStatus> REQUESTED_TARGETS = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<GenerationKey, ChunkStatus> REQUESTED_PHYSICAL_STATUSES =
+            new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<GenerationKey, ChunkStatus> MATERIALIZATION_OBLIGATIONS =
+            new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<GenerationKey, ChunkStatus> PHYSICAL_STATUS_ALLOWANCES =
+            new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<GenerationKey, Map<GenerationKey, ChunkStatus>> ACTIVE_PHYSICAL_PLANS =
+            new ConcurrentHashMap<>();
+    private static final Object PLAN_LOCK = new Object();
+    private static final Map<GeneratingChunkMap, ServerLevel> PHYSICAL_CHUNK_MAPS =
+            java.util.Collections.synchronizedMap(new IdentityHashMap<>());
     private static final ConcurrentHashMap<GenerationKey, InFlight> IN_FLIGHT = new ConcurrentHashMap<>();
     private static final Map<ChunkAccess, GenerationKey> AWAITING_PUBLISH =
             java.util.Collections.synchronizedMap(new IdentityHashMap<>());
@@ -45,6 +55,7 @@ public final class MosaicPhysicalMaterializer {
     private static final AtomicLong ISOLATED_GENERATIONS = new AtomicLong();
     private static final AtomicLong ARTIFACT_CAPTURES = new AtomicLong();
     private static final AtomicLong PUBLISHES = new AtomicLong();
+    private static final AtomicLong PLAN_COUNT = new AtomicLong();
 
     private static volatile Consumer<Publication> verificationObserver;
     private static volatile FaultPoint verificationFault = FaultPoint.NONE;
@@ -58,16 +69,53 @@ public final class MosaicPhysicalMaterializer {
 
     public static void registerPhysicalRequest(ServerLevel level, ChunkStatus targetStatus, ChunkPos pos) {
         if (!isPhysicalMosaic(level) || targetStatus == ChunkStatus.EMPTY) return;
-        if (targetStatus.isAfter(ChunkStatus.FEATURES)) {
+        if (targetStatus.isAfter(ChunkStatus.LIGHT)) {
             throw new IllegalStateException(
-                    "Phase 3A refuses physical Mosaic status after FEATURES: " + targetStatus + " at " + pos);
+                    "Phase 3B refuses physical Mosaic status after LIGHT: " + targetStatus + " at " + pos);
         }
         GenerationKey key = key(level, pos);
-        REQUESTED_TARGETS.merge(key, targetStatus, (left, right) -> right.isAfter(left) ? right : left);
+        PHYSICAL_CHUNK_MAPS.put(level.getChunkSource().chunkMap, level);
+        ChunkStatus effectiveStatus = REQUESTED_PHYSICAL_STATUSES.merge(
+                key, targetStatus, (left, right) -> right.isAfter(left) ? right : left);
+        MosaicPhysicalGenerationPlan plan = MosaicPhysicalGenerationPlan.derive(pos, effectiveStatus);
+        PLAN_COUNT.incrementAndGet();
+        plan.materializationObligations().forEach((obligationPos, requiredStatus) -> {
+            GenerationKey obligationKey = key(level, obligationPos);
+            GenerationChunkHolder existing = level.getChunkSource().chunkMap
+                    .getUpdatingChunkIfPresent(ChunkPos.pack(obligationPos.x(), obligationPos.z()));
+            ChunkStatus existingStatus = existing == null ? null : existing.getPersistedStatus();
+            if (existingStatus != null && !existingStatus.isBefore(ChunkStatus.FEATURES)) {
+                MATERIALIZATION_OBLIGATIONS.remove(obligationKey);
+            } else {
+                MATERIALIZATION_OBLIGATIONS.merge(
+                        obligationKey,
+                        requiredStatus,
+                        (left, right) -> right.isAfter(left) ? right : left);
+            }
+        });
+        Map<GenerationKey, ChunkStatus> keyedRequirements = new java.util.LinkedHashMap<>();
+        plan.physicalStatusRequirements().forEach((requiredPos, requiredStatus) ->
+                keyedRequirements.put(key(level, requiredPos), requiredStatus));
+        synchronized (PLAN_LOCK) {
+            ACTIVE_PHYSICAL_PLANS.put(key, Map.copyOf(keyedRequirements));
+            keyedRequirements.forEach((requiredKey, requiredStatus) ->
+                    PHYSICAL_STATUS_ALLOWANCES.merge(
+                            requiredKey,
+                            requiredStatus,
+                            (left, right) -> right.isAfter(left) ? right : left));
+        }
+        PhysicalMosaicTrace.recordPlan(level, plan);
     }
 
-    public static boolean isRequestedTarget(ServerLevel level, ChunkPos pos) {
-        return REQUESTED_TARGETS.containsKey(key(level, pos));
+    public static boolean hasMaterializationObligation(ServerLevel level, ChunkPos pos) {
+        return MATERIALIZATION_OBLIGATIONS.containsKey(key(level, pos));
+    }
+
+    public static ChunkStatus physicalStepAllowance(
+            GeneratingChunkMap chunkMap, ChunkPos pos) {
+        ServerLevel level = PHYSICAL_CHUNK_MAPS.get(chunkMap);
+        if (level == null || !isPhysicalMosaic(level)) return null;
+        return PHYSICAL_STATUS_ALLOWANCES.get(key(level, pos));
     }
 
     public static CompletableFuture<ChunkAccess> materializeLoadedTarget(
@@ -75,10 +123,10 @@ public final class MosaicPhysicalMaterializer {
             GenerationChunkHolder holder,
             CompletableFuture<ChunkAccess> loadedFuture) {
         GenerationKey key = key(level, holder.getPos());
-        if (!REQUESTED_TARGETS.containsKey(key)) return loadedFuture;
+        if (!MATERIALIZATION_OBLIGATIONS.containsKey(key)) return loadedFuture;
         return loadedFuture.thenCompose(loaded -> {
             if (!loaded.getPersistedStatus().isBefore(ChunkStatus.FEATURES)) {
-                REQUESTED_TARGETS.remove(key);
+                MATERIALIZATION_OBLIGATIONS.remove(key);
                 return CompletableFuture.completedFuture(loaded);
             }
             return requestPrepared(level, holder.getPos()).thenApply(prepared -> {
@@ -122,7 +170,8 @@ public final class MosaicPhysicalMaterializer {
         promise.whenComplete((prepared, throwable) -> {
             if (throwable != null) {
                 IN_FLIGHT.remove(key, created);
-                REQUESTED_TARGETS.remove(key);
+                MATERIALIZATION_OBLIGATIONS.remove(key);
+                clearPlansContaining(level, pos);
             }
         });
         return promise;
@@ -143,6 +192,7 @@ public final class MosaicPhysicalMaterializer {
     }
 
     public static CompletableFuture<ChunkAccess> passThroughPhysicalStep(
+            ServerLevel level,
             GenerationChunkHolder holder,
             ChunkStatus targetStatus) {
         ChunkAccess parent = holder.getChunkIfPresentUnchecked(targetStatus.getParent());
@@ -151,7 +201,74 @@ public final class MosaicPhysicalMaterializer {
                     "Mosaic physical status pass-through is missing parent "
                             + targetStatus.getParent() + " for " + holder.getPos());
         }
-        return CompletableFuture.completedFuture(parent);
+        return onPhysicalStepFuture(
+                level, holder, targetStatus, CompletableFuture.completedFuture(parent));
+    }
+
+    public static CompletableFuture<ChunkAccess> onPhysicalStepFuture(
+            ServerLevel level,
+            GenerationChunkHolder holder,
+            ChunkStatus targetStatus,
+            CompletableFuture<ChunkAccess> future) {
+        return future.thenApply(chunk -> {
+            GenerationKey key = key(level, holder.getPos());
+            ChunkStatus requested = REQUESTED_PHYSICAL_STATUSES.get(key);
+            if (requested != null && targetStatus.isOrAfter(requested)) {
+                completePhysicalRequest(key);
+            }
+            ChunkStatus allowance = PHYSICAL_STATUS_ALLOWANCES.get(key);
+            if (allowance != null && targetStatus.isOrAfter(allowance)) {
+                PHYSICAL_STATUS_ALLOWANCES.remove(key, allowance);
+            }
+            PhysicalMosaicTrace.onPhysicalStepCompleted(level, targetStatus, chunk);
+            return chunk;
+        }).whenComplete((chunk, throwable) -> {
+            if (throwable != null) clearPlansContaining(level, holder.getPos());
+        });
+    }
+
+    public static void clearPhysicalRequest(ServerLevel level, ChunkPos pos) {
+        completePhysicalRequest(key(level, pos));
+    }
+
+    private static void completePhysicalRequest(GenerationKey key) {
+        REQUESTED_PHYSICAL_STATUSES.remove(key);
+        MATERIALIZATION_OBLIGATIONS.remove(key);
+        synchronized (PLAN_LOCK) {
+            Map<GenerationKey, ChunkStatus> removed = ACTIVE_PHYSICAL_PLANS.remove(key);
+            if (removed == null) {
+                PHYSICAL_STATUS_ALLOWANCES.remove(key);
+                return;
+            }
+            for (GenerationKey affected : removed.keySet()) {
+                ChunkStatus remaining = null;
+                for (Map<GenerationKey, ChunkStatus> active : ACTIVE_PHYSICAL_PLANS.values()) {
+                    ChunkStatus candidate = active.get(affected);
+                    if (candidate != null && (remaining == null || candidate.isAfter(remaining))) {
+                        remaining = candidate;
+                    }
+                }
+                if (remaining == null) PHYSICAL_STATUS_ALLOWANCES.remove(affected);
+                else PHYSICAL_STATUS_ALLOWANCES.put(affected, remaining);
+            }
+        }
+    }
+
+    private static void clearPlansContaining(ServerLevel level, ChunkPos failedPos) {
+        GenerationKey failedKey = key(level, failedPos);
+        java.util.List<GenerationKey> owners;
+        synchronized (PLAN_LOCK) {
+            owners = ACTIVE_PHYSICAL_PLANS.entrySet().stream()
+                    .filter(entry -> entry.getValue().containsKey(failedKey))
+                    .map(Map.Entry::getKey)
+                    .toList();
+        }
+        if (owners.isEmpty()) {
+            MATERIALIZATION_OBLIGATIONS.remove(failedKey);
+            PHYSICAL_STATUS_ALLOWANCES.remove(failedKey);
+        } else {
+            owners.forEach(MosaicPhysicalMaterializer::completePhysicalRequest);
+        }
     }
 
     /** Called from GenerationChunkHolder.completeFuture, the scheduler-owned publication point. */
@@ -159,22 +276,25 @@ public final class MosaicPhysicalMaterializer {
             GenerationChunkHolder holder,
             ChunkStatus status,
             ChunkAccess chunk) {
-        if (status != ChunkStatus.EMPTY) return;
-        GenerationKey key = AWAITING_PUBLISH.remove(chunk);
-        if (key == null) return;
-        if (!holder.getPos().equals(key.pos())) {
-            abort(key, chunk);
-            throw new IllegalStateException("Prepared Mosaic Chunk published to the wrong holder");
+        if (status == ChunkStatus.EMPTY) {
+            GenerationKey key = AWAITING_PUBLISH.remove(chunk);
+            if (key != null) {
+                if (!holder.getPos().equals(key.pos())) {
+                    abort(key, chunk);
+                    throw new IllegalStateException("Prepared Mosaic Chunk published to the wrong holder");
+                }
+                PUBLISHES.incrementAndGet();
+                InFlight flight = IN_FLIGHT.remove(key);
+                MATERIALIZATION_OBLIGATIONS.remove(key);
+                if (flight == null) {
+                    throw new IllegalStateException("Published Mosaic Chunk had no in-flight owner: " + key);
+                }
+                PreparedMaterialization prepared = flight.future().join();
+                Consumer<Publication> observer = verificationObserver;
+                if (observer != null) observer.accept(new Publication(key, prepared, holder));
+            }
         }
-        PUBLISHES.incrementAndGet();
-        InFlight flight = IN_FLIGHT.remove(key);
-        REQUESTED_TARGETS.remove(key);
-        if (flight == null) {
-            throw new IllegalStateException("Published Mosaic Chunk had no in-flight owner: " + key);
-        }
-        PreparedMaterialization prepared = flight.future().join();
-        Consumer<Publication> observer = verificationObserver;
-        if (observer != null) observer.accept(new Publication(key, prepared, holder));
+        PhysicalMosaicTrace.onHolderStatusCompleted(holder, status, chunk);
     }
 
     public static void validateProvenance(
@@ -214,7 +334,13 @@ public final class MosaicPhysicalMaterializer {
         IN_FLIGHT.forEach((key, flight) -> {
             if (key.server() == server && IN_FLIGHT.remove(key, flight)) flight.future().cancel(true);
         });
-        REQUESTED_TARGETS.keySet().removeIf(key -> key.server() == server);
+        REQUESTED_PHYSICAL_STATUSES.keySet().removeIf(key -> key.server() == server);
+        MATERIALIZATION_OBLIGATIONS.keySet().removeIf(key -> key.server() == server);
+        PHYSICAL_STATUS_ALLOWANCES.keySet().removeIf(key -> key.server() == server);
+        ACTIVE_PHYSICAL_PLANS.keySet().removeIf(key -> key.server() == server);
+        synchronized (PHYSICAL_CHUNK_MAPS) {
+            PHYSICAL_CHUNK_MAPS.entrySet().removeIf(entry -> entry.getValue().getServer() == server);
+        }
         synchronized (AWAITING_PUBLISH) {
             AWAITING_PUBLISH.entrySet().removeIf(entry -> entry.getValue().server() == server);
         }
@@ -227,20 +353,28 @@ public final class MosaicPhysicalMaterializer {
                 ISOLATED_GENERATIONS.get(),
                 ARTIFACT_CAPTURES.get(),
                 PUBLISHES.get(),
+                PLAN_COUNT.get(),
                 IN_FLIGHT.size(),
-                REQUESTED_TARGETS.size());
+                REQUESTED_PHYSICAL_STATUSES.size(),
+                MATERIALIZATION_OBLIGATIONS.size(),
+                PHYSICAL_STATUS_ALLOWANCES.size());
     }
 
     public static void resetVerificationState() {
         if (!IN_FLIGHT.isEmpty() || !AWAITING_PUBLISH.isEmpty()) {
             throw new IllegalStateException("Cannot reset Phase 3A metrics while materialization is in flight");
         }
-        REQUESTED_TARGETS.clear();
+        REQUESTED_PHYSICAL_STATUSES.clear();
+        MATERIALIZATION_OBLIGATIONS.clear();
+        PHYSICAL_STATUS_ALLOWANCES.clear();
+        ACTIVE_PHYSICAL_PLANS.clear();
+        PHYSICAL_CHUNK_MAPS.clear();
         REQUEST_COUNT.set(0L);
         DEDUP_HITS.set(0L);
         ISOLATED_GENERATIONS.set(0L);
         ARTIFACT_CAPTURES.set(0L);
         PUBLISHES.set(0L);
+        PLAN_COUNT.set(0L);
         verificationFault = FaultPoint.NONE;
         verificationObserver = null;
     }
@@ -326,7 +460,8 @@ public final class MosaicPhysicalMaterializer {
     private static void abort(GenerationKey key, ChunkAccess chunk) {
         AWAITING_PUBLISH.remove(chunk);
         IN_FLIGHT.remove(key);
-        REQUESTED_TARGETS.remove(key);
+        MATERIALIZATION_OBLIGATIONS.remove(key);
+        PHYSICAL_STATUS_ALLOWANCES.remove(key);
     }
 
     private static void failIf(FaultPoint point) {
@@ -372,8 +507,11 @@ public final class MosaicPhysicalMaterializer {
             long isolatedGenerationCount,
             long artifactCaptureCount,
             long publishCount,
+            long planCount,
             int inFlightCount,
-            int requestedTargetCount) {
+            int requestedTargetCount,
+            int materializationObligationCount,
+            int physicalStatusAllowanceCount) {
     }
 
     public enum FaultPoint {

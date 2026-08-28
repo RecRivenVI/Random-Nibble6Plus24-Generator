@@ -28,6 +28,7 @@ import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3A
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3APhysicalPatchVerification;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3AFaultVerification;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3AReloadVerification;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3BVerification;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicPhysicalMaterializer;
 
 @Mixin(MinecraftServer.class)
@@ -37,6 +38,7 @@ abstract class MinecraftServerMixin {
     private void randomnibble6plus24generator$armNativeControlBeforePhysicalGeneration(CallbackInfo callbackInfo) {
         Phase3APhysicalMaterializationVerification.bootstrapProfileIfRequested(
                 (MinecraftServer) (Object) this);
+        Phase3BVerification.bootstrapProfileIfRequested((MinecraftServer) (Object) this);
         NativeVanillaControlHarness.armIfRequested((MinecraftServer) (Object) this);
         NativeVanillaFeatureOrderProbe.armIfRequested((MinecraftServer) (Object) this);
         Phase2C1StageBisectionHarness.armNativeIfRequested((MinecraftServer) (Object) this);
@@ -54,6 +56,10 @@ abstract class MinecraftServerMixin {
             boolean debug,
             LevelLoadListener listener) {
         if (Phase3APhysicalMaterializationVerification.skipInitialSpawnIfRequested()) {
+            levelData.setInitialized(true);
+            return;
+        }
+        if (Phase3BVerification.skipInitialSpawnIfRequested()) {
             levelData.setInitialized(true);
             return;
         }
@@ -87,6 +93,7 @@ abstract class MinecraftServerMixin {
         Phase3APhysicalPatchVerification.runIfRequested((MinecraftServer) (Object) this);
         Phase3AFaultVerification.runIfRequested((MinecraftServer) (Object) this);
         Phase3AReloadVerification.runIfRequested((MinecraftServer) (Object) this);
+        Phase3BVerification.runIfRequested((MinecraftServer) (Object) this);
         NativeVanillaControlHarness.completeIfRequested((MinecraftServer) (Object) this);
         NativeVanillaFeatureOrderProbe.runIfRequested((MinecraftServer) (Object) this);
         NativeVanillaFeatureControlHarness.runIfRequested((MinecraftServer) (Object) this);
@@ -95,11 +102,13 @@ abstract class MinecraftServerMixin {
 
     @Inject(method = "prepareLevels", at = @At("HEAD"), cancellable = true)
     private void randomnibble6plus24generator$skipSpawnPreparationAfterPhase3AVerification(CallbackInfo callbackInfo) {
-        if (Phase3APhysicalMaterializationVerification.skipPrepareLevelsIfCompleted()) callbackInfo.cancel();
+        if (Phase3APhysicalMaterializationVerification.skipPrepareLevelsIfCompleted()
+                || Phase3BVerification.skipPrepareLevelsIfCompleted()) callbackInfo.cancel();
     }
 
     @Inject(method = "stopServer", at = @At("HEAD"))
     private void randomnibble6plus24generator$cancelMosaicMaterializationsOnStop(CallbackInfo callbackInfo) {
+        Phase3BVerification.cleanupExactStatusHolders((MinecraftServer) (Object) this);
         MosaicPhysicalMaterializer.shutdown((MinecraftServer) (Object) this);
     }
 }

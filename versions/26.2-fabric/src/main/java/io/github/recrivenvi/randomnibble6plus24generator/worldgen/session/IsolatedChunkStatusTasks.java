@@ -35,13 +35,18 @@ public final class IsolatedChunkStatusTasks {
             ChunkAccess chunk) {
         context.recordStage(ChunkStatus.STRUCTURE_STARTS);
         if (context.hostLevel().getServer().getWorldGenSettings().options().generateStructures()) {
-            context.generator().createStructures(
-                    context.hostLevel().registryAccess(),
-                    context.structureState(),
-                    context.structureManager(),
-                    chunk,
-                    context.worldGenContext().structureManager(),
-                    context.dimension());
+            // StructureTemplate.Palette lazily populates ordinary HashMap caches. Separate
+            // isolated universes may run concurrently, but they share the server's Vanilla
+            // StructureTemplateManager; serialize only this cache-populating entry point.
+            synchronized (context.hostLevel().getServer().getStructureManager()) {
+                context.generator().createStructures(
+                        context.hostLevel().registryAccess(),
+                        context.structureState(),
+                        context.structureManager(),
+                        chunk,
+                        context.worldGenContext().structureManager(),
+                        context.dimension());
+            }
         }
         context.structureCheck().onStructureLoad(chunk.getPos(), chunk.getAllStarts());
         return CompletableFuture.completedFuture(chunk);

@@ -75,6 +75,7 @@ public final class FeatureStageSnapshot {
     private final Map<Integer, short[]> postProcessing;
     private final List<String> entities;
     private final String hash;
+    private final String worldgenDataHash;
 
     private FeatureStageSnapshot(
             String dimension,
@@ -112,6 +113,7 @@ public final class FeatureStageSnapshot {
         this.postProcessing = postProcessing;
         this.entities = entities;
         this.hash = calculateHash();
+        this.worldgenDataHash = calculateHash(false);
     }
 
     public static FeatureStageSnapshot capture(
@@ -300,6 +302,10 @@ public final class FeatureStageSnapshot {
         return hash;
     }
 
+    public String worldgenDataHash() {
+        return worldgenDataHash;
+    }
+
     public ChunkPos chunkPos() {
         return chunkPos;
     }
@@ -376,6 +382,10 @@ public final class FeatureStageSnapshot {
     }
 
     private String calculateHash() {
+        return calculateHash(true);
+    }
+
+    private String calculateHash(boolean includeStatus) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             update(digest, dimension);
@@ -383,7 +393,7 @@ public final class FeatureStageSnapshot {
             update(digest, chunkPos.z());
             update(digest, minY);
             update(digest, height);
-            update(digest, status);
+            if (includeStatus) update(digest, status);
             for (String value : blocks) update(digest, value);
             for (String value : biomes) update(digest, value);
             updateLongMap(digest, heightmaps);
