@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "package": "io.github.recrivenvi.randomnibble6plus24generator.mixin",
+  "mixins": [
+    "ChunkStatusTasksMixin",
+    "ChunkStepMixin",
+    "MinecraftServerMixin",
+    "SeedCommandMixin",
+    "WorldGenRegionMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
