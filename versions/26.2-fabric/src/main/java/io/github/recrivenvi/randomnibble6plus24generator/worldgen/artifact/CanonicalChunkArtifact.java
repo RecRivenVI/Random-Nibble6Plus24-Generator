@@ -326,7 +326,14 @@ public final class CanonicalChunkArtifact {
     private String calculateRawFingerprint() {
         MessageDigest digest = digest();
         digest.update(dimension.getBytes(StandardCharsets.UTF_8));
-        update(digest, chunkX); update(digest, chunkZ); update(digest, localWorldSeed);
+        update(digest, chunkX);
+        update(digest, chunkZ);
+        update(digest, minY);
+        update(digest, height);
+        update(digest, localWorldSeed);
+        update(digest, mosaicFormatVersion);
+        update(digest, seedDerivationAlgorithmVersion);
+        update(digest, featureOrderingAlgorithmVersion);
         digest.update(vanillaPayload);
         for (long value : instantiatedBlockEntityPositions) update(digest, value);
         return HexFormat.of().formatHex(digest.digest());

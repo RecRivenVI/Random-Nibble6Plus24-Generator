@@ -4,11 +4,15 @@
   "mixins": [
     "CappedProcessorMixin",
     "ChunkGeneratorMixin",
+    "ChunkMapMixin",
     "ChunkStatusTasksMixin",
     "ChunkStepMixin",
+    "GenerationChunkHolderMixin",
     "MinecraftServerMixin",
+    "MinecraftServerInvoker",
     "PaleMossDecoratorMixin",
     "SerializableChunkDataInvoker",
+    "SerializableChunkDataMixin",
     "SeedCommandMixin",
     "WorldGenRegionMixin"
   ],

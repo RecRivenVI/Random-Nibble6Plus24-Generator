@@ -19,9 +19,24 @@ import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.Genera
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.IsolatedChunkStatusTasks;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.FeatureFrontierEvidence;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.NativeFeatureExecutionTrace;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicPhysicalMaterializer;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.PhysicalMosaicTrace;
 
 @Mixin(ChunkStatusTasks.class)
 abstract class ChunkStatusTasksMixin {
+
+    @Inject(method = {"initializeLight", "light", "generateSpawn", "full"}, at = @At("HEAD"))
+    private static void randomnibble6plus24generator$rejectPostFeaturesPhysicalMosaic(
+            WorldGenContext worldGenContext,
+            ChunkStep step,
+            StaticCache2D<GenerationChunkHolder> cache,
+            ChunkAccess chunk,
+            CallbackInfoReturnable<CompletableFuture<ChunkAccess>> callback) {
+        if (GenerationContextRegistry.find(worldGenContext).isEmpty()
+                && MosaicPhysicalMaterializer.isPhysicalMosaic(worldGenContext.level())) {
+            PhysicalMosaicTrace.rejectForbiddenStatus(step.targetStatus());
+        }
+    }
 
     @Inject(method = "generateStructureStarts", at = @At("HEAD"), cancellable = true)
     private static void randomnibble6plus24generator$routeStructureStarts(

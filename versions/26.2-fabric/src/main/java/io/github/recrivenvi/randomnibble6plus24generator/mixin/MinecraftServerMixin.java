@@ -1,10 +1,14 @@
 package io.github.recrivenvi.randomnibble6plus24generator.mixin;
 
 import net.minecraft.server.MinecraftServer;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.progress.LevelLoadListener;
+import net.minecraft.world.level.storage.ServerLevelData;
 
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.identity.MosaicWorldIdentity;
@@ -20,15 +24,41 @@ import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2D
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.NativeVanillaControlHarness;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.NativeVanillaFeatureOrderProbe;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.NativeVanillaFeatureControlHarness;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3APhysicalMaterializationVerification;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3APhysicalPatchVerification;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3AFaultVerification;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3AReloadVerification;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicPhysicalMaterializer;
 
 @Mixin(MinecraftServer.class)
 abstract class MinecraftServerMixin {
 
     @Inject(method = "createLevels", at = @At("HEAD"))
     private void randomnibble6plus24generator$armNativeControlBeforePhysicalGeneration(CallbackInfo callbackInfo) {
+        Phase3APhysicalMaterializationVerification.bootstrapProfileIfRequested(
+                (MinecraftServer) (Object) this);
         NativeVanillaControlHarness.armIfRequested((MinecraftServer) (Object) this);
         NativeVanillaFeatureOrderProbe.armIfRequested((MinecraftServer) (Object) this);
         Phase2C1StageBisectionHarness.armNativeIfRequested((MinecraftServer) (Object) this);
+    }
+
+    @Redirect(
+            method = "createLevels",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/server/MinecraftServer;setInitialSpawn(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/level/storage/ServerLevelData;ZZLnet/minecraft/server/level/progress/LevelLoadListener;)V"))
+    private void randomnibble6plus24generator$skipInitialSpawnOnlyForPhase3AFixture(
+            ServerLevel level,
+            ServerLevelData levelData,
+            boolean generateBonusChest,
+            boolean debug,
+            LevelLoadListener listener) {
+        if (Phase3APhysicalMaterializationVerification.skipInitialSpawnIfRequested()) {
+            levelData.setInitialized(true);
+            return;
+        }
+        MinecraftServerInvoker.randomnibble6plus24generator$invokeSetInitialSpawn(
+                level, levelData, generateBonusChest, debug, listener);
     }
 
     @Inject(
@@ -53,9 +83,23 @@ abstract class MinecraftServerMixin {
         Phase2C1FCoverageScan.runIfRequested((MinecraftServer) (Object) this);
         Phase2DVerification.runIfRequested((MinecraftServer) (Object) this);
         Phase2DTransportVerification.runIfRequested((MinecraftServer) (Object) this);
+        Phase3APhysicalMaterializationVerification.runIfRequested((MinecraftServer) (Object) this);
+        Phase3APhysicalPatchVerification.runIfRequested((MinecraftServer) (Object) this);
+        Phase3AFaultVerification.runIfRequested((MinecraftServer) (Object) this);
+        Phase3AReloadVerification.runIfRequested((MinecraftServer) (Object) this);
         NativeVanillaControlHarness.completeIfRequested((MinecraftServer) (Object) this);
         NativeVanillaFeatureOrderProbe.runIfRequested((MinecraftServer) (Object) this);
         NativeVanillaFeatureControlHarness.runIfRequested((MinecraftServer) (Object) this);
         Phase2C1StageBisectionHarness.completeNativeIfRequested((MinecraftServer) (Object) this);
+    }
+
+    @Inject(method = "prepareLevels", at = @At("HEAD"), cancellable = true)
+    private void randomnibble6plus24generator$skipSpawnPreparationAfterPhase3AVerification(CallbackInfo callbackInfo) {
+        if (Phase3APhysicalMaterializationVerification.skipPrepareLevelsIfCompleted()) callbackInfo.cancel();
+    }
+
+    @Inject(method = "stopServer", at = @At("HEAD"))
+    private void randomnibble6plus24generator$cancelMosaicMaterializationsOnStop(CallbackInfo callbackInfo) {
+        MosaicPhysicalMaterializer.shutdown((MinecraftServer) (Object) this);
     }
 }

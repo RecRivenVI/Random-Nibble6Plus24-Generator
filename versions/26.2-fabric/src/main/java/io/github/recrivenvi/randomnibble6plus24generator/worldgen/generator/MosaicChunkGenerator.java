@@ -30,6 +30,7 @@ import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemp
 
 import io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile.MosaicWorldProfile;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.PhysicalMosaicTrace;
 
 /**
  * Serialized Mosaic world identity and future worldgen integration point.
@@ -186,6 +187,7 @@ public final class MosaicChunkGenerator extends ChunkGenerator {
     }
 
     private static MosaicGenerationUnavailableException unavailable(String operation) {
+        PhysicalMosaicTrace.recordGeneratorCall(operation);
         return new MosaicGenerationUnavailableException(operation);
     }
 }
