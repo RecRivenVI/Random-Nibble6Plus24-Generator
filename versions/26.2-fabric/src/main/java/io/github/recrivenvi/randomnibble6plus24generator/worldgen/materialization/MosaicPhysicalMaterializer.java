@@ -14,11 +14,14 @@ import net.minecraft.server.level.GenerationChunkHolder;
 import net.minecraft.server.level.GeneratingChunkMap;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Util;
+import net.minecraft.util.StaticCache2D;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ProtoChunk;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
+import net.minecraft.world.level.chunk.status.ChunkStep;
+import net.minecraft.world.level.chunk.status.WorldGenContext;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.artifact.CanonicalChunkArtifact;
@@ -56,6 +59,10 @@ public final class MosaicPhysicalMaterializer {
     private static final AtomicLong ARTIFACT_CAPTURES = new AtomicLong();
     private static final AtomicLong PUBLISHES = new AtomicLong();
     private static final AtomicLong PLAN_COUNT = new AtomicLong();
+    private static final ConcurrentHashMap<GenerationKey, AtomicLong> ARTIFACT_CAPTURES_BY_KEY =
+            new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<GenerationKey, AtomicLong> PUBLISHES_BY_KEY =
+            new ConcurrentHashMap<>();
 
     private static volatile Consumer<Publication> verificationObserver;
     private static volatile FaultPoint verificationFault = FaultPoint.NONE;
@@ -216,6 +223,37 @@ public final class MosaicPhysicalMaterializer {
                 level, holder, targetStatus, CompletableFuture.completedFuture(parent));
     }
 
+    /**
+     * Repairs the race where the ordinary scheduler has already completed a
+     * holder's EMPTY/pre-light future before its Mosaic physical plan is
+     * registered.  The canonical Artifact is then supplied directly as the
+     * input to the requested Vanilla derived-state step, so the holder still
+     * advances through the normal ChunkStatus future chain without ever
+     * running seed-dependent worldgen on the physical master seed.
+     */
+    public static CompletableFuture<ChunkAccess> materializePhysicalStep(
+            ServerLevel level,
+            GenerationChunkHolder holder,
+            ChunkStep step,
+            StaticCache2D<GenerationChunkHolder> cache,
+            WorldGenContext worldGenContext) {
+        ChunkStatus targetStatus = step.targetStatus();
+        GenerationKey key = key(level, holder.getPos());
+        CompletableFuture<PreparedMaterialization> preparedFuture = requestPrepared(level, holder.getPos());
+        CompletableFuture<ChunkAccess> stage = preparedFuture.thenCompose(prepared -> {
+            MATERIALIZATION_OBLIGATIONS.remove(key);
+            return step.apply(worldGenContext, cache, prepared.chunk());
+        });
+        return stage.thenCompose(result -> onPhysicalStepFuture(
+                level, holder, targetStatus, CompletableFuture.completedFuture(result)))
+                .whenComplete((result, throwable) -> {
+                    InFlight flight = IN_FLIGHT.get(key);
+                    if (flight != null && flight.future() == preparedFuture) {
+                        IN_FLIGHT.remove(key, flight);
+                    }
+                });
+    }
+
     public static CompletableFuture<ChunkAccess> onPhysicalStepFuture(
             ServerLevel level,
             GenerationChunkHolder holder,
@@ -302,6 +340,7 @@ public final class MosaicPhysicalMaterializer {
                     throw new IllegalStateException("Prepared Mosaic Chunk published to the wrong holder");
                 }
                 PUBLISHES.incrementAndGet();
+                PUBLISHES_BY_KEY.computeIfAbsent(key, ignored -> new AtomicLong()).incrementAndGet();
                 InFlight flight = IN_FLIGHT.remove(key);
                 MATERIALIZATION_OBLIGATIONS.remove(key);
                 if (flight == null) {
@@ -356,6 +395,8 @@ public final class MosaicPhysicalMaterializer {
         MATERIALIZATION_OBLIGATIONS.keySet().removeIf(key -> key.server() == server);
         PHYSICAL_STATUS_ALLOWANCES.keySet().removeIf(key -> key.server() == server);
         ACTIVE_PHYSICAL_PLANS.keySet().removeIf(key -> key.server() == server);
+        ARTIFACT_CAPTURES_BY_KEY.keySet().removeIf(key -> key.server() == server);
+        PUBLISHES_BY_KEY.keySet().removeIf(key -> key.server() == server);
         synchronized (PHYSICAL_CHUNK_MAPS) {
             PHYSICAL_CHUNK_MAPS.entrySet().removeIf(entry -> entry.getValue().getServer() == server);
         }
@@ -378,6 +419,25 @@ public final class MosaicPhysicalMaterializer {
                 PHYSICAL_STATUS_ALLOWANCES.size());
     }
 
+    /** Returns whether one ordinary physical target has no pending Mosaic handoff work. */
+    public static boolean isIdle(ServerLevel level, ChunkPos pos) {
+        GenerationKey key = key(level, pos);
+        return !IN_FLIGHT.containsKey(key)
+                && !REQUESTED_PHYSICAL_STATUSES.containsKey(key)
+                && !MATERIALIZATION_OBLIGATIONS.containsKey(key)
+                && !PHYSICAL_STATUS_ALLOWANCES.containsKey(key);
+    }
+
+    public static long artifactCaptures(ServerLevel level, ChunkPos pos) {
+        AtomicLong count = ARTIFACT_CAPTURES_BY_KEY.get(key(level, pos));
+        return count == null ? 0L : count.get();
+    }
+
+    public static long publishes(ServerLevel level, ChunkPos pos) {
+        AtomicLong count = PUBLISHES_BY_KEY.get(key(level, pos));
+        return count == null ? 0L : count.get();
+    }
+
     public static void resetVerificationState() {
         if (!IN_FLIGHT.isEmpty() || !AWAITING_PUBLISH.isEmpty()) {
             throw new IllegalStateException("Cannot reset Phase 3A metrics while materialization is in flight");
@@ -393,6 +453,8 @@ public final class MosaicPhysicalMaterializer {
         ARTIFACT_CAPTURES.set(0L);
         PUBLISHES.set(0L);
         PLAN_COUNT.set(0L);
+        ARTIFACT_CAPTURES_BY_KEY.clear();
+        PUBLISHES_BY_KEY.clear();
         verificationFault = FaultPoint.NONE;
         verificationObserver = null;
     }
@@ -432,6 +494,7 @@ public final class MosaicPhysicalMaterializer {
                     StructurePieceSerializationContext.fromLevel(level));
             artifactNanos = System.nanoTime() - artifactStarted;
             ARTIFACT_CAPTURES.incrementAndGet();
+            ARTIFACT_CAPTURES_BY_KEY.computeIfAbsent(key, ignored -> new AtomicLong()).incrementAndGet();
             failIf(FaultPoint.AFTER_ARTIFACT_CAPTURE);
         }
         long isolatedNanos = System.nanoTime() - isolatedStarted;

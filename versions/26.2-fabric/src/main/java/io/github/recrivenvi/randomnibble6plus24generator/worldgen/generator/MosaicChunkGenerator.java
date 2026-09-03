@@ -162,6 +162,16 @@ public final class MosaicChunkGenerator extends ChunkGenerator {
         return settings.value().noiseSettings().minY();
     }
 
+    /**
+     * Supplies only the seed-independent anchor used by Minecraft's initial
+     * spawn search.  Terrain itself still comes exclusively from the Mosaic
+     * materialization pipeline; no vanilla master-seed worldgen is delegated.
+     */
+    @Override
+    public int getSpawnHeight(LevelHeightAccessor heightAccessor) {
+        return Math.max(getMinY() + 1, getSeaLevel() + 1);
+    }
+
     @Override
     public int getBaseHeight(
             int x,

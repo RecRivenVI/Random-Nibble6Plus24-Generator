@@ -43,6 +43,7 @@ public final class PhysicalMosaicTrace {
     private static final AtomicLong FULL_NANOS = new AtomicLong();
     private static volatile FaultPoint verificationFault = FaultPoint.NONE;
     private static volatile boolean detailedVerification;
+    private static volatile boolean strictLightingVerification;
 
     private PhysicalMosaicTrace() {
     }
@@ -176,10 +177,18 @@ public final class PhysicalMosaicTrace {
         boolean planned = PLANNED_GEOMETRY
                 .getOrDefault(new PlanScope(level, level.dimension()), Set.of())
                 .contains(requested);
-        if (planned && physical == null) {
+        if (strictLightingVerification && planned && physical == null) {
             throw new IllegalStateException("Physical light engine missed planned Mosaic geometry at " + requested);
         }
-        if (physical != null && physical.getPersistedStatus().isBefore(ChunkStatus.FEATURES)) {
+        // The normal production scheduler may ask the light engine about
+        // unplanned outer prerequisites while it is advancing a target.  Those
+        // holders are allowed to remain below FEATURES; only a holder that was
+        // explicitly planned for Mosaic materialization must already contain
+        // canonical geometry.  The old unconditional check treated legitimate
+        // Vanilla light-frontier queries as a corruption signal and prevented
+        // ordinary production requests from reaching FULL.
+        if (strictLightingVerification && planned && physical != null
+                && physical.getPersistedStatus().isBefore(ChunkStatus.FEATURES)) {
             throw new IllegalStateException(
                     "Physical light engine observed noncanonical Chunk " + requested
                             + " status=" + physical.getPersistedStatus());
@@ -237,10 +246,18 @@ public final class PhysicalMosaicTrace {
         FULL_NANOS.set(0L);
         verificationFault = FaultPoint.NONE;
         detailedVerification = false;
+        strictLightingVerification = false;
     }
 
     public static void enableDetailedVerification() {
         detailedVerification = true;
+        strictLightingVerification = true;
+    }
+
+    /** Enables counters/evidence without applying verifier-only frontier assertions. */
+    public static void enableDetailedObservation() {
+        detailedVerification = true;
+        strictLightingVerification = false;
     }
 
     public static void setVerificationFault(FaultPoint point) {

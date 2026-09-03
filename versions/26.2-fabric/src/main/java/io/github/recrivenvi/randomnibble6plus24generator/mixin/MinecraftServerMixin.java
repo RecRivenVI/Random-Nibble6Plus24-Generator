@@ -30,6 +30,7 @@ import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3A
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3AReloadVerification;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3BVerification;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3C1Verification;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3C2ProductionVerification;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicPhysicalMaterializer;
 
 @Mixin(MinecraftServer.class)
@@ -37,6 +38,7 @@ abstract class MinecraftServerMixin {
 
     @Inject(method = "createLevels", at = @At("HEAD"))
     private void randomnibble6plus24generator$armNativeControlBeforePhysicalGeneration(CallbackInfo callbackInfo) {
+        MosaicWorldIdentity.bootstrapNewWorldProfileIfNeeded((MinecraftServer) (Object) this);
         Phase3APhysicalMaterializationVerification.bootstrapProfileIfRequested(
                 (MinecraftServer) (Object) this);
         Phase3BVerification.bootstrapProfileIfRequested((MinecraftServer) (Object) this);
@@ -112,6 +114,12 @@ abstract class MinecraftServerMixin {
         if (Phase3APhysicalMaterializationVerification.skipPrepareLevelsIfCompleted()
                 || Phase3BVerification.skipPrepareLevelsIfCompleted()
                 || Phase3C1Verification.skipPrepareLevelsIfCompleted()) callbackInfo.cancel();
+    }
+
+    @Inject(method = "tickServer", at = @At("RETURN"))
+    private void randomnibble6plus24generator$observeOrdinaryMosaicProductionRequest(
+            java.util.function.BooleanSupplier haveTime, CallbackInfo callbackInfo) {
+        Phase3C2ProductionVerification.runIfRequested((MinecraftServer) (Object) this);
     }
 
     @Inject(method = "stopServer", at = @At("HEAD"))

@@ -12,6 +12,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.level.saveddata.SavedDataType;
 import net.minecraft.world.level.storage.LevelResource;
+import net.minecraft.util.datafix.DataFixTypes;
 
 import io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator;
 
@@ -29,7 +30,11 @@ public final class MosaicWorldProfileData extends SavedData {
             ID,
             () -> new MosaicWorldProfileData(MosaicWorldProfile.current()),
             CODEC,
-            null);
+            // There is no generic custom SavedData data-fix type in 26.2. The
+            // profile is world-generation metadata, so use the vanilla world
+            // generation settings category to keep SavedDataStorage reload
+            // compatible (and, importantly, non-null for existing files).
+            DataFixTypes.SAVED_DATA_WORLD_GEN_SETTINGS);
 
     private final MosaicWorldProfile profile;
 

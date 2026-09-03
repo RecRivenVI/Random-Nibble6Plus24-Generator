@@ -11,6 +11,7 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.level.chunk.status.ChunkStep;
+import net.minecraft.world.level.chunk.status.WorldGenContext;
 
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -27,6 +28,10 @@ abstract class ChunkMapMixin {
     @Shadow
     @Final
     private ServerLevel level;
+
+    @Shadow
+    @Final
+    private WorldGenContext worldGenContext;
 
     @Inject(method = "scheduleGenerationTask", at = @At("HEAD"))
     private void randomnibble6plus24generator$registerPhysicalMosaicTarget(
@@ -46,6 +51,16 @@ abstract class ChunkMapMixin {
             CallbackInfoReturnable<CompletableFuture<ChunkAccess>> callback) {
         if (!MosaicPhysicalMaterializer.isPhysicalMosaic(level) || step.targetStatus() == ChunkStatus.EMPTY) return;
         ChunkStatus target = step.targetStatus();
+        if (target.isOrAfter(ChunkStatus.INITIALIZE_LIGHT)
+                && target.isOrBefore(ChunkStatus.FULL)
+                && MosaicPhysicalMaterializer.hasMaterializationObligation(level, holder.getPos())) {
+            ChunkAccess current = holder.getChunkIfPresentUnchecked(target.getParent());
+            if (current == null || current.getPersistedStatus().isBefore(ChunkStatus.FEATURES)) {
+                callback.setReturnValue(MosaicPhysicalMaterializer.materializePhysicalStep(
+                        level, holder, step, cache, worldGenContext));
+                return;
+            }
+        }
         if (target.isOrBefore(ChunkStatus.FEATURES)) {
             callback.setReturnValue(MosaicPhysicalMaterializer.passThroughPhysicalStep(level, holder, target));
             return;

@@ -1,5 +1,7 @@
 package io.github.recrivenvi.randomnibble6plus24generator.worldgen.identity;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import net.minecraft.server.MinecraftServer;
@@ -60,6 +62,41 @@ public final class MosaicWorldIdentity {
                 persistedProfile,
                 profileFilePresent);
         return validatedProfile.map(profile -> new MosaicRuntimeContext(worldGenSettings, profile));
+    }
+
+    /**
+     * Persists the profile for a brand-new, fully serialized Mosaic world.  An
+     * existing save with a missing profile is intentionally not repaired here;
+     * the normal validator must fail closed instead of guessing its format.
+     */
+    public static void bootstrapNewWorldProfileIfNeeded(MinecraftServer server) {
+        if (MosaicWorldProfileData.fileExists(server)
+                || server.getWorldData().overworldData().isInitialized()) return;
+
+        List<MosaicChunkGenerator> generators = new ArrayList<>();
+        for (var entry : server.getWorldGenSettings().dimensions().dimensions().entrySet()) {
+            if (entry.getValue().generator() instanceof MosaicChunkGenerator generator) {
+                generators.add(generator);
+            }
+        }
+        if (generators.isEmpty() || generators.size() != server.getWorldGenSettings()
+                .dimensions().dimensions().size()) return;
+
+        MosaicWorldProfile profile = generators.getFirst().profile();
+        if (generators.stream().anyMatch(generator -> !profile.equals(generator.profile()))) {
+            throw new MosaicIdentityValidationException(
+                    "New Mosaic world contains inconsistent serialized generator profiles");
+        }
+        profile.requireSupported();
+        server.getDataStorage().set(
+                MosaicWorldProfileData.TYPE,
+                new MosaicWorldProfileData(profile));
+        RandomNibble6Plus24Generator.LOGGER.info(
+                "Initialized Mosaic world profile for new save: format={}, seedAlgorithm={}, presentationAlgorithm={}, primaryDimension={}",
+                profile.formatVersion(),
+                profile.seedDerivationAlgorithmVersion(),
+                profile.presentationAlgorithmVersion(),
+                profile.primaryDimension().identifier());
     }
 
     public static void validateServerAfterLevelCreation(MinecraftServer server) {
