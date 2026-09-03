@@ -88,4 +88,15 @@ class MosaicPhysicalGenerationPlanTest {
                     MosaicPhysicalGenerationPlan.derive(center, status).materializationObligations());
         }
     }
+
+    @Test
+    void spawnAndFullRequestsRetainCanonicalArtifactObligations() {
+        ChunkPos center = new ChunkPos(12, -14);
+        for (ChunkStatus status : java.util.List.of(ChunkStatus.SPAWN, ChunkStatus.FULL)) {
+            MosaicPhysicalGenerationPlan plan = MosaicPhysicalGenerationPlan.derive(center, status);
+            assertTrue(plan.materializationObligations().containsKey(center));
+            assertTrue(plan.materializationObligations().values().stream()
+                    .allMatch(required -> !required.isBefore(ChunkStatus.FEATURES)));
+        }
+    }
 }

@@ -11,6 +11,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.identity.MosaicWorldIdentity;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.PhysicalMosaicTrace;
 
 /** Restores saved Mosaic structure starts with the same local world seed that created them. */
 @Mixin(SerializableChunkData.class)
@@ -27,9 +28,11 @@ abstract class SerializableChunkDataMixin {
                     target = "Lnet/minecraft/server/level/ServerLevel;getSeed()J"))
     private long randomnibble6plus24generator$decodeStructuresWithLocalWorldSeed(ServerLevel level) {
         if (MosaicWorldIdentity.isMosaicWorld(level) && MosaicWorldIdentity.isMosaicDimension(level)) {
-            return MosaicWorldIdentity.runtimeContext(level)
+            long localSeed = MosaicWorldIdentity.runtimeContext(level)
                     .orElseThrow(() -> new IllegalStateException("Missing Mosaic runtime context while loading Chunk"))
                     .resolveLocalWorldSeed(level.dimension(), chunkPos);
+            PhysicalMosaicTrace.recordStructureReloadSeed(level, chunkPos, localSeed, level.getSeed());
+            return localSeed;
         }
         return level.getSeed();
     }

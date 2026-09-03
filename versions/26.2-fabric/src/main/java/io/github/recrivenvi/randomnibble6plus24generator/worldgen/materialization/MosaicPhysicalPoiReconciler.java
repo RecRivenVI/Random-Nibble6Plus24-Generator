@@ -35,7 +35,9 @@ public final class MosaicPhysicalPoiReconciler {
             throw new IllegalArgumentException("POI reconciliation is Mosaic-only");
         }
         if (chunk.getPersistedStatus().isBefore(ChunkStatus.FEATURES)) {
-            throw new IllegalStateException("POI reconciliation requires physical FEATURES data at " + chunk.getPos());
+            throw new IllegalStateException("POI reconciliation requires physical FEATURES data at "
+                    + chunk.getPos() + " ("
+                    + MosaicPhysicalMaterializer.describePhysicalState(level, chunk.getPos()) + ")");
         }
         failIf(FaultPoint.BEFORE_RECONCILIATION);
         long started = System.nanoTime();

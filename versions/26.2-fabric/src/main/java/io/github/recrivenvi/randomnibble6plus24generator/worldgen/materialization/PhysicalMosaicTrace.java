@@ -18,6 +18,8 @@ import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.LightChunk;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.PhysicalWorldAccessException;
+
 /** Verification counters and bounded-on-demand evidence for physical Mosaic derived-state work. */
 public final class PhysicalMosaicTrace {
 
@@ -29,8 +31,16 @@ public final class PhysicalMosaicTrace {
     private static final ConcurrentHashMap<PlanScope, Set<ChunkPos>> PLANNED_GEOMETRY = new ConcurrentHashMap<>();
     private static final ConcurrentLinkedQueue<PlanRecord> PLANS = new ConcurrentLinkedQueue<>();
     private static final ConcurrentLinkedQueue<LightQuery> LIGHT_QUERIES = new ConcurrentLinkedQueue<>();
+    private static final ConcurrentLinkedQueue<SpawnSeed> SPAWN_SEEDS = new ConcurrentLinkedQueue<>();
+    private static final ConcurrentLinkedQueue<SpawnRead> SPAWN_READS = new ConcurrentLinkedQueue<>();
+    private static final ConcurrentLinkedQueue<StructureReloadSeed> STRUCTURE_RELOAD_SEEDS = new ConcurrentLinkedQueue<>();
+    private static final ConcurrentHashMap<String, LongAdder> LIFECYCLE_CALLS = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, LongAdder> LIFECYCLE_DUPLICATES = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, LongAdder> RUNTIME_TICKS = new ConcurrentHashMap<>();
     private static final AtomicLong INITIALIZE_NANOS = new AtomicLong();
     private static final AtomicLong LIGHT_NANOS = new AtomicLong();
+    private static final AtomicLong SPAWN_NANOS = new AtomicLong();
+    private static final AtomicLong FULL_NANOS = new AtomicLong();
     private static volatile FaultPoint verificationFault = FaultPoint.NONE;
     private static volatile boolean detailedVerification;
 
@@ -43,7 +53,7 @@ public final class PhysicalMosaicTrace {
 
     public static void rejectForbiddenStatus(ChunkStatus status) {
         FORBIDDEN_STATUS_CALLS.computeIfAbsent(status.getName(), ignored -> new LongAdder()).increment();
-        throw new IllegalStateException("Phase 3B forbids physical Mosaic status " + status);
+        throw new IllegalStateException("Phase 3C1 forbids physical Mosaic status " + status);
     }
 
     public static void recordPlan(ServerLevel level, MosaicPhysicalGenerationPlan plan) {
@@ -64,10 +74,13 @@ public final class PhysicalMosaicTrace {
             ChunkStatus status,
             ChunkAccess chunk,
             boolean physicalEngine) {
-        if (status != ChunkStatus.INITIALIZE_LIGHT && status != ChunkStatus.LIGHT) {
-            throw new IllegalArgumentException("Not a Phase 3B physical stage: " + status);
+        if (status != ChunkStatus.INITIALIZE_LIGHT
+                && status != ChunkStatus.LIGHT
+                && status != ChunkStatus.SPAWN
+                && status != ChunkStatus.FULL) {
+            throw new IllegalArgumentException("Not a Phase 3C1 physical stage: " + status);
         }
-        if (!physicalEngine) {
+        if ((status == ChunkStatus.INITIALIZE_LIGHT || status == ChunkStatus.LIGHT) && !physicalEngine) {
             throw new IllegalStateException("Physical Mosaic lighting did not receive ServerChunkCache light engine");
         }
         PHYSICAL_STATUS_CALLS.computeIfAbsent(status.getName(), ignored -> new LongAdder()).increment();
@@ -86,14 +99,69 @@ public final class PhysicalMosaicTrace {
     }
 
     public static void onPhysicalStepCompleted(ServerLevel level, ChunkStatus status, ChunkAccess chunk) {
-        if (status != ChunkStatus.INITIALIZE_LIGHT && status != ChunkStatus.LIGHT) return;
+        if (status != ChunkStatus.INITIALIZE_LIGHT
+                && status != ChunkStatus.LIGHT
+                && status != ChunkStatus.SPAWN
+                && status != ChunkStatus.FULL) return;
         PHYSICAL_STATUS_COMPLETIONS.computeIfAbsent(status.getName(), ignored -> new LongAdder()).increment();
         Long started = STAGE_STARTS.remove(new StageKey(level, status, chunk.getPos()));
         if (started != null) {
             long elapsed = System.nanoTime() - started;
             if (status == ChunkStatus.INITIALIZE_LIGHT) INITIALIZE_NANOS.addAndGet(elapsed);
             if (status == ChunkStatus.LIGHT) LIGHT_NANOS.addAndGet(elapsed);
+            if (status == ChunkStatus.SPAWN) SPAWN_NANOS.addAndGet(elapsed);
+            if (status == ChunkStatus.FULL) FULL_NANOS.addAndGet(elapsed);
         }
+    }
+
+    public static void recordSpawnSeed(
+            ServerLevel level, net.minecraft.world.level.ChunkPos target, long observed, long expected) {
+        if (observed != expected) {
+            throw new PhysicalWorldAccessException(
+                    "Physical Mosaic SPAWN seed mismatch at " + target
+                            + ": observed=" + observed + ", expected=" + expected);
+        }
+        SPAWN_SEEDS.add(new SpawnSeed(level.dimension(), target, observed, expected));
+    }
+
+    public static void recordSpawnChunkReads(
+            ServerLevel level,
+            net.minecraft.world.level.ChunkPos target,
+            Map<String, Long> reads) {
+        reads.forEach((key, count) -> SPAWN_READS.add(
+                new SpawnRead(level.dimension(), target, key, count)));
+    }
+
+    public static void recordStructureReloadSeed(
+            ServerLevel level,
+            net.minecraft.world.level.ChunkPos chunkPos,
+            long routedSeed,
+            long physicalSeed) {
+        STRUCTURE_RELOAD_SEEDS.add(new StructureReloadSeed(
+                level.dimension(), chunkPos, routedSeed, physicalSeed));
+    }
+
+    public static void recordLifecycleCall(
+            ServerLevel level, String lifecycle, net.minecraft.world.level.ChunkPos pos) {
+        if (!detailedVerification || !MosaicPhysicalMaterializer.isPhysicalMosaic(level)) return;
+        String key = lifecycle + "@" + level.dimension().identifier() + ":" + pos;
+        long count = LIFECYCLE_CALLS.computeIfAbsent(key, ignored -> new LongAdder()).sum();
+        // updateBlockEntityTicker is invoked once per ticker-bearing block
+        // entity, so its per-chunk count is not a duplicate lifecycle event.
+        if (count > 0 && !"updateBlockEntityTicker".equals(lifecycle)) {
+            LIFECYCLE_DUPLICATES.computeIfAbsent(key, ignored -> new LongAdder()).increment();
+        }
+        LIFECYCLE_CALLS.get(key).increment();
+    }
+
+    public static void recordRuntimeTick(ServerLevel level, String kind) {
+        if (!detailedVerification || !MosaicPhysicalMaterializer.isPhysicalMosaic(level)) return;
+        RUNTIME_TICKS.computeIfAbsent(kind, ignored -> new LongAdder()).increment();
+    }
+
+    public static void recordRuntimeTick(String kind) {
+        if (!detailedVerification) return;
+        RUNTIME_TICKS.computeIfAbsent(kind, ignored -> new LongAdder()).increment();
     }
 
     public static void onHolderStatusCompleted(
@@ -135,8 +203,16 @@ public final class PhysicalMosaicTrace {
                 copy(PHYSICAL_STATUS_COMPLETIONS),
                 INITIALIZE_NANOS.get(),
                 LIGHT_NANOS.get(),
+                SPAWN_NANOS.get(),
+                FULL_NANOS.get(),
                 List.copyOf(PLANS),
                 List.copyOf(LIGHT_QUERIES),
+                List.copyOf(SPAWN_SEEDS),
+                List.copyOf(SPAWN_READS),
+                List.copyOf(STRUCTURE_RELOAD_SEEDS),
+                copy(LIFECYCLE_CALLS),
+                copy(LIFECYCLE_DUPLICATES),
+                copy(RUNTIME_TICKS),
                 STAGE_STARTS.size());
     }
 
@@ -149,8 +225,16 @@ public final class PhysicalMosaicTrace {
         PLANNED_GEOMETRY.clear();
         PLANS.clear();
         LIGHT_QUERIES.clear();
+        SPAWN_SEEDS.clear();
+        SPAWN_READS.clear();
+        STRUCTURE_RELOAD_SEEDS.clear();
+        LIFECYCLE_CALLS.clear();
+        LIFECYCLE_DUPLICATES.clear();
+        RUNTIME_TICKS.clear();
         INITIALIZE_NANOS.set(0L);
         LIGHT_NANOS.set(0L);
+        SPAWN_NANOS.set(0L);
+        FULL_NANOS.set(0L);
         verificationFault = FaultPoint.NONE;
         detailedVerification = false;
     }
@@ -198,6 +282,27 @@ public final class PhysicalMosaicTrace {
             boolean plannedMaterializedGeometry) {
     }
 
+    public record SpawnSeed(
+            ResourceKey<Level> dimension,
+            net.minecraft.world.level.ChunkPos target,
+            long observed,
+            long expected) {
+    }
+
+    public record SpawnRead(
+            ResourceKey<Level> dimension,
+            net.minecraft.world.level.ChunkPos target,
+            String requested,
+            long count) {
+    }
+
+    public record StructureReloadSeed(
+            ResourceKey<Level> dimension,
+            net.minecraft.world.level.ChunkPos chunkPos,
+            long routedSeed,
+            long physicalSeed) {
+    }
+
     public record Snapshot(
             Map<String, Long> generatorCalls,
             Map<String, Long> forbiddenStatusCalls,
@@ -205,8 +310,16 @@ public final class PhysicalMosaicTrace {
             Map<String, Long> physicalStatusCompletions,
             long initializeLightNanos,
             long lightNanos,
+            long spawnNanos,
+            long fullNanos,
             List<PlanRecord> plans,
             List<LightQuery> lightQueries,
+            List<SpawnSeed> spawnSeeds,
+            List<SpawnRead> spawnReads,
+            List<StructureReloadSeed> structureReloadSeeds,
+            Map<String, Long> lifecycleCalls,
+            Map<String, Long> lifecycleDuplicates,
+            Map<String, Long> runtimeTicks,
             int activeStageCount) {
         public long totalGeneratorCalls() {
             return generatorCalls.values().stream().mapToLong(Long::longValue).sum();

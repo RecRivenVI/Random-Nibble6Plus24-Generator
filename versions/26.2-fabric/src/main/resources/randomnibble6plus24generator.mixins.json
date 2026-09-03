@@ -3,12 +3,17 @@
   "package": "io.github.recrivenvi.randomnibble6plus24generator.mixin",
   "mixins": [
     "CappedProcessorMixin",
+    "ChunkAccessAccessor",
     "ChunkGeneratorMixin",
+    "ChunkHolderInvoker",
     "ChunkMapMixin",
     "ChunkMapInvoker",
     "ChunkStatusTasksMixin",
     "ChunkStepMixin",
+    "BlockEntityTickerTraceMixin",
     "GenerationChunkHolderMixin",
+    "LevelChunkLifecycleTraceMixin",
+    "LevelTicksAccessor",
     "MinecraftServerMixin",
     "MinecraftServerInvoker",
     "PaleMossDecoratorMixin",
@@ -16,6 +21,9 @@
     "SerializableChunkDataMixin",
     "SeedCommandMixin",
     "ServerChunkCacheMixin",
+    "ServerLevelInvoker",
+    "ServerLevelLifecycleTraceMixin",
+    "StructureCheckMixin",
     "WorldGenRegionMixin"
   ],
   "injectors": {

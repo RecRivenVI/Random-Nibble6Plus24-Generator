@@ -69,9 +69,9 @@ public final class MosaicPhysicalMaterializer {
 
     public static void registerPhysicalRequest(ServerLevel level, ChunkStatus targetStatus, ChunkPos pos) {
         if (!isPhysicalMosaic(level) || targetStatus == ChunkStatus.EMPTY) return;
-        if (targetStatus.isAfter(ChunkStatus.LIGHT)) {
+        if (targetStatus.isAfter(ChunkStatus.FULL)) {
             throw new IllegalStateException(
-                    "Phase 3B refuses physical Mosaic status after LIGHT: " + targetStatus + " at " + pos);
+                    "Phase 3C1 refuses physical Mosaic status after FULL: " + targetStatus + " at " + pos);
         }
         GenerationKey key = key(level, pos);
         PHYSICAL_CHUNK_MAPS.put(level.getChunkSource().chunkMap, level);
@@ -109,6 +109,17 @@ public final class MosaicPhysicalMaterializer {
 
     public static boolean hasMaterializationObligation(ServerLevel level, ChunkPos pos) {
         return MATERIALIZATION_OBLIGATIONS.containsKey(key(level, pos));
+    }
+
+    /** Bounded diagnostics for the physical handoff harness; not used by production generation. */
+    public static String describePhysicalState(ServerLevel level, ChunkPos pos) {
+        GenerationKey generationKey = key(level, pos);
+        GenerationChunkHolder holder = level.getChunkSource().chunkMap
+                .getUpdatingChunkIfPresent(ChunkPos.pack(pos.x(), pos.z()));
+        return "holder=" + (holder == null ? "null" : holder.getPersistedStatus())
+                + ",obligation=" + MATERIALIZATION_OBLIGATIONS.get(generationKey)
+                + ",allowance=" + PHYSICAL_STATUS_ALLOWANCES.get(generationKey)
+                + ",requested=" + REQUESTED_PHYSICAL_STATUSES.get(generationKey);
     }
 
     public static ChunkStatus physicalStepAllowance(
@@ -233,14 +244,15 @@ public final class MosaicPhysicalMaterializer {
 
     private static void completePhysicalRequest(GenerationKey key) {
         REQUESTED_PHYSICAL_STATUSES.remove(key);
-        MATERIALIZATION_OBLIGATIONS.remove(key);
         synchronized (PLAN_LOCK) {
             Map<GenerationKey, ChunkStatus> removed = ACTIVE_PHYSICAL_PLANS.remove(key);
             if (removed == null) {
+                removeObligationIfUnused(key);
                 PHYSICAL_STATUS_ALLOWANCES.remove(key);
                 return;
             }
             for (GenerationKey affected : removed.keySet()) {
+                removeObligationIfUnused(affected);
                 ChunkStatus remaining = null;
                 for (Map<GenerationKey, ChunkStatus> active : ACTIVE_PHYSICAL_PLANS.values()) {
                     ChunkStatus candidate = active.get(affected);
@@ -252,6 +264,12 @@ public final class MosaicPhysicalMaterializer {
                 else PHYSICAL_STATUS_ALLOWANCES.put(affected, remaining);
             }
         }
+    }
+
+    private static void removeObligationIfUnused(GenerationKey obligation) {
+        boolean stillRequired = ACTIVE_PHYSICAL_PLANS.values().stream()
+                .anyMatch(plan -> plan.containsKey(obligation));
+        if (!stillRequired) MATERIALIZATION_OBLIGATIONS.remove(obligation);
     }
 
     private static void clearPlansContaining(ServerLevel level, ChunkPos failedPos) {

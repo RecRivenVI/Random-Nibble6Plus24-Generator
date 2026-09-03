@@ -63,6 +63,7 @@ abstract class ChunkMapMixin {
             }
             return;
         }
+        if (target == ChunkStatus.SPAWN || target == ChunkStatus.FULL) return;
         io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.PhysicalMosaicTrace
                 .rejectForbiddenStatus(target);
     }
@@ -79,7 +80,9 @@ abstract class ChunkMapMixin {
             callback.setReturnValue(MosaicPhysicalMaterializer.materializeLoadedTarget(
                     level, holder, callback.getReturnValue()));
         } else if ((step.targetStatus() == ChunkStatus.INITIALIZE_LIGHT
-                        || step.targetStatus() == ChunkStatus.LIGHT)
+                        || step.targetStatus() == ChunkStatus.LIGHT
+                        || step.targetStatus() == ChunkStatus.SPAWN
+                        || step.targetStatus() == ChunkStatus.FULL)
                 && MosaicPhysicalMaterializer.isPhysicalMosaic(level)) {
             callback.setReturnValue(MosaicPhysicalMaterializer.onPhysicalStepFuture(
                     level, holder, step.targetStatus(), callback.getReturnValue()));

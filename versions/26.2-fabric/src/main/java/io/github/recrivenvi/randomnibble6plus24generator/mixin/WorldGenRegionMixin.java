@@ -13,6 +13,7 @@ import net.minecraft.util.StaticCache2D;
 import net.minecraft.world.level.biome.BiomeManager;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.core.Holder;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ChunkSource;
@@ -32,6 +33,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.GenerationContextRegistry;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.MosaicSpawnContextRegistry;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.PhysicalWorldAccessException;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.FeatureFrontierEvidence;
 
@@ -87,6 +89,19 @@ abstract class WorldGenRegionMixin {
             FeatureFrontierEvidence.captureSurfaceRegion(region, step, center, context);
         });
         if (GenerationContextRegistry.find(cache).isEmpty()) {
+            MosaicSpawnContextRegistry.find(cache).ifPresent(context -> {
+                this.seed = context.worldSeed();
+                this.random = context.randomState()
+                        .getOrCreateRandomFactory(RANDOMNIBBLE6PLUS24GENERATOR$WORLDGEN_REGION_RANDOM)
+                        .at(this.center.getPos().getWorldPosition());
+                WorldGenRegion region = (WorldGenRegion) (Object) this;
+                this.biomeManager = new BiomeManager(
+                        region::getNoiseBiome,
+                        BiomeManager.obfuscateSeed(context.worldSeed()));
+            });
+        }
+        if (GenerationContextRegistry.find(cache).isEmpty()
+                && MosaicSpawnContextRegistry.find(cache).isEmpty()) {
             FeatureFrontierEvidence.captureSurfaceRegion(
                     (WorldGenRegion) (Object) this, step, center, null);
         }
@@ -98,7 +113,9 @@ abstract class WorldGenRegionMixin {
                     value = "INVOKE",
                     target = "Lnet/minecraft/server/level/ServerLevel;getSeed()J"))
     private long randomnibble6plus24generator$useSessionSeedDuringConstruction(ServerLevel level) {
-        return GenerationContextRegistry.find(cache)
+        var isolated = GenerationContextRegistry.find(cache);
+        if (isolated.isPresent()) return isolated.get().worldSeed();
+        return MosaicSpawnContextRegistry.find(cache)
                 .map(context -> context.worldSeed())
                 .orElseGet(level::getSeed);
     }
@@ -110,7 +127,9 @@ abstract class WorldGenRegionMixin {
                     target = "Lnet/minecraft/server/level/ServerChunkCache;randomState()Lnet/minecraft/world/level/levelgen/RandomState;"))
     private RandomState randomnibble6plus24generator$useSessionRandomStateDuringConstruction(
             ServerChunkCache chunkSource) {
-        return GenerationContextRegistry.find(cache)
+        var isolated = GenerationContextRegistry.find(cache);
+        if (isolated.isPresent()) return isolated.get().randomState();
+        return MosaicSpawnContextRegistry.find(cache)
                 .map(context -> context.randomState())
                 .orElseGet(chunkSource::randomState);
     }
@@ -156,9 +175,23 @@ abstract class WorldGenRegionMixin {
     @Inject(method = "getChunkSource", at = @At("HEAD"))
     private void randomnibble6plus24generator$forbidPhysicalChunkSource(
             CallbackInfoReturnable<ChunkSource> callback) {
-        if (GenerationContextRegistry.find(cache).isPresent()) {
+        if (GenerationContextRegistry.find(cache).isPresent()
+                || MosaicSpawnContextRegistry.find(cache).isPresent()) {
             throw new PhysicalWorldAccessException("WorldGenRegion.getChunkSource()");
         }
+    }
+
+    @Inject(
+            method = "getChunk(IILnet/minecraft/world/level/chunk/status/ChunkStatus;Z)Lnet/minecraft/world/level/chunk/ChunkAccess;",
+            at = @At("HEAD"))
+    private void randomnibble6plus24generator$traceSpawnChunkRead(
+            int chunkX,
+            int chunkZ,
+            net.minecraft.world.level.chunk.status.ChunkStatus requestedStatus,
+            boolean allowEmpty,
+            CallbackInfoReturnable<ChunkAccess> callback) {
+        MosaicSpawnContextRegistry.find(cache).ifPresent(context ->
+                context.recordChunkRead(new ChunkPos(chunkX, chunkZ), requestedStatus));
     }
 
     @Inject(method = "isOldChunkAround", at = @At("HEAD"), cancellable = true)
@@ -171,6 +204,7 @@ abstract class WorldGenRegionMixin {
             // The vanilla implementation consults the physical ChunkMap directly.
             callback.setReturnValue(false);
         }
+        if (MosaicSpawnContextRegistry.find(cache).isPresent()) callback.setReturnValue(false);
     }
 
     @Inject(method = "getUncachedNoiseBiome", at = @At("HEAD"), cancellable = true)
@@ -187,6 +221,11 @@ abstract class WorldGenRegionMixin {
                     quartZ,
                     context.randomState().sampler()));
         });
+        if (callback.getReturnValue() == null) {
+            MosaicSpawnContextRegistry.find(cache).ifPresent(context -> callback.setReturnValue(
+                    context.generator().getBiomeSource().getNoiseBiome(
+                            quartX, quartY, quartZ, context.randomState().sampler())));
+        }
     }
 
     @Inject(method = "getLightEngine", at = @At("HEAD"), cancellable = true)

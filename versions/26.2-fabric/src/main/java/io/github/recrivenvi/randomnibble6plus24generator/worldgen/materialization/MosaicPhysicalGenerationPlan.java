@@ -33,8 +33,8 @@ public record MosaicPhysicalGenerationPlan(
         if (requestedStatus == ChunkStatus.EMPTY) {
             return new MosaicPhysicalGenerationPlan(requestedPos, requestedStatus, 0, Map.of(), Map.of());
         }
-        if (requestedStatus.isAfter(ChunkStatus.LIGHT)) {
-            throw new IllegalArgumentException("Phase 3B cannot plan physical status " + requestedStatus);
+        if (requestedStatus.isAfter(ChunkStatus.FULL)) {
+            throw new IllegalArgumentException("Phase 3C1 cannot plan physical status " + requestedStatus);
         }
 
         ChunkStep step = ChunkPyramid.GENERATION_PYRAMID.getStepTo(requestedStatus);
@@ -52,7 +52,18 @@ public record MosaicPhysicalGenerationPlan(
             // Mosaic never executes a partial seed-dependent physical pipeline. Any non-empty
             // request for a missing target publishes the complete pre-light Artifact instead.
             obligations.put(requestedPos, ChunkStatus.FEATURES);
+        } else if (requestedStatus.isOrBefore(ChunkStatus.LIGHT)) {
+            for (int radius = 0; radius <= dependencies.getRadius(); radius++) {
+                ChunkStatus required = dependencies.get(radius);
+                if (required.isBefore(ChunkStatus.FEATURES)) continue;
+                addSquareRing(obligations, requestedPos, radius, required);
+            }
         } else {
+            // SPAWN/FULL are derived from an already materialized physical LIGHT chunk.  The
+            // requested center is still the only new canonical obligation; its surrounding
+            // requirements are handled by their own physical requests when Vanilla promotes
+            // the accessibility/ticking frontier.
+            obligations.put(requestedPos, ChunkStatus.FEATURES);
             for (int radius = 0; radius <= dependencies.getRadius(); radius++) {
                 ChunkStatus required = dependencies.get(radius);
                 if (required.isBefore(ChunkStatus.FEATURES)) continue;

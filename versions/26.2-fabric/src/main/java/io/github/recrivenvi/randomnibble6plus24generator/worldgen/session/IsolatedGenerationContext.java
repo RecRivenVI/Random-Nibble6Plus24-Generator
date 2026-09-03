@@ -273,6 +273,26 @@ public final class IsolatedGenerationContext implements AutoCloseable {
                         physicalLevelEscapeSummary()));
     }
 
+    /**
+     * Builds only the BIOMES-level virtual inputs needed by the physical SPAWN
+     * bridge.  No terrain, carvers, features, or Artifact work is performed.
+     */
+    public Map<ChunkPos, ChunkAccess> generateBiomesForSpawn(Set<ChunkPos> positions) {
+        ensureOpen();
+        Map<ChunkPos, ChunkAccess> result = new java.util.LinkedHashMap<>();
+        positions.stream().sorted(java.util.Comparator.comparingInt(ChunkPos::z)
+                .thenComparingInt(ChunkPos::x)).forEach(pos -> {
+            ChunkGenerationTask task = chunkMap.scheduleGenerationTask(ChunkStatus.BIOMES, pos);
+            CompletableFutureDriver.runToCompletion(task);
+            ChunkAccess chunk = chunkMap.chunkAt(pos, ChunkStatus.BIOMES);
+            if (chunk == null || chunk.getPersistedStatus() != ChunkStatus.BIOMES) {
+                throw new IllegalStateException("SPAWN BIOMES dependency did not reach BIOMES: " + pos);
+            }
+            result.put(pos, chunk);
+        });
+        return Map.copyOf(result);
+    }
+
     private GenerationResult generateTo(ChunkStatus targetStatus) {
         ensureOpen();
         if (targetStatus.isOrAfter(ChunkStatus.FEATURES)) {
