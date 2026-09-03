@@ -23,6 +23,7 @@
     "ServerChunkCacheMixin",
     "ServerLevelInvoker",
     "ServerLevelLifecycleTraceMixin",
+    "StructureManagerMixin",
     "StructureCheckMixin",
     "WorldGenRegionMixin"
   ],

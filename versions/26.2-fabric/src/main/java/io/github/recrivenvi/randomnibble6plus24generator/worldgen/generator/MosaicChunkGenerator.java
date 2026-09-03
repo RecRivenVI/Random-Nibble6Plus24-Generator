@@ -3,14 +3,17 @@ package io.github.recrivenvi.randomnibble6plus24generator.worldgen.generator;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.Holder;
+import net.minecraft.core.HolderSet;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.WorldGenRegion;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelHeightAccessor;
@@ -27,6 +30,7 @@ import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
 import net.minecraft.world.level.levelgen.RandomState;
 import net.minecraft.world.level.levelgen.blending.Blender;
 import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplateManager;
+import net.minecraft.world.level.levelgen.structure.Structure;
 
 import io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile.MosaicWorldProfile;
@@ -145,6 +149,21 @@ public final class MosaicChunkGenerator extends ChunkGenerator {
     @Override
     public void spawnOriginalMobs(WorldGenRegion region) {
         throw unavailable("spawnOriginalMobs");
+    }
+
+    /**
+     * Overlay V1 deliberately does not define remote structure discovery. The
+     * vanilla command therefore receives its normal "not found" result rather
+     * than consulting the physical master-seed structure placement graph.
+     */
+    @Override
+    public Pair<BlockPos, Holder<Structure>> findNearestMapStructure(
+            ServerLevel level,
+            HolderSet<Structure> structures,
+            BlockPos origin,
+            int radius,
+            boolean skipKnownStructures) {
+        return null;
     }
 
     @Override

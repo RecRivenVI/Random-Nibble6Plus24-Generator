@@ -32,8 +32,12 @@ import net.minecraft.world.level.chunk.status.WorldGenContext;
 import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
 import net.minecraft.world.level.levelgen.RandomState;
 import net.minecraft.world.level.levelgen.WorldOptions;
+import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.StructureCheck;
+import net.minecraft.world.level.levelgen.structure.StructureStart;
+import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 import net.minecraft.world.level.lighting.LevelLightEngine;
+import net.minecraft.nbt.CompoundTag;
 
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.generator.MosaicChunkGenerator;
 
@@ -271,6 +275,34 @@ public final class IsolatedGenerationContext implements AutoCloseable {
                         chunkMap.statusDistribution(),
                         featureWriteSummary(),
                         physicalLevelEscapeSummary()));
+    }
+
+    /**
+     * Captures same-local-universe starts from the ordered writer frontier whose
+     * pieces intersect the target's 16x16 footprint. The returned NBT is
+     * detached before the session closes so the runtime overlay never needs to
+     * rerun FEATURES or inspect a physical neighbor.
+     */
+    public List<CompoundTag> captureExternalStructureStarts(
+            StructurePieceSerializationContext structureContext) {
+        ensureOpen();
+        FeatureOrderingPlan plan = FeatureOrderingPlan.targetLocalZxRowMajorV1(target);
+        BoundingBox targetBox = new BoundingBox(
+                target.getMinBlockX(), hostLevel.getMinY(), target.getMinBlockZ(),
+                target.getMaxBlockX(), hostLevel.getMaxY() - 1, target.getMaxBlockZ());
+        List<CompoundTag> result = new java.util.ArrayList<>();
+        for (ChunkPos writer : plan.writers()) {
+            if (writer.equals(target)) continue;
+            ChunkAccess chunk = chunkMap.chunkAt(writer, ChunkStatus.FEATURES);
+            if (chunk == null) continue;
+            for (StructureStart start : chunk.getAllStarts().values()) {
+                if (start == null || !start.isValid()) continue;
+                boolean intersects = start.getPieces().stream()
+                        .anyMatch(piece -> piece.getBoundingBox().intersects(targetBox));
+                if (intersects) result.add(start.createTag(structureContext, writer));
+            }
+        }
+        return List.copyOf(result);
     }
 
     /**

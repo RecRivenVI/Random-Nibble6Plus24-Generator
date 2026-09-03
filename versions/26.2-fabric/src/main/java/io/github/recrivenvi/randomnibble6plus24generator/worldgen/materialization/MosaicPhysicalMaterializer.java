@@ -13,6 +13,7 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.GenerationChunkHolder;
 import net.minecraft.server.level.GeneratingChunkMap;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.util.Util;
 import net.minecraft.util.StaticCache2D;
 import net.minecraft.world.level.ChunkPos;
@@ -32,6 +33,7 @@ import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.Featur
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.IsolatedGenerationContext;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.IsolatedGenerationMetrics;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.IsolatedGenerationMode;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.MosaicStructureOverlayStore;
 
 /**
  * Prepares one detached canonical FEATURES result and publishes its fresh ProtoChunk only through
@@ -242,7 +244,11 @@ public final class MosaicPhysicalMaterializer {
         CompletableFuture<PreparedMaterialization> preparedFuture = requestPrepared(level, holder.getPos());
         CompletableFuture<ChunkAccess> stage = preparedFuture.thenCompose(prepared -> {
             MATERIALIZATION_OBLIGATIONS.remove(key);
-            return step.apply(worldGenContext, cache, prepared.chunk());
+            return step.apply(worldGenContext, cache, prepared.chunk()).thenApply(result -> {
+                MosaicStructureOverlayStore.publish(
+                        level, key.pos(), prepared.artifact().localWorldSeed(), prepared.externalStructureStarts());
+                return result;
+            });
         });
         return stage.thenCompose(result -> onPhysicalStepFuture(
                 level, holder, targetStatus, CompletableFuture.completedFuture(result)))
@@ -347,6 +353,9 @@ public final class MosaicPhysicalMaterializer {
                     throw new IllegalStateException("Published Mosaic Chunk had no in-flight owner: " + key);
                 }
                 PreparedMaterialization prepared = flight.future().join();
+                ServerLevel level = levelFor(key);
+                MosaicStructureOverlayStore.publish(
+                        level, key.pos(), prepared.artifact().localWorldSeed(), prepared.externalStructureStarts());
                 Consumer<Publication> observer = verificationObserver;
                 if (observer != null) observer.accept(new Publication(key, prepared, holder));
             }
@@ -477,6 +486,7 @@ public final class MosaicPhysicalMaterializer {
         ISOLATED_GENERATIONS.incrementAndGet();
         long isolatedStarted = System.nanoTime();
         CanonicalChunkArtifact artifact;
+        java.util.List<CompoundTag> externalStructureStarts;
         IsolatedGenerationMetrics isolatedMetrics;
         long artifactNanos;
         try (IsolatedGenerationContext context = IsolatedGenerationContext.create(
@@ -484,6 +494,8 @@ public final class MosaicPhysicalMaterializer {
             FeatureStableGenerationRun run = context.generateFeaturesStable();
             isolatedMetrics = run.metrics();
             failIf(FaultPoint.AFTER_ISOLATED_STABLE_GENERATION);
+            externalStructureStarts = context.captureExternalStructureStarts(
+                    StructurePieceSerializationContext.fromLevel(level));
             long artifactStarted = System.nanoTime();
             artifact = CanonicalChunkArtifact.capture(
                     run,
@@ -517,6 +529,7 @@ public final class MosaicPhysicalMaterializer {
                 key,
                 artifact,
                 fresh,
+                externalStructureStarts,
                 isolatedMetrics,
                 isolatedNanos,
                 artifactNanos,
@@ -536,6 +549,17 @@ public final class MosaicPhysicalMaterializer {
                 profile.seedDerivationAlgorithmVersion(),
                 profile.featureOrderingAlgorithmVersion(),
                 profile.presentationAlgorithmVersion());
+    }
+
+    private static ServerLevel levelFor(GenerationKey key) {
+        synchronized (PHYSICAL_CHUNK_MAPS) {
+            for (ServerLevel level : PHYSICAL_CHUNK_MAPS.values()) {
+                if (level.getServer() == key.server() && level.dimension().equals(key.dimension())) {
+                    return level;
+                }
+            }
+        }
+        throw new IllegalStateException("No physical Mosaic level for published generation " + key);
     }
 
     private static void abort(GenerationKey key, ChunkAccess chunk) {
@@ -569,6 +593,7 @@ public final class MosaicPhysicalMaterializer {
             GenerationKey key,
             CanonicalChunkArtifact artifact,
             ProtoChunk chunk,
+            java.util.List<CompoundTag> externalStructureStarts,
             IsolatedGenerationMetrics isolatedMetrics,
             long isolatedNanos,
             long artifactNanos,
