@@ -24,7 +24,7 @@ public final class MosaicWorldIdentity {
     }
 
     public static boolean isMosaicWorld(ServerLevel level) {
-        return isMosaicWorld(level.getServer());
+        return runtimeContext(level).isPresent();
     }
 
     public static boolean isMosaicWorld(MinecraftServer server) {
@@ -32,21 +32,64 @@ public final class MosaicWorldIdentity {
     }
 
     public static boolean isMosaicDimension(ServerLevel level) {
-        boolean mosaicWorld = isMosaicWorld(level);
-        boolean mosaicDimension = level.getChunkSource().getGenerator() instanceof MosaicChunkGenerator;
-        if (mosaicWorld != mosaicDimension) {
-            throw new MosaicIdentityValidationException(
-                    "World/dimension Mosaic identity mismatch for " + level.dimension().identifier());
-        }
-        return mosaicDimension;
+        return runtimeContext(level).isPresent();
     }
 
     public static Optional<MosaicRuntimeContext> runtimeContext(ServerLevel level) {
-        return runtimeContext(level.getServer());
+        MosaicWorldRuntimeState state = state(level.getServer());
+        Optional<MosaicRuntimeContext> context = state.requireValidated(level.getServer().getWorldGenSettings());
+        state.requireOpenDimension(level);
+        boolean mosaicDimension = level.getChunkSource().getGenerator() instanceof MosaicChunkGenerator;
+        if (context.isPresent() != mosaicDimension
+                || (mosaicDimension && !context.orElseThrow().profile().equals(
+                        ((MosaicChunkGenerator) level.getChunkSource().getGenerator()).profile()))) {
+            state.invalidate();
+            throw new MosaicIdentityValidationException(
+                    "World/dimension Mosaic identity mismatch for " + level.dimension().identifier());
+        }
+        return context;
     }
 
     public static Optional<MosaicRuntimeContext> runtimeContext(MinecraftServer server) {
+        return state(server).requireValidated(server.getWorldGenSettings());
+    }
+
+    /** Load boundary, after new-save/test profile bootstrap and before any spawn generation. */
+    public static void initializeServerIdentity(MinecraftServer server) {
+        ((MosaicProfileChangeSource) server.getDataStorage())
+                .randomnibble6plus24generator$onIdentityReplacement(state(server)::invalidate);
+        revalidateServerIdentity(server);
+    }
+
+    /**
+     * Synchronous explicit boundary after SavedData profile/settings replacement.
+     * Ordinary datapack /reload does not replace 26.2 WorldGenSettings or its profile.
+     */
+    public static void revalidateServerIdentity(MinecraftServer server) {
+        if (!server.isSameThread()) {
+            throw new IllegalStateException("Mosaic identity validation must run on the owning server thread");
+        }
         WorldGenSettings worldGenSettings = server.getWorldGenSettings();
+        state(server).validate(worldGenSettings, () -> {
+            if (server.getDataStorage().get(WorldGenSettings.TYPE) != worldGenSettings) {
+                throw new MosaicIdentityValidationException(
+                        "SavedData WorldGenSettings differs from the server authority; refusing Vanilla fallback");
+            }
+            return readProfileEvidence(server);
+        });
+    }
+
+    /** Explicitly rereads the profile from disk; never called by Chunk/status queries. */
+    public static void reloadProfileFromDisk(MinecraftServer server) {
+        if (!server.isSameThread()) {
+            throw new IllegalStateException("Mosaic profile reload must run on the owning server thread");
+        }
+        ((MosaicProfileChangeSource) server.getDataStorage())
+                .randomnibble6plus24generator$discardProfileForExplicitReload();
+        revalidateServerIdentity(server);
+    }
+
+    private static MosaicWorldRuntimeState.ProfileEvidence readProfileEvidence(MinecraftServer server) {
         boolean profileFilePresent = MosaicWorldProfileData.fileExists(server);
         Optional<MosaicWorldProfile> persistedProfile;
         try {
@@ -57,11 +100,21 @@ public final class MosaicWorldIdentity {
                     exception);
         }
 
-        Optional<MosaicWorldProfile> validatedProfile = MosaicIdentityValidator.validate(
-                worldGenSettings.dimensions(),
-                persistedProfile,
-                profileFilePresent);
-        return validatedProfile.map(profile -> new MosaicRuntimeContext(worldGenSettings, profile));
+        return new MosaicWorldRuntimeState.ProfileEvidence(persistedProfile, profileFilePresent);
+    }
+
+    /** Called in finally, after the normal save/close path has finished or failed. */
+    public static void closeServerIdentity(MinecraftServer server) {
+        state(server).close();
+        ((MosaicProfileChangeSource) server.getDataStorage())
+                .randomnibble6plus24generator$onIdentityReplacement(null);
+    }
+
+    private static MosaicWorldRuntimeState state(MinecraftServer server) {
+        if (!(server instanceof MosaicRuntimeContextOwner owner)) {
+            throw new MosaicIdentityValidationException("Missing server-owned Mosaic identity lifecycle");
+        }
+        return owner.randomnibble6plus24generator$worldIdentity();
     }
 
     /**
@@ -102,6 +155,7 @@ public final class MosaicWorldIdentity {
     public static void validateServerAfterLevelCreation(MinecraftServer server) {
         try {
             Optional<MosaicRuntimeContext> context = runtimeContext(server);
+            for (ServerLevel level : server.getAllLevels()) runtimeContext(level);
             context.ifPresent(value -> RandomNibble6Plus24Generator.LOGGER.info(
                     "Validated Mosaic world identity: format={}, seedAlgorithm={}, presentationAlgorithm={}, primaryDimension={}",
                     value.profile().formatVersion(),

@@ -38,7 +38,9 @@ class FabricMetadataTest {
         JsonObject mixins = resourceJson("/randomnibble6plus24generator.mixins.json");
 
         assertTrue(mixins.get("required").getAsBoolean());
-        assertEquals(27, mixins.getAsJsonArray("mixins").size());
+        assertEquals(29, mixins.getAsJsonArray("mixins").size());
+        assertTrue(mixins.getAsJsonArray("mixins").contains(new com.google.gson.JsonPrimitive("SavedDataIdentityMixin")));
+        assertTrue(mixins.getAsJsonArray("mixins").contains(new com.google.gson.JsonPrimitive("ServerLevelIdentityMixin")));
         assertTrue(mixins.getAsJsonArray("mixins").contains(new com.google.gson.JsonPrimitive("CappedProcessorMixin")));
         assertTrue(mixins.getAsJsonArray("mixins").contains(new com.google.gson.JsonPrimitive("ChunkGeneratorMixin")));
         assertTrue(mixins.getAsJsonArray("mixins").contains(new com.google.gson.JsonPrimitive("ChunkMapMixin")));

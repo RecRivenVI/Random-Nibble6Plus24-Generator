@@ -51,3 +51,16 @@ tasks.processResources {
 tasks.test {
     useJUnitPlatform()
 }
+
+// Real Fabric lifecycle regression, isolated from ordinary client/server runs.
+if (providers.gradleProperty("identityLifecycleTest").isPresent) {
+    sourceSets.test.get().resources.srcDir("src/test/identity-lifecycle/resources")
+    loom.mods.create("mosaic_identity_lifecycle_test") { sourceSet(sourceSets.test.get()) }
+    loom.runs.named("server") {
+        runDirectory.set(rootProject.layout.projectDirectory.dir("runs/26.2-fabric/identity-lifecycle"))
+    }
+    tasks.named<JavaExec>("runServer") {
+        dependsOn(tasks.testClasses)
+        classpath += sourceSets.test.get().output
+    }
+}

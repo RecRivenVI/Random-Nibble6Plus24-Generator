@@ -6,12 +6,17 @@ import net.minecraft.server.level.progress.LevelLoadListener;
 import net.minecraft.world.level.storage.ServerLevelData;
 
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Unique;
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.identity.MosaicWorldIdentity;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.identity.MosaicRuntimeContextOwner;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.identity.MosaicWorldRuntimeState;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2AVerification;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2BVerification;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2C1Verification;
@@ -39,7 +44,15 @@ import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materializatio
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.MosaicStructureOverlayStore;
 
 @Mixin(MinecraftServer.class)
-abstract class MinecraftServerMixin {
+abstract class MinecraftServerMixin implements MosaicRuntimeContextOwner {
+
+    @Unique
+    private final MosaicWorldRuntimeState randomnibble6plus24generator$identity = new MosaicWorldRuntimeState();
+
+    @Override
+    public MosaicWorldRuntimeState randomnibble6plus24generator$worldIdentity() {
+        return randomnibble6plus24generator$identity;
+    }
 
     @Inject(method = "createLevels", at = @At("HEAD"))
     private void randomnibble6plus24generator$armNativeControlBeforePhysicalGeneration(CallbackInfo callbackInfo) {
@@ -48,6 +61,7 @@ abstract class MinecraftServerMixin {
                 (MinecraftServer) (Object) this);
         Phase3BVerification.bootstrapProfileIfRequested((MinecraftServer) (Object) this);
         Phase3C1Verification.bootstrapProfileIfRequested((MinecraftServer) (Object) this);
+        MosaicWorldIdentity.initializeServerIdentity((MinecraftServer) (Object) this);
         NativeVanillaControlHarness.armIfRequested((MinecraftServer) (Object) this);
         NativeVanillaFeatureOrderProbe.armIfRequested((MinecraftServer) (Object) this);
         Phase2C1StageBisectionHarness.armNativeIfRequested((MinecraftServer) (Object) this);
@@ -146,5 +160,14 @@ abstract class MinecraftServerMixin {
         Phase3BVerification.cleanupExactStatusHolders((MinecraftServer) (Object) this);
         MosaicPhysicalMaterializer.shutdown((MinecraftServer) (Object) this);
         MosaicStructureOverlayStore.clear((MinecraftServer) (Object) this);
+    }
+
+    @WrapMethod(method = "stopServer")
+    private void randomnibble6plus24generator$releaseIdentityAfterSaveAndClose(Operation<Void> original) {
+        try {
+            original.call();
+        } finally {
+            MosaicWorldIdentity.closeServerIdentity((MinecraftServer) (Object) this);
+        }
     }
 }
