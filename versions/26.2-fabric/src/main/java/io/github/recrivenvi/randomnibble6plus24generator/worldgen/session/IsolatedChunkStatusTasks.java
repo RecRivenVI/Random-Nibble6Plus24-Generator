@@ -20,6 +20,7 @@ import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.level.chunk.status.ChunkStep;
 import net.minecraft.world.level.levelgen.blending.Blender;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.levelgen.structure.placement.ConcentricRingsStructurePlacement;
 
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.FeatureFrontierEvidence;
 
@@ -35,6 +36,16 @@ public final class IsolatedChunkStatusTasks {
             ChunkAccess chunk) {
         context.recordStage(ChunkStatus.STRUCTURE_STARTS);
         if (context.hostLevel().getServer().getWorldGenSettings().options().generateStructures()) {
+            // ChunkGeneratorStructureState creates concentric-ring positions on the
+            // background executor.  Resolve those futures before taking the shared
+            // StructureTemplateManager monitor; otherwise a spawn burst can fill the
+            // common pool with workers waiting on the monitor while the monitor owner
+            // waits for one of the same-pool ring futures (a real production deadlock).
+            for (var structureSet : context.structureState().possibleStructureSets()) {
+                if (structureSet.value().placement() instanceof ConcentricRingsStructurePlacement rings) {
+                    context.structureState().getRingPositionsFor(rings);
+                }
+            }
             // StructureTemplate.Palette lazily populates ordinary HashMap caches. Separate
             // isolated universes may run concurrently, but they share the server's Vanilla
             // StructureTemplateManager; serialize only this cache-populating entry point.

@@ -15,6 +15,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.PhysicalMosaicTrace;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicPhysicalMaterializer;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.MosaicStructureIndexStore;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3C2RSpawnTrace;
 
 /** Development-only evidence that Vanilla activates each physical LevelChunk lifecycle once. */
 @Mixin(LevelChunk.class)
@@ -54,8 +55,15 @@ abstract class LevelChunkLifecycleTraceMixin {
     @Inject(method = "postProcessGeneration", at = @At("HEAD"))
     private void randomnibble6plus24generator$tracePostProcess(
             ServerLevel serverLevel, CallbackInfo callbackInfo) {
+        Phase3C2RSpawnTrace.beginPostProcess(serverLevel, ((LevelChunk) (Object) this).getPos());
         PhysicalMosaicTrace.recordLifecycleCall(
                 serverLevel, "postProcessGeneration", ((LevelChunk) (Object) this).getPos());
+    }
+
+    @Inject(method = "postProcessGeneration", at = @At("RETURN"))
+    private void randomnibble6plus24generator$finishPostProcess(
+            ServerLevel serverLevel, CallbackInfo callbackInfo) {
+        Phase3C2RSpawnTrace.endPostProcess(serverLevel, ((LevelChunk) (Object) this).getPos());
     }
 
     @Inject(method = "updateBlockEntityTicker", at = @At("HEAD"))

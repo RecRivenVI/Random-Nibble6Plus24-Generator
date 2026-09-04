@@ -34,6 +34,7 @@ import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3C
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3C3AOverlayVerification;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3C3ANormalVanillaVerification;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3C3BLocateVerification;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3C2RSpawnVerification;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicPhysicalMaterializer;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.MosaicStructureOverlayStore;
 
@@ -136,6 +137,7 @@ abstract class MinecraftServerMixin {
         Phase3C2ProductionVerification.runIfRequested((MinecraftServer) (Object) this);
         Phase3C3AOverlayVerification.runIfRequested((MinecraftServer) (Object) this);
         Phase3C3BLocateVerification.runIfRequested((MinecraftServer) (Object) this);
+        Phase3C2RSpawnVerification.runIfRequested((MinecraftServer) (Object) this);
         Phase3C3ANormalVanillaVerification.runIfRequested((MinecraftServer) (Object) this);
     }
 
