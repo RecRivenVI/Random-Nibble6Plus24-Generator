@@ -1,12 +1,7 @@
 param(
     [long]$MasterSeed = 123456789,
-    [ValidateSet('probe', 'reload', 'clear', 'clear-reload')]
+    [ValidateSet('probe', 'reload')]
     [string]$Mode = 'probe',
-    [int]$MaxCandidates = 512,
-    [string]$Structures = 'village,mineshaft,trial_chambers,monument,fortress,end_city',
-    [int]$ScanCenterX = 0,
-    [int]$ScanCenterZ = 0,
-    [switch]$TraceCandidates,
     [switch]$KeepWorld
 )
 
@@ -18,9 +13,9 @@ $runRoot = (Resolve-Path (Join-Path $repositoryRoot 'runs\26.2-fabric\server')).
 $propertiesPath = Join-Path $runRoot 'server.properties'
 $originalProperties = [IO.File]::ReadAllText($propertiesPath)
 $originalJavaToolOptions = $env:JAVA_TOOL_OPTIONS
-$worldName = "phase3c3a-overlay-$MasterSeed"
+$worldName = "phase3c3b-locate-$MasterSeed"
 $worldPath = [IO.Path]::GetFullPath((Join-Path $runRoot $worldName))
-$resultRoot = [IO.Path]::GetFullPath((Join-Path $repositoryRoot 'versions\26.2-fabric\build\phase3c3a-overlay'))
+$resultRoot = [IO.Path]::GetFullPath((Join-Path $repositoryRoot 'versions\26.2-fabric\build\phase3c3b-locate'))
 $resultPath = Join-Path $resultRoot "$Mode.json"
 $previousPath = Join-Path $resultRoot 'probe.json'
 
@@ -28,7 +23,7 @@ function Remove-World {
     $prefix = $runRoot + [IO.Path]::DirectorySeparatorChar
     if ((-not $worldPath.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) `
             -or (Split-Path -Leaf $worldPath) -ne $worldName) {
-        throw "Refusing unsafe Phase 3C3A cleanup path: $worldPath"
+        throw "Refusing unsafe Phase 3C3B cleanup path: $worldPath"
     }
     if (Test-Path -LiteralPath $worldPath) { [IO.Directory]::Delete($worldPath, $true) }
 }
@@ -41,11 +36,11 @@ function Set-Property([string]$content, [string]$name, [string]$value) {
 }
 
 function Write-HiddenPresetPack {
-    $packRoot = Join-Path $worldPath 'datapacks\phase3c3a-hidden-mosaic'
+    $packRoot = Join-Path $worldPath 'datapacks\phase3c3b-hidden-mosaic'
     $presetDirectory = Join-Path $packRoot 'data\randomnibble6plus24generator\worldgen\world_preset'
     New-Item -ItemType Directory -Path $presetDirectory -Force | Out-Null
     [IO.File]::WriteAllText((Join-Path $packRoot 'pack.mcmeta'),
-        '{"pack":{"pack_format":107,"min_format":[107,1],"max_format":[107,1],"description":"Phase 3C3A hidden Mosaic overlay"}}')
+        '{"pack":{"pack_format":107,"min_format":[107,1],"max_format":[107,1],"description":"Phase 3C3B hidden Mosaic index"}}')
     $profile = '"mosaic_profile":{"format_version":2,"seed_derivation_algorithm_version":1,"feature_ordering_algorithm_version":1,"presentation_algorithm_version":1,"primary_dimension":"minecraft:overworld"}'
     $preset = @"
 {
@@ -80,7 +75,7 @@ function Write-HiddenPresetPack {
   }
 }
 "@
-    [IO.File]::WriteAllText((Join-Path $presetDirectory 'phase3c3a_hidden_mosaic.json'), $preset)
+    [IO.File]::WriteAllText((Join-Path $presetDirectory 'phase3c3b_hidden_mosaic.json'), $preset)
 }
 
 try {
@@ -96,40 +91,44 @@ try {
     if (Test-Path -LiteralPath $resultPath) { Remove-Item -LiteralPath $resultPath -Force }
 
     $properties = Set-Property $originalProperties 'level-seed' ([string]$MasterSeed)
-    $properties = Set-Property $properties 'level-type' 'randomnibble6plus24generator:phase3c3a_hidden_mosaic'
+    $properties = Set-Property $properties 'level-type' 'randomnibble6plus24generator:phase3c3b_hidden_mosaic'
     $properties = Set-Property $properties 'view-distance' '2'
     $properties = Set-Property $properties 'simulation-distance' '2'
-    # The probe deliberately waits on isolated physical chunk futures from a
-    # server-tick callback.  Disable the watchdog for this test-only harness;
-    # production server settings are restored in finally.
     $properties = Set-Property $properties 'max-tick-time' '-1'
     [IO.File]::WriteAllText($propertiesPath, $properties)
 
     $options = @(
-        "-Drandomnibble6plus24generator.phase3c3a.overlay.mode=$Mode",
-        "-Drandomnibble6plus24generator.phase3c3a.overlay.output=$($resultPath.Replace('\','/'))",
-        "-Drandomnibble6plus24generator.phase3c3a.overlay.maxCandidates=$MaxCandidates",
-        "-Drandomnibble6plus24generator.phase3c3a.overlay.structures=$Structures",
-        "-Drandomnibble6plus24generator.phase3c3a.overlay.scanCenterX=$ScanCenterX",
-        "-Drandomnibble6plus24generator.phase3c3a.overlay.scanCenterZ=$ScanCenterZ",
-        "-Drandomnibble6plus24generator.phase3c3a.overlay.autoStop=true"
+        "-Drandomnibble6plus24generator.phase3c3b.locate.mode=$Mode",
+        "-Drandomnibble6plus24generator.phase3c3b.locate.output=$($resultPath.Replace('\','/'))",
+        '-Drandomnibble6plus24generator.phase3c3b.locate.autoStop=true'
     )
-    if ($Mode -ne 'probe' -and (Test-Path -LiteralPath $previousPath)) {
-        $options += "-Drandomnibble6plus24generator.phase3c3a.overlay.fixtureSpec=$((Get-Content -LiteralPath $previousPath -Raw | ConvertFrom-Json).fixtureSpec)"
-    } elseif ($Mode -ne 'probe') {
-        throw "$Mode mode requires the previous probe result: $previousPath"
+    if ($Mode -ne 'probe') {
+        if (-not (Test-Path -LiteralPath $previousPath)) {
+            throw "Reload mode requires the previous probe result: $previousPath"
+        }
+        $options += "-Drandomnibble6plus24generator.phase3c3b.locate.fixtureSpec=$((Get-Content -LiteralPath $previousPath -Raw | ConvertFrom-Json).fixtureSpec)"
     }
-    if ($TraceCandidates) { $options += '-Drandomnibble6plus24generator.phase3c3a.overlay.traceCandidates=true' }
     $env:JAVA_TOOL_OPTIONS = $options -join ' '
     & (Join-Path $repositoryRoot 'gradlew.bat') ':versions:26.2-fabric:runServer' "--args=nogui --world $worldName" | Out-Host
-    if ($LASTEXITCODE -ne 0) { throw "Phase 3C3A overlay server failed: $LASTEXITCODE" }
+    if ($LASTEXITCODE -ne 0) { throw "Phase 3C3B locate server failed: $LASTEXITCODE" }
     $latestLog = Join-Path $runRoot 'logs\latest.log'
-    $passLog = Select-String -Path $latestLog -Pattern 'Phase 3C3A (Structure Overlay|Overlay projection replacement) PASS' -Quiet
+    $passLog = Select-String -Path $latestLog -Pattern 'Phase 3C3B Mosaic /locate PASS' -Quiet
     if ((-not (Test-Path -LiteralPath $resultPath)) -or (-not $passLog)) {
-        throw "Phase 3C3A overlay server did not report a PASS; inspect $latestLog"
+        throw "Phase 3C3B locate server did not report a PASS; inspect $latestLog"
     }
     $result = Get-Content -LiteralPath $resultPath -Raw | ConvertFrom-Json
-    if ($result.status -ne 'PASS') { throw "Phase 3C3A overlay result failed: $result" }
+    if ($result.status -ne 'PASS') { throw "Phase 3C3B locate result failed: $result" }
+    if ($Mode -eq 'reload' -and $result.artifactGenerations -ne 0) {
+        throw "Phase 3C3B reload regenerated canonical data: $result"
+    }
+    if ($Mode -eq 'reload') {
+        $probe = Get-Content -LiteralPath $previousPath -Raw | ConvertFrom-Json
+        $locationsEqual = (($probe.locations | ConvertTo-Json -Depth 12 -Compress) -eq ($result.locations | ConvertTo-Json -Depth 12 -Compress))
+        $tagsEqual = (($probe.tagQuery | ConvertTo-Json -Depth 12 -Compress) -eq ($result.tagQuery | ConvertTo-Json -Depth 12 -Compress))
+        if ((-not $locationsEqual) -or (-not $tagsEqual)) {
+            throw "Phase 3C3B reload changed persisted locate results"
+        }
+    }
     $result | ConvertTo-Json -Depth 12
 } finally {
     [IO.File]::WriteAllText($propertiesPath, $originalProperties)

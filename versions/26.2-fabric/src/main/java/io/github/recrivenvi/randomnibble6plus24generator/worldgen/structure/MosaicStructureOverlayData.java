@@ -3,6 +3,7 @@ package io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
@@ -56,8 +57,15 @@ final class MosaicStructureOverlayData extends SavedData {
     }
 
     void put(String key, ChunkProjection projection) {
+        if (Objects.equals(chunks.get(key), projection)) return;
         chunks.put(key, projection);
         setDirty();
+    }
+
+    boolean remove(String key) {
+        if (chunks.remove(key) == null) return false;
+        setDirty();
+        return true;
     }
 
     record ChunkProjection(int chunkX, int chunkZ, long localWorldSeed, List<CompoundTag> externalStarts) {

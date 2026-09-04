@@ -49,6 +49,7 @@ import io.github.recrivenvi.randomnibble6plus24generator.worldgen.identity.Mosai
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicPhysicalMaterializer;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.MosaicStructureOverlayStore;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.MosaicStructureOverlayTrace;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.MosaicStructureIndexStore;
 
 /** Test-only acceptance probe for the loaded-Chunk Structure Overlay V1. */
 public final class Phase3C3AOverlayVerification {
@@ -76,6 +77,10 @@ public final class Phase3C3AOverlayVerification {
         }
         MosaicStructureOverlayTrace.reset();
         MosaicPhysicalMaterializer.Metrics baselineMaterializer = MosaicPhysicalMaterializer.metrics();
+        if (mode.equals("clear") || mode.equals("clear-reload")) {
+            runProjectionReplacement(server, mode, baselineMaterializer);
+            return;
+        }
         boolean reload = "reload".equals(mode);
         List<Fixture> fixtures = fixtureSpec().isBlank()
                 ? discoverFixtures(server)
@@ -101,7 +106,7 @@ public final class Phase3C3AOverlayVerification {
         result.add("queries", queriesJson(queries));
         result.add("crossSeedBoundary", crossSeedBoundary(server, fixtures));
         result.add("overlayCalls", map(MosaicStructureOverlayTrace.snapshot()));
-        result.addProperty("locateResult", "null (Overlay V1 fail-closed)");
+        result.addProperty("locateResult", "indexed physical projection");
         if (reload && MosaicPhysicalMaterializer.metrics().artifactCaptureCount()
                 != baselineMaterializer.artifactCaptureCount()) {
             throw new IllegalStateException("Overlay reload regenerated a canonical Artifact");
@@ -109,6 +114,52 @@ public final class Phase3C3AOverlayVerification {
         write(result);
         RandomNibble6Plus24Generator.LOGGER.info(
                 "Phase 3C3A Structure Overlay PASS fixtures={} mode={}", fixtures.size(), mode);
+        if (Boolean.parseBoolean(System.getProperty(PREFIX + "autoStop", "true"))) server.halt(false);
+    }
+
+    private static void runProjectionReplacement(
+            MinecraftServer server, String mode, MosaicPhysicalMaterializer.Metrics baselineMaterializer) {
+        String encoded = fixtureSpec();
+        if (encoded.isBlank()) throw new IllegalStateException("Projection replacement requires fixtureSpec");
+        if (mode.equals("clear")) {
+            List<Fixture> fixtures = loadFixtures(server, encoded);
+            for (Fixture fixture : fixtures) {
+                long seed = MosaicWorldIdentity.runtimeContext(fixture.level()).orElseThrow()
+                        .resolveLocalWorldSeed(fixture.level().dimension(), fixture.owner());
+                MosaicStructureOverlayStore.publish(fixture.level(), fixture.owner(), seed, List.of());
+                if (!MosaicStructureOverlayStore.externalStarts(fixture.level(), fixture.owner()).isEmpty()
+                        || MosaicStructureIndexStore.indexedEntryCount(fixture.level()) != 0) {
+                    throw new IllegalStateException("Empty Overlay replacement left a cached projection: "
+                            + fixture.owner());
+                }
+            }
+        } else {
+            for (String entry : encoded.split(";")) {
+                if (entry.isBlank()) continue;
+                String[] parts = entry.split("\\|", -1);
+                if (parts.length != 4) throw new IllegalStateException("Malformed projection fixture: " + entry);
+                ServerLevel level = level(server, parts[1]);
+                ChunkPos owner = new ChunkPos(Integer.parseInt(parts[2]), Integer.parseInt(parts[3]));
+                requestFull(server, level, owner);
+                if (!MosaicStructureOverlayStore.externalStarts(level, owner).isEmpty()
+                        || MosaicStructureIndexStore.indexedEntryCount(level) != 0) {
+                    throw new IllegalStateException("Cleared Overlay projection reappeared after restart: " + entry);
+                }
+            }
+        }
+        if (MosaicPhysicalMaterializer.metrics().artifactCaptureCount()
+                != baselineMaterializer.artifactCaptureCount()) {
+            throw new IllegalStateException("Projection replacement triggered canonical generation");
+        }
+        JsonObject result = new JsonObject();
+        result.addProperty("status", "PASS");
+        result.addProperty("mode", mode);
+        result.addProperty("fixtureSpec", encoded);
+        result.addProperty("artifactGenerations", 0L);
+        result.addProperty("externalStartsAfter", 0L);
+        write(result);
+        RandomNibble6Plus24Generator.LOGGER.info(
+                "Phase 3C3A Overlay projection replacement PASS mode={}", mode);
         if (Boolean.parseBoolean(System.getProperty(PREFIX + "autoStop", "true"))) server.halt(false);
     }
 
@@ -349,9 +400,13 @@ public final class Phase3C3AOverlayVerification {
             throw new IllegalStateException("Overlay LocationPredicate query missed " + fixture);
         }
         HolderSet<Structure> direct = HolderSet.direct(registry.wrapAsHolder(fixture.structure()));
-        if (fixture.level().getChunkSource().getGenerator().findNearestMapStructure(
-                fixture.level(), direct, fixture.point(), 32, false) != null) {
-            throw new IllegalStateException("Mosaic /locate path returned a remote result for " + fixture);
+        var located = fixture.level().getChunkSource().getGenerator().findNearestMapStructure(
+                fixture.level(), direct, fixture.point(), 32, false);
+        if (located == null
+                || located.getSecond().value() != fixture.structure()
+                || !ChunkPos.containing(located.getFirst()).equals(fixture.owner())) {
+            throw new IllegalStateException("Mosaic /locate index returned an invalid physical projection for "
+                    + fixture + ": " + located);
         }
         long externalStarts = MosaicStructureOverlayStore.externalStarts(fixture.level(), fixture.owner()).stream()
                 .filter(start -> start.getStructure() == fixture.structure()).count();
@@ -359,7 +414,8 @@ public final class Phase3C3AOverlayVerification {
                 + "|start=" + fixture.start().getChunkPos()
                 + "|box=" + fixture.start().getBoundingBox()
                 + "|pieces=" + fixture.start().getPieces().size()
-                + "|externalStarts=" + externalStarts;
+                + "|externalStarts=" + externalStarts
+                + "|locator=" + located.getFirst();
         return new Query(fixture.structureId(), fixture.owner(), fixture.point(), signature, externalStarts);
     }
 

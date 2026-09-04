@@ -245,8 +245,9 @@ public final class MosaicPhysicalMaterializer {
         CompletableFuture<ChunkAccess> stage = preparedFuture.thenCompose(prepared -> {
             MATERIALIZATION_OBLIGATIONS.remove(key);
             return step.apply(worldGenContext, cache, prepared.chunk()).thenApply(result -> {
-                MosaicStructureOverlayStore.publish(
-                        level, key.pos(), prepared.artifact().localWorldSeed(), prepared.externalStructureStarts());
+                MosaicStructureOverlayStore.publishCanonical(
+                        level, key.pos(), prepared.artifact().localWorldSeed(),
+                        prepared.chunk(), prepared.externalStructureStarts());
                 return result;
             });
         });
@@ -354,8 +355,9 @@ public final class MosaicPhysicalMaterializer {
                 }
                 PreparedMaterialization prepared = flight.future().join();
                 ServerLevel level = levelFor(key);
-                MosaicStructureOverlayStore.publish(
-                        level, key.pos(), prepared.artifact().localWorldSeed(), prepared.externalStructureStarts());
+                MosaicStructureOverlayStore.publishCanonical(
+                        level, key.pos(), prepared.artifact().localWorldSeed(),
+                        prepared.chunk(), prepared.externalStructureStarts());
                 Consumer<Publication> observer = verificationObserver;
                 if (observer != null) observer.accept(new Publication(key, prepared, holder));
             }

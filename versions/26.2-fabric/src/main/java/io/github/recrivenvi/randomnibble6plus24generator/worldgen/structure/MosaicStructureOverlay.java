@@ -188,7 +188,7 @@ public final class MosaicStructureOverlay {
         }
     }
 
-    /** Remote /locate is not defined by Overlay V1; report no candidate. */
+    /** Unindexed remote structure checks stay closed; locate uses the persisted index instead. */
     public static StructureCheckResult refuseLocate(LevelAccessor level, ChunkPos chunkPos) {
         ServerLevel server = server(level).orElseThrow();
         trace("locateRefused", server, chunkPos);

@@ -33,6 +33,7 @@ import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3C
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3C2ProductionVerification;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3C3AOverlayVerification;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3C3ANormalVanillaVerification;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3C3BLocateVerification;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicPhysicalMaterializer;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.MosaicStructureOverlayStore;
 
@@ -75,6 +76,10 @@ abstract class MinecraftServerMixin {
             return;
         }
         if (Phase3C3AOverlayVerification.skipInitialSpawnIfRequested()) {
+            levelData.setInitialized(true);
+            return;
+        }
+        if (Phase3C3BLocateVerification.skipInitialSpawnIfRequested()) {
             levelData.setInitialized(true);
             return;
         }
@@ -121,7 +126,8 @@ abstract class MinecraftServerMixin {
         if (Phase3APhysicalMaterializationVerification.skipPrepareLevelsIfCompleted()
                 || Phase3BVerification.skipPrepareLevelsIfCompleted()
                 || Phase3C1Verification.skipPrepareLevelsIfCompleted()
-                || Phase3C3AOverlayVerification.skipPrepareLevelsIfRequested()) callbackInfo.cancel();
+                || Phase3C3AOverlayVerification.skipPrepareLevelsIfRequested()
+                || Phase3C3BLocateVerification.skipPrepareLevelsIfRequested()) callbackInfo.cancel();
     }
 
     @Inject(method = "tickServer", at = @At("RETURN"))
@@ -129,6 +135,7 @@ abstract class MinecraftServerMixin {
             java.util.function.BooleanSupplier haveTime, CallbackInfo callbackInfo) {
         Phase3C2ProductionVerification.runIfRequested((MinecraftServer) (Object) this);
         Phase3C3AOverlayVerification.runIfRequested((MinecraftServer) (Object) this);
+        Phase3C3BLocateVerification.runIfRequested((MinecraftServer) (Object) this);
         Phase3C3ANormalVanillaVerification.runIfRequested((MinecraftServer) (Object) this);
     }
 

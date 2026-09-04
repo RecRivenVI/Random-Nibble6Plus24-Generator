@@ -13,6 +13,7 @@
     "BlockEntityTickerTraceMixin",
     "GenerationChunkHolderMixin",
     "LevelChunkLifecycleTraceMixin",
+    "LocateCommandMixin",
     "LevelTicksAccessor",
     "MinecraftServerMixin",
     "MinecraftServerInvoker",

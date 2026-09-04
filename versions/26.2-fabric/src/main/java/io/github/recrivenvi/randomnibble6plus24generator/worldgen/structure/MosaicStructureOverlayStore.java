@@ -9,6 +9,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.levelgen.structure.StructureStart;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
@@ -33,14 +34,36 @@ public final class MosaicStructureOverlayStore {
             ChunkPos owner,
             long localWorldSeed,
             List<CompoundTag> externalStarts) {
-        if (externalStarts.isEmpty()) return;
+        String key = key(level, owner);
+        if (externalStarts.isEmpty()) {
+            MosaicStructureOverlayData data = level.getServer().getDataStorage()
+                    .get(MosaicStructureOverlayData.TYPE);
+            if (data != null) data.remove(key);
+            CACHE.computeIfAbsent(level.getServer(), ignored -> new ConcurrentHashMap<>())
+                    .remove(key);
+            MosaicStructureIndexStore.remove(level, owner);
+            return;
+        }
         MosaicStructureOverlayData data = level.getServer().getDataStorage()
                 .computeIfAbsent(MosaicStructureOverlayData.TYPE);
-        String key = key(level, owner);
         data.put(key, new MosaicStructureOverlayData.ChunkProjection(
                 owner.x(), owner.z(), localWorldSeed, externalStarts));
         CACHE.computeIfAbsent(level.getServer(), ignored -> new ConcurrentHashMap<>())
                 .remove(key);
+    }
+
+    /** Publishes the physical owner's starts and its projected cross-Chunk starts as one index update. */
+    public static synchronized void publishCanonical(
+            ServerLevel level,
+            ChunkPos owner,
+            long localWorldSeed,
+            ChunkAccess canonicalChunk,
+            List<CompoundTag> externalStarts) {
+        publish(level, owner, localWorldSeed, externalStarts);
+        List<StructureStart> ownerStarts = canonicalChunk.getAllStarts().values().stream()
+                .filter(start -> start != null && start.isValid())
+                .toList();
+        MosaicStructureIndexStore.publish(level, owner, localWorldSeed, ownerStarts, externalStarts);
     }
 
     public static List<StructureStart> startsForOwner(ServerLevel level, ChunkPos owner) {
