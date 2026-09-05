@@ -5,6 +5,8 @@
     "CappedProcessorMixin",
     "ChunkAccessAccessor",
     "ChunkGeneratorMixin",
+    "ChunkGeneratorStructureStateMixin",
+    "ConcentricRingsStructurePlacementMixin",
     "ChunkHolderInvoker",
     "ChunkHolderLifecycleTraceMixin",
     "ChunkMapMixin",
@@ -31,6 +33,7 @@
     "ServerLevelLifecycleTraceMixin",
     "StructureManagerMixin",
     "StructureCheckMixin",
+    "StructurePlacementAccessor",
     "WorldGenRegionMixin"
   ],
   "injectors": {

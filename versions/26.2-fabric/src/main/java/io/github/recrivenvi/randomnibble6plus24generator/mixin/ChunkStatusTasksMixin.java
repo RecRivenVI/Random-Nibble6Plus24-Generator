@@ -1,9 +1,12 @@
 package io.github.recrivenvi.randomnibble6plus24generator.mixin;
 
 import java.util.concurrent.CompletableFuture;
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 
 import net.minecraft.server.level.GenerationChunkHolder;
 import net.minecraft.util.StaticCache2D;
+import net.minecraft.util.Util;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.status.ChunkStatusTasks;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
@@ -20,6 +23,7 @@ import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.Isolat
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.FeatureFrontierEvidence;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.NativeFeatureExecutionTrace;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicPhysicalMaterializer;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicGenerationLifecycleOwner;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicPhysicalPoiReconciler;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicPhysicalSpawner;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.PhysicalMosaicTrace;
@@ -55,15 +59,17 @@ abstract class ChunkStatusTasksMixin {
         }
     }
 
-    @Inject(method = "initializeLight", at = @At("HEAD"), cancellable = true)
-    private static void randomnibble6plus24generator$preparePhysicalMosaicInitializeLight(
+    @WrapMethod(method = "initializeLight")
+    private static CompletableFuture<ChunkAccess> randomnibble6plus24generator$preparePhysicalMosaicInitializeLight(
             WorldGenContext worldGenContext,
             ChunkStep step,
             StaticCache2D<GenerationChunkHolder> cache,
             ChunkAccess chunk,
-            CallbackInfoReturnable<CompletableFuture<ChunkAccess>> callback) {
+            Operation<CompletableFuture<ChunkAccess>> original) {
         if (GenerationContextRegistry.find(worldGenContext).isPresent()
-                || !MosaicPhysicalMaterializer.isPhysicalMosaic(worldGenContext.level())) return;
+                || !MosaicPhysicalMaterializer.isPhysicalMosaic(worldGenContext.level())) {
+            return original.call(worldGenContext, step, cache, chunk);
+        }
         boolean physicalEngine = worldGenContext.lightEngine()
                 == worldGenContext.level().getChunkSource().getLightEngine();
         try {
@@ -76,13 +82,19 @@ abstract class ChunkStatusTasksMixin {
             if (chunk.getPersistedStatus().isOrAfter(ChunkStatus.FEATURES)
                     || MosaicPhysicalMaterializer.hasMaterializationObligation(
                             worldGenContext.level(), chunk.getPos())) {
-                MosaicPhysicalPoiReconciler.reconcile(worldGenContext.level(), chunk);
+                return MosaicPhysicalPoiReconciler.reconcileAsync(worldGenContext, chunk)
+                        .thenComposeAsync(ignored -> {
+                            var owner = (MosaicGenerationLifecycleOwner) worldGenContext.level();
+                            owner.randomnibble6plus24generator$generationLifecycle().checkPreparing();
+                            // Only POI touches server-owned storage. Vanilla's chunk-local light
+                            // preparation stays off the server thread; no worker blocks on a join.
+                            return original.call(worldGenContext, step, cache, chunk);
+                        }, Util.backgroundExecutor());
             }
         } catch (RuntimeException exception) {
-            CompletableFuture<ChunkAccess> failed = new CompletableFuture<>();
-            failed.completeExceptionally(exception);
-            callback.setReturnValue(failed);
+            return CompletableFuture.failedFuture(exception);
         }
+        return original.call(worldGenContext, step, cache, chunk);
     }
 
     @Inject(method = "light", at = @At("HEAD"))

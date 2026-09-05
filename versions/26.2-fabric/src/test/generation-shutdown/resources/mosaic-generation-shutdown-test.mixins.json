@@ -1,0 +1,7 @@
+{
+  "required": true,
+  "package": "io.github.recrivenvi.randomnibble6plus24generator.shutdowntest.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "mixins": ["ShutdownTestServerMixin", "ShutdownTestWorkerMixin", "ShutdownTestCrashMixin"],
+  "injectors": {"defaultRequire": 1}
+}

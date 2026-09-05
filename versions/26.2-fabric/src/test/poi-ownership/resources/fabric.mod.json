@@ -1,0 +1,1 @@
+{"schemaVersion":1,"id":"mosaic_poi_ownership_test","version":"1","name":"Mosaic POI ownership regression","environment":"server","mixins":["mosaic-poi-test.mixins.json"],"depends":{"randomnibble6plus24generator":"*"}}

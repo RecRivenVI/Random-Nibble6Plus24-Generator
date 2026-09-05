@@ -79,6 +79,13 @@ public final class MosaicPhysicalMaterializer {
 
     public static void registerPhysicalRequest(ServerLevel level, ChunkStatus targetStatus, ChunkPos pos) {
         if (!isPhysicalMosaic(level) || targetStatus == ChunkStatus.EMPTY) return;
+        var lifecycle = lifecycle(level);
+        synchronized (lifecycle) {
+            if (lifecycle.activate()) registerOpenPhysicalRequest(level, targetStatus, pos);
+        }
+    }
+
+    private static void registerOpenPhysicalRequest(ServerLevel level, ChunkStatus targetStatus, ChunkPos pos) {
         if (targetStatus.isAfter(ChunkStatus.FULL)) {
             throw new IllegalStateException(
                     "Phase 3C1 refuses physical Mosaic status after FULL: " + targetStatus + " at " + pos);
@@ -135,7 +142,7 @@ public final class MosaicPhysicalMaterializer {
     public static ChunkStatus physicalStepAllowance(
             GeneratingChunkMap chunkMap, ChunkPos pos) {
         ServerLevel level = PHYSICAL_CHUNK_MAPS.get(chunkMap);
-        if (level == null || !isPhysicalMosaic(level)) return null;
+        if (level == null || lifecycle(level).closing() || !isPhysicalMosaic(level)) return null;
         return PHYSICAL_STATUS_ALLOWANCES.get(key(level, pos));
     }
 
@@ -165,36 +172,50 @@ public final class MosaicPhysicalMaterializer {
 
     /** Returns the same in-flight future for every concurrent request of an identical generation key. */
     public static CompletableFuture<PreparedMaterialization> requestPrepared(ServerLevel level, ChunkPos pos) {
+        MosaicGenerationLifecycle lifecycle = lifecycle(level);
+        if (lifecycle.active() && lifecycle.closing()) {
+            return CompletableFuture.failedFuture(lifecycle.cancellation());
+        }
         GenerationKey key = key(level, pos);
         REQUEST_COUNT.incrementAndGet();
-        InFlight existing = IN_FLIGHT.get(key);
-        if (existing != null) {
-            DEDUP_HITS.incrementAndGet();
-            return existing.future();
-        }
-
         CompletableFuture<PreparedMaterialization> promise = new CompletableFuture<>();
         InFlight created = new InFlight(promise);
-        existing = IN_FLIGHT.putIfAbsent(key, created);
-        if (existing != null) {
-            DEDUP_HITS.incrementAndGet();
-            return existing.future();
+        synchronized (lifecycle) {
+            if (!lifecycle.activate()) return CompletableFuture.failedFuture(lifecycle.cancellation());
+            InFlight existing = IN_FLIGHT.putIfAbsent(key, created);
+            if (existing != null) {
+                DEDUP_HITS.incrementAndGet();
+                return existing.future();
+            }
+            lifecycle.workerAccepted();
         }
 
-        CompletableFuture.runAsync(() -> {
-            try {
-                promise.complete(prepare(level, pos, key));
-            } catch (Throwable throwable) {
-                promise.completeExceptionally(throwable);
-            }
-        }, Util.backgroundExecutor());
         promise.whenComplete((prepared, throwable) -> {
             if (throwable != null) {
                 IN_FLIGHT.remove(key, created);
                 MATERIALIZATION_OBLIGATIONS.remove(key);
-                clearPlansContaining(level, pos);
+                clearPlansContaining(key);
             }
         });
+        try {
+            CompletableFuture.runAsync(() -> {
+                try {
+                    promise.complete(prepare(level, pos, key));
+                } catch (Throwable throwable) {
+                    if (!promise.completeExceptionally(throwable) && !lifecycle.isExpected(throwable)) {
+                        // An unrelated caller may have cancelled the result first. A real worker
+                        // failure must not disappear just because its result future was already done.
+                        net.minecraft.util.thread.BlockableEventLoop.relayDelayCrash(
+                                net.minecraft.CrashReport.forThrowable(throwable, "Exception Mosaic generation worker"));
+                    }
+                } finally {
+                    lifecycle.workerFinished();
+                }
+            }, Util.backgroundExecutor());
+        } catch (RuntimeException failure) {
+            promise.completeExceptionally(failure);
+            lifecycle.workerFinished();
+        }
         return promise;
     }
 
@@ -267,8 +288,8 @@ public final class MosaicPhysicalMaterializer {
             GenerationChunkHolder holder,
             ChunkStatus targetStatus,
             CompletableFuture<ChunkAccess> future) {
+        GenerationKey key = key(level, holder.getPos());
         return future.thenApply(chunk -> {
-            GenerationKey key = key(level, holder.getPos());
             ChunkStatus requested = REQUESTED_PHYSICAL_STATUSES.get(key);
             if (requested != null && targetStatus.isOrAfter(requested)) {
                 completePhysicalRequest(key);
@@ -280,7 +301,7 @@ public final class MosaicPhysicalMaterializer {
             PhysicalMosaicTrace.onPhysicalStepCompleted(level, targetStatus, chunk);
             return chunk;
         }).whenComplete((chunk, throwable) -> {
-            if (throwable != null) clearPlansContaining(level, holder.getPos());
+            if (throwable != null) clearPlansContaining(key);
         });
     }
 
@@ -319,7 +340,10 @@ public final class MosaicPhysicalMaterializer {
     }
 
     private static void clearPlansContaining(ServerLevel level, ChunkPos failedPos) {
-        GenerationKey failedKey = key(level, failedPos);
+        clearPlansContaining(key(level, failedPos));
+    }
+
+    private static void clearPlansContaining(GenerationKey failedKey) {
         java.util.List<GenerationKey> owners;
         synchronized (PLAN_LOCK) {
             owners = ACTIVE_PHYSICAL_PLANS.entrySet().stream()
@@ -400,9 +424,31 @@ public final class MosaicPhysicalMaterializer {
     }
 
     public static void shutdown(MinecraftServer server) {
-        IN_FLIGHT.forEach((key, flight) -> {
-            if (key.server() == server && IN_FLIGHT.remove(key, flight)) flight.future().cancel(true);
+        // Cooperative close: queued/preparing workers produce an owner-tagged termination,
+        // while transactions already past canonical preparation finish their atomic handoff.
+        // Vanilla's existing hasWork/deactivateTicketsOnClosing loop drains holder tasks.
+        for (ServerLevel level : server.getAllLevels()) lifecycle(level).beginClosing();
+    }
+
+    /** Invoked after Vanilla's generation drain, before save/closing registries or storage. */
+    public static void finishShutdown(MinecraftServer server) {
+        server.managedBlock(() -> {
+            for (ServerLevel level : server.getAllLevels()) if (!lifecycle(level).quiescent()) return false;
+            return true;
         });
+        clearClosedServer(server);
+    }
+
+    /** Preserve the original fatal error, but never leave detached workers running against a retired identity. */
+    public static void finishFailedShutdown(MinecraftServer server) {
+        shutdown(server);
+        for (ServerLevel level : server.getAllLevels()) lifecycle(level).awaitClosedWorkers();
+        clearClosedServer(server);
+        MosaicStructureOverlayStore.clear(server);
+    }
+
+    private static void clearClosedServer(MinecraftServer server) {
+        IN_FLIGHT.keySet().removeIf(key -> key.server() == server);
         REQUESTED_PHYSICAL_STATUSES.keySet().removeIf(key -> key.server() == server);
         MATERIALIZATION_OBLIGATIONS.keySet().removeIf(key -> key.server() == server);
         PHYSICAL_STATUS_ALLOWANCES.keySet().removeIf(key -> key.server() == server);
@@ -415,6 +461,33 @@ public final class MosaicPhysicalMaterializer {
         synchronized (AWAITING_PUBLISH) {
             AWAITING_PUBLISH.entrySet().removeIf(entry -> entry.getValue().server() == server);
         }
+    }
+
+    /** Also covers an explicit ServerLevel close, not just the integrated-server stop path. */
+    public static void closeLevel(ServerLevel level) {
+        var lifecycle = lifecycle(level);
+        lifecycle.beginClosing();
+        if (!lifecycle.active()) return;
+        level.getServer().managedBlock(lifecycle::quiescent);
+        java.util.function.Predicate<GenerationKey> belongs = key -> key.server() == level.getServer()
+                && key.dimension().equals(level.dimension());
+        IN_FLIGHT.keySet().removeIf(belongs);
+        REQUESTED_PHYSICAL_STATUSES.keySet().removeIf(belongs);
+        MATERIALIZATION_OBLIGATIONS.keySet().removeIf(belongs);
+        PHYSICAL_STATUS_ALLOWANCES.keySet().removeIf(belongs);
+        ACTIVE_PHYSICAL_PLANS.keySet().removeIf(belongs);
+        ARTIFACT_CAPTURES_BY_KEY.keySet().removeIf(belongs);
+        PUBLISHES_BY_KEY.keySet().removeIf(belongs);
+        synchronized (PHYSICAL_CHUNK_MAPS) {
+            PHYSICAL_CHUNK_MAPS.entrySet().removeIf(entry -> entry.getValue() == level);
+        }
+        synchronized (AWAITING_PUBLISH) {
+            AWAITING_PUBLISH.entrySet().removeIf(entry -> belongs.test(entry.getValue()));
+        }
+    }
+
+    private static MosaicGenerationLifecycle lifecycle(ServerLevel level) {
+        return ((MosaicGenerationLifecycleOwner) level).randomnibble6plus24generator$generationLifecycle();
     }
 
     public static Metrics metrics() {
@@ -480,6 +553,8 @@ public final class MosaicPhysicalMaterializer {
     }
 
     private static PreparedMaterialization prepare(ServerLevel level, ChunkPos pos, GenerationKey key) {
+        MosaicGenerationLifecycle lifecycle = lifecycle(level);
+        lifecycle.checkPreparing();
         long totalStarted = System.nanoTime();
         MosaicRuntimeContext runtime = MosaicWorldIdentity.runtimeContext(level)
                 .orElseThrow(() -> new IllegalStateException("Missing Mosaic runtime context"));
@@ -496,6 +571,9 @@ public final class MosaicPhysicalMaterializer {
         try (IsolatedGenerationContext context = IsolatedGenerationContext.create(
                 IsolatedGenerationMode.ISOLATED_MOSAIC, level, localSeed, pos)) {
             FeatureStableGenerationRun run = context.generateFeaturesStable();
+            // Do not retain the isolated session or start Artifact/materialization for a closing world.
+            // Already-running Vanilla work finishes in its existing executor and closes via try-with-resources.
+            lifecycle.checkPreparing();
             spawnBiomes = context.captureSpawnBiomes(runtime.profile());
             isolatedMetrics = run.metrics();
             failIf(FaultPoint.AFTER_ISOLATED_STABLE_GENERATION);

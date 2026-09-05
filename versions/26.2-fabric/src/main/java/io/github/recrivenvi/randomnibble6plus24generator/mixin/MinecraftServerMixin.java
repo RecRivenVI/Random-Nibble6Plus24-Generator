@@ -159,6 +159,12 @@ abstract class MinecraftServerMixin implements MosaicRuntimeContextOwner {
     private void randomnibble6plus24generator$cancelMosaicMaterializationsOnStop(CallbackInfo callbackInfo) {
         Phase3BVerification.cleanupExactStatusHolders((MinecraftServer) (Object) this);
         MosaicPhysicalMaterializer.shutdown((MinecraftServer) (Object) this);
+    }
+
+    @Inject(method = "stopServer", at = @At(value = "INVOKE", target =
+            "Lnet/minecraft/server/MinecraftServer;saveAllChunks(ZZZ)Z", shift = At.Shift.BEFORE))
+    private void randomnibble6plus24generator$drainMosaicWorkersBeforeSave(CallbackInfo callbackInfo) {
+        MosaicPhysicalMaterializer.finishShutdown((MinecraftServer) (Object) this);
         MosaicStructureOverlayStore.clear((MinecraftServer) (Object) this);
     }
 
@@ -166,6 +172,13 @@ abstract class MinecraftServerMixin implements MosaicRuntimeContextOwner {
     private void randomnibble6plus24generator$releaseIdentityAfterSaveAndClose(Operation<Void> original) {
         try {
             original.call();
+        } catch (RuntimeException | Error failure) {
+            try {
+                MosaicPhysicalMaterializer.finishFailedShutdown((MinecraftServer) (Object) this);
+            } catch (RuntimeException | Error cleanupFailure) {
+                failure.addSuppressed(cleanupFailure);
+            }
+            throw failure;
         } finally {
             MosaicWorldIdentity.closeServerIdentity((MinecraftServer) (Object) this);
         }

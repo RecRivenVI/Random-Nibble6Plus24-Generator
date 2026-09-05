@@ -41,6 +41,8 @@ import net.minecraft.nbt.CompoundTag;
 
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.generator.MosaicChunkGenerator;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile.MosaicWorldProfile;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.ConcentricRingScope;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.ConcentricRingStateAccess;
 
 public final class IsolatedGenerationContext implements AutoCloseable {
 
@@ -110,6 +112,11 @@ public final class IsolatedGenerationContext implements AutoCloseable {
                 registryAccess.lookupOrThrow(Registries.STRUCTURE_SET),
                 randomState,
                 worldSeed);
+        if (mode == IsolatedGenerationMode.ISOLATED_MOSAIC) {
+            ((ConcentricRingStateAccess) structureState).randomnibble6plus24generator$setRingScope(
+                    ConcentricRingScope.forV2Target(target, worldSeed,
+                            generator.getBiomeSource(), structureState.possibleStructureSets()));
+        }
         this.structureState.ensureStructuresGenerated();
         this.structureStateNanos = System.nanoTime() - structureStateStarted;
         this.chunkScanAccess = new EmptyVirtualChunkScanAccess();

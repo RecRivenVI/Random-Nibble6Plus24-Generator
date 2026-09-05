@@ -21,9 +21,15 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicPhysicalMaterializer;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicGenerationLifecycle;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicGenerationLifecycleOwner;
 
 @Mixin(ChunkMap.class)
-abstract class ChunkMapMixin {
+abstract class ChunkMapMixin implements MosaicGenerationLifecycleOwner {
+    @Override
+    public MosaicGenerationLifecycle randomnibble6plus24generator$generationLifecycle() {
+        return ((MosaicGenerationLifecycleOwner) level).randomnibble6plus24generator$generationLifecycle();
+    }
 
     @Shadow
     @Final
@@ -38,6 +44,8 @@ abstract class ChunkMapMixin {
             ChunkStatus targetStatus,
             ChunkPos pos,
             CallbackInfoReturnable<ChunkGenerationTask> callback) {
+        if (randomnibble6plus24generator$generationLifecycle().active()
+                && randomnibble6plus24generator$generationLifecycle().closing()) return;
         if (MosaicPhysicalMaterializer.isPhysicalMosaic(level)) {
             MosaicPhysicalMaterializer.registerPhysicalRequest(level, targetStatus, pos);
         }
@@ -49,6 +57,11 @@ abstract class ChunkMapMixin {
             ChunkStep step,
             StaticCache2D<GenerationChunkHolder> cache,
             CallbackInfoReturnable<CompletableFuture<ChunkAccess>> callback) {
+        var lifecycle = randomnibble6plus24generator$generationLifecycle();
+        if (lifecycle.active() && lifecycle.closing()) {
+            callback.setReturnValue(CompletableFuture.failedFuture(lifecycle.cancellation()));
+            return;
+        }
         if (!MosaicPhysicalMaterializer.isPhysicalMosaic(level) || step.targetStatus() == ChunkStatus.EMPTY) return;
         ChunkStatus target = step.targetStatus();
         if (target.isOrAfter(ChunkStatus.INITIALIZE_LIGHT)
@@ -89,6 +102,8 @@ abstract class ChunkMapMixin {
             ChunkStep step,
             StaticCache2D<GenerationChunkHolder> cache,
             CallbackInfoReturnable<CompletableFuture<ChunkAccess>> callback) {
+        if (randomnibble6plus24generator$generationLifecycle().active()
+                && randomnibble6plus24generator$generationLifecycle().closing()) return;
         if (step.targetStatus() == ChunkStatus.EMPTY
                 && MosaicPhysicalMaterializer.isPhysicalMosaic(level)
                 && MosaicPhysicalMaterializer.hasMaterializationObligation(level, holder.getPos())) {

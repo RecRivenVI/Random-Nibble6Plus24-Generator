@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
 
 import net.minecraft.core.BlockPos;
@@ -18,6 +19,7 @@ import net.minecraft.world.entity.ai.village.poi.PoiTypes;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
+import net.minecraft.world.level.chunk.status.WorldGenContext;
 
 /** Post-publication, idempotent POI derivation from one physical Chunk's own sections. */
 public final class MosaicPhysicalPoiReconciler {
@@ -30,7 +32,21 @@ public final class MosaicPhysicalPoiReconciler {
     private MosaicPhysicalPoiReconciler() {
     }
 
+    /** Match Vanilla chunk loading: prefetch may be asynchronous, storage unpack/mutation may not. */
+    public static CompletableFuture<Reconciliation> reconcileAsync(WorldGenContext context, ChunkAccess chunk) {
+        ServerLevel level = context.level();
+        var lifecycle = ((MosaicGenerationLifecycleOwner) level).randomnibble6plus24generator$generationLifecycle();
+        lifecycle.checkPreparing();
+        return level.getPoiManager().prefetch(chunk.getPos()).thenApplyAsync(ignored -> {
+            lifecycle.checkPreparing();
+            return reconcile(level, chunk);
+        // Use the chunk-source event loop, not MinecraftServer's general task queue:
+        // synchronous getChunk waits pump this queue (as does native scheduleChunkLoad).
+        }, context.mainThreadExecutor());
+    }
+
     public static Reconciliation reconcile(ServerLevel level, ChunkAccess chunk) {
+        requireServerThread(level);
         if (!MosaicPhysicalMaterializer.isPhysicalMosaic(level)) {
             throw new IllegalArgumentException("POI reconciliation is Mosaic-only");
         }
@@ -73,6 +89,7 @@ public final class MosaicPhysicalPoiReconciler {
     }
 
     public static List<PoiEntry> actualEntries(ServerLevel level, ChunkAccess chunk) {
+        requireServerThread(level);
         List<PoiEntry> result = level.getPoiManager()
                 .getInChunk(ignored -> true, chunk.getPos(), PoiManager.Occupancy.ANY)
                 .map(MosaicPhysicalPoiReconciler::entry)
@@ -98,6 +115,13 @@ public final class MosaicPhysicalPoiReconciler {
 
     public static void shutdown(MinecraftServer server) {
         // No persistent marker, executor, or server-owned state exists.
+    }
+
+    private static void requireServerThread(ServerLevel level) {
+        if (!level.getServer().isSameThread()) {
+            throw new IllegalStateException("Physical POI storage belongs to the server thread, not "
+                    + Thread.currentThread().getName());
+        }
     }
 
     private static PoiEntry entry(PoiRecord record) {

@@ -78,3 +78,45 @@ if (providers.gradleProperty("spawnReuseTest").isPresent) {
         classpath += sourceSets.test.get().output
     }
 }
+
+// Native concentric-ring Oracle regression. Test sources never enter the production JAR.
+if (providers.gradleProperty("strongholdTest").isPresent) {
+    require(!providers.gradleProperty("performanceProbe").isPresent)
+    sourceSets.test.get().resources.srcDir("src/test/stronghold/resources")
+    loom.mods.create("mosaic_stronghold_test") { sourceSet(sourceSets.test.get()) }
+    loom.runs.named("server") {
+        runDirectory.set(rootProject.layout.projectDirectory.dir("runs/26.2-fabric/stronghold-test"))
+    }
+    tasks.named<JavaExec>("runServer") {
+        dependsOn(tasks.testClasses)
+        classpath += sourceSets.test.get().output
+    }
+}
+
+// Explicit lifecycle cancellation / real-error propagation regression, excluded from production JARs.
+if (providers.gradleProperty("generationShutdownTest").isPresent) {
+    require(!providers.gradleProperty("performanceProbe").isPresent)
+    sourceSets.test.get().resources.srcDir("src/test/generation-shutdown/resources")
+    loom.mods.create("mosaic_generation_shutdown_test") { sourceSet(sourceSets.test.get()) }
+    loom.runs.named("server") {
+        runDirectory.set(rootProject.layout.projectDirectory.dir("runs/26.2-fabric/generation-shutdown"))
+    }
+    tasks.named<JavaExec>("runServer") {
+        dependsOn(tasks.testClasses)
+        classpath += sourceSets.test.get().output
+    }
+}
+
+// Physical POI ownership and restart regression; no test hooks enter the product JAR.
+if (providers.gradleProperty("poiOwnershipTest").isPresent) {
+    require(!providers.gradleProperty("performanceProbe").isPresent)
+    sourceSets.test.get().resources.srcDir("src/test/poi-ownership/resources")
+    loom.mods.create("mosaic_poi_ownership_test") { sourceSet(sourceSets.test.get()) }
+    loom.runs.named("server") {
+        runDirectory.set(rootProject.layout.projectDirectory.dir("runs/26.2-fabric/poi-ownership"))
+    }
+    tasks.named<JavaExec>("runServer") {
+        dependsOn(tasks.testClasses)
+        classpath += sourceSets.test.get().runtimeClasspath
+    }
+}

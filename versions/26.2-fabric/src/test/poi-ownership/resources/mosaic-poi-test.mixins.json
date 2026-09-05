@@ -1,0 +1,1 @@
+{"required":true,"package":"io.github.recrivenvi.randomnibble6plus24generator.poitest.mixin","compatibilityLevel":"JAVA_25","mixins":["PoiTestServerMixin","PoiStorageObservationMixin"],"injectors":{"defaultRequire":1}}
