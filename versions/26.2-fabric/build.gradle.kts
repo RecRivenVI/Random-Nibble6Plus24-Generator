@@ -64,3 +64,17 @@ if (providers.gradleProperty("identityLifecycleTest").isPresent) {
         classpath += sourceSets.test.get().output
     }
 }
+
+// Opt-in production SPAWN equivalence and persistence regression.
+if (providers.gradleProperty("spawnReuseTest").isPresent) {
+    require(!providers.gradleProperty("identityLifecycleTest").isPresent)
+    sourceSets.test.get().resources.srcDir("src/test/spawn-reuse/resources")
+    loom.mods.create("mosaic_spawn_reuse_test") { sourceSet(sourceSets.test.get()) }
+    loom.runs.named("server") {
+        runDirectory.set(rootProject.layout.projectDirectory.dir("runs/26.2-fabric/spawn-reuse"))
+    }
+    tasks.named<JavaExec>("runServer") {
+        dependsOn(tasks.testClasses)
+        classpath += sourceSets.test.get().output
+    }
+}

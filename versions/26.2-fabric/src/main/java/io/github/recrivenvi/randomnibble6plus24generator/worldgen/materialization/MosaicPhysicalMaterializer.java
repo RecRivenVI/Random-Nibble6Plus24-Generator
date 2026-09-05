@@ -33,6 +33,7 @@ import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.Featur
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.IsolatedGenerationContext;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.IsolatedGenerationMetrics;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.IsolatedGenerationMode;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.SpawnBiomeSnapshot;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.MosaicStructureOverlayStore;
 
 /**
@@ -488,12 +489,14 @@ public final class MosaicPhysicalMaterializer {
         ISOLATED_GENERATIONS.incrementAndGet();
         long isolatedStarted = System.nanoTime();
         CanonicalChunkArtifact artifact;
+        SpawnBiomeSnapshot spawnBiomes;
         java.util.List<CompoundTag> externalStructureStarts;
         IsolatedGenerationMetrics isolatedMetrics;
         long artifactNanos;
         try (IsolatedGenerationContext context = IsolatedGenerationContext.create(
                 IsolatedGenerationMode.ISOLATED_MOSAIC, level, localSeed, pos)) {
             FeatureStableGenerationRun run = context.generateFeaturesStable();
+            spawnBiomes = context.captureSpawnBiomes(runtime.profile());
             isolatedMetrics = run.metrics();
             failIf(FaultPoint.AFTER_ISOLATED_STABLE_GENERATION);
             externalStructureStarts = context.captureExternalStructureStarts(
@@ -527,6 +530,7 @@ public final class MosaicPhysicalMaterializer {
             throw new IllegalStateException("Rehydrated physical handoff is not a fresh pre-light FEATURES ProtoChunk");
         }
         failIf(FaultPoint.AFTER_PROVENANCE_VALIDATION);
+        ((MosaicSpawnBiomeCarrier) fresh).randomnibble6plus24generator$spawnBiomes(spawnBiomes);
         return new PreparedMaterialization(
                 key,
                 artifact,

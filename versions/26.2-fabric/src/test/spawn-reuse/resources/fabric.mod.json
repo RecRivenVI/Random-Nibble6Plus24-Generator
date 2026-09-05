@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "id": "mosaic_spawn_reuse_test",
+  "version": "0.0.0",
+  "environment": "server",
+  "mixins": ["mosaic-spawn-reuse-test.mixins.json"],
+  "depends": {"randomnibble6plus24generator": "*"}
+}

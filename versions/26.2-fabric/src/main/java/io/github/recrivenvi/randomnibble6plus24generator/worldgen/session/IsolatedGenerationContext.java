@@ -40,6 +40,7 @@ import net.minecraft.world.level.lighting.LevelLightEngine;
 import net.minecraft.nbt.CompoundTag;
 
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.generator.MosaicChunkGenerator;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile.MosaicWorldProfile;
 
 public final class IsolatedGenerationContext implements AutoCloseable {
 
@@ -323,6 +324,16 @@ public final class IsolatedGenerationContext implements AutoCloseable {
             result.put(pos, chunk);
         });
         return Map.copyOf(result);
+    }
+
+    /** Copies only the already-generated stored palettes before this session closes. */
+    public SpawnBiomeSnapshot captureSpawnBiomes(MosaicWorldProfile profile) {
+        ensureOpen();
+        if (!chunkMap.chunksAtOrBeyond(ChunkStatus.FEATURES).containsAll(SpawnBiomeSnapshot.neighbors(target))) {
+            throw new IllegalStateException("SPAWN input capture requires the completed V2 FEATURES frontier");
+        }
+        return SpawnBiomeSnapshot.capture(dimension, target, worldSeed, profile,
+                pos -> chunkMap.chunkAt(pos, ChunkStatus.BIOMES));
     }
 
     private GenerationResult generateTo(ChunkStatus targetStatus) {

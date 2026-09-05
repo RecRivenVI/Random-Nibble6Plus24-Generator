@@ -25,12 +25,11 @@ import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.Mosaic
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.PhysicalWorldAccessException;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.IsolatedGenerationContext;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.IsolatedGenerationMode;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.SpawnBiomeSnapshot;
 
-/** Runs only Vanilla's local-seed SPAWN task against an already-lighted target. */
-public final class MosaicPhysicalSpawner {
+/** Frozen f339d05 SPAWN implementation, test-only regression oracle. */
+public final class V2SpawnOracle {
 
-    private MosaicPhysicalSpawner() {
+    private V2SpawnOracle() {
     }
 
     public static CompletableFuture<ChunkAccess> generateSpawn(
@@ -63,7 +62,11 @@ public final class MosaicPhysicalSpawner {
         if (physicalTargetHolder == null) {
             throw new IllegalStateException("Physical Mosaic SPAWN target holder is missing: " + target);
         }
-        Map<ChunkPos, ChunkAccess> localBiomeChunks = biomeInputs(level, chunk, localSeed, runtime);
+        Map<ChunkPos, ChunkAccess> localBiomeChunks;
+        try (IsolatedGenerationContext biomeContext = IsolatedGenerationContext.create(
+                IsolatedGenerationMode.ISOLATED_MOSAIC, level, localSeed, target)) {
+            localBiomeChunks = biomeContext.generateBiomesForSpawn(spawnNeighbors(target));
+        }
         MosaicSpawnGenerationContext context = new MosaicSpawnGenerationContext(
                 level,
                 target,
@@ -106,26 +109,17 @@ public final class MosaicPhysicalSpawner {
         } finally {
             MosaicSpawnContextRegistry.unbind(context);
             context.close();
-            ((MosaicSpawnBiomeCarrier) chunk).randomnibble6plus24generator$spawnBiomes(null);
         }
     }
 
-    private static Map<ChunkPos, ChunkAccess> biomeInputs(
-            ServerLevel level, ChunkAccess chunk, long localSeed, MosaicRuntimeContext runtime) {
-        SpawnBiomeSnapshot snapshot = ((MosaicSpawnBiomeCarrier) chunk).randomnibble6plus24generator$spawnBiomes();
-        if (snapshot == null) {
-            // A saved FEATURES/LIGHT ProtoChunk has no transient input. Retain the
-            // exact V2 cold-recovery path; never regenerate Artifact or terrain.
-            try (IsolatedGenerationContext context = IsolatedGenerationContext.create(
-                    IsolatedGenerationMode.ISOLATED_MOSAIC, level, localSeed, chunk.getPos())) {
-                return context.generateBiomesForSpawn(Set.copyOf(SpawnBiomeSnapshot.neighbors(chunk.getPos())));
+    private static Set<ChunkPos> spawnNeighbors(ChunkPos target) {
+        java.util.Set<ChunkPos> positions = new java.util.HashSet<>();
+        for (int dz = -1; dz <= 1; dz++) {
+            for (int dx = -1; dx <= 1; dx++) {
+                if (dx == 0 && dz == 0) continue;
+                positions.add(new ChunkPos(target.x() + dx, target.z() + dz));
             }
         }
-        snapshot.validate(level.dimension(), chunk.getPos(), localSeed, runtime.profile());
-        Map<ChunkPos, ChunkAccess> inputs = new java.util.LinkedHashMap<>();
-        for (ChunkPos pos : snapshot.positions()) {
-            inputs.put(pos, new MosaicSpawnBiomeView(pos, snapshot, level.palettedContainerFactory()));
-        }
-        return Map.copyOf(inputs);
+        return Set.copyOf(positions);
     }
 }
