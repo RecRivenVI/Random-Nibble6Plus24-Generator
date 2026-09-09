@@ -2,6 +2,8 @@
   "required": true,
   "package": "io.github.recrivenvi.randomnibble6plus24generator.mixin",
   "mixins": [
+    "StructureCandidateStateMixin",
+    "StructureCandidateGeneratorMixin",
     "CappedProcessorMixin",
     "ChunkAccessAccessor",
     "ChunkGeneratorMixin",

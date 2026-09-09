@@ -43,6 +43,8 @@ import io.github.recrivenvi.randomnibble6plus24generator.worldgen.generator.Mosa
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile.MosaicWorldProfile;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.ConcentricRingScope;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.ConcentricRingStateAccess;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.StructureCandidateScope;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.StructureCandidateStateAccess;
 
 public final class IsolatedGenerationContext implements AutoCloseable {
 
@@ -116,6 +118,8 @@ public final class IsolatedGenerationContext implements AutoCloseable {
             ((ConcentricRingStateAccess) structureState).randomnibble6plus24generator$setRingScope(
                     ConcentricRingScope.forV2Target(target, worldSeed,
                             generator.getBiomeSource(), structureState.possibleStructureSets()));
+            ((StructureCandidateStateAccess) structureState).randomnibble6plus24generator$setCandidateScope(
+                    StructureCandidateScope.forV2Target(target, worldSeed, structureState.possibleStructureSets()));
         }
         this.structureState.ensureStructuresGenerated();
         this.structureStateNanos = System.nanoTime() - structureStateStarted;

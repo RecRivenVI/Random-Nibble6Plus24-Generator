@@ -120,3 +120,61 @@ if (providers.gradleProperty("poiOwnershipTest").isPresent) {
         classpath += sourceSets.test.get().runtimeClasspath
     }
 }
+
+// Native placement-contract and false-negative regression, not part of product artifacts.
+if (providers.gradleProperty("candidatePruningTest").isPresent) {
+    require(!providers.gradleProperty("performanceProbe").isPresent)
+    sourceSets.test.get().resources.srcDir("src/test/candidate-pruning/resources")
+    loom.mods.create("mosaic_candidate_pruning_test") { sourceSet(sourceSets.test.get()) }
+    loom.runs.named("server") {
+        runDirectory.set(rootProject.layout.projectDirectory.dir("runs/26.2-fabric/candidate-pruning"))
+    }
+    tasks.named<JavaExec>("runServer") {
+        dependsOn(tasks.testClasses)
+        classpath += sourceSets.test.get().output
+    }
+}
+
+// Opt-in research mod. It is not included in the production artifact or normal runs.
+if (providers.gradleProperty("lightweightProbe").isPresent) {
+    require(!providers.gradleProperty("identityLifecycleTest").isPresent)
+    sourceSets.test.get().resources.srcDir("src/test/lightweight/resources")
+    loom.runs.named("server") {
+        runDirectory.set(rootProject.layout.projectDirectory.dir("runs/26.2-fabric/lightweight-research"))
+    }
+    loom.mods.create("mosaic_lightweight_probe") {
+        sourceSet(sourceSets.test.get())
+    }
+    tasks.named<JavaExec>("runServer") {
+        dependsOn(tasks.testClasses)
+        classpath += sourceSets.test.get().output
+    }
+}
+
+// Observers only; independent of the lightweight algorithm experiment.
+if (providers.gradleProperty("performanceProbe").isPresent) {
+    require(!providers.gradleProperty("identityLifecycleTest").isPresent)
+    require(!providers.gradleProperty("lightweightProbe").isPresent)
+    sourceSets.test.get().resources.srcDir("src/test/performance/resources")
+    loom.mods.create("mosaic_performance_probe") { sourceSet(sourceSets.test.get()) }
+    loom.runs.named("server") {
+        runDirectory.set(rootProject.layout.projectDirectory.dir("runs/26.2-fabric/performance-server"))
+        if (providers.gradleProperty("structureIsolationProbe").isPresent) {
+            runDirectory.set(rootProject.layout.projectDirectory.dir("runs/26.2-fabric/structure-isolation"))
+        }
+        if (providers.gradleProperty("lazyStructureStudy").isPresent) {
+            runDirectory.set(rootProject.layout.projectDirectory.dir("runs/26.2-fabric/lazy-structure"))
+        }
+    }
+    loom.runs.named("client") {
+        runDirectory.set(rootProject.layout.projectDirectory.dir("runs/26.2-fabric/performance-client"))
+    }
+    tasks.named<JavaExec>("runServer") {
+        dependsOn(tasks.testClasses)
+        classpath += sourceSets.test.get().output
+    }
+    tasks.named<JavaExec>("runClient") {
+        dependsOn(tasks.testClasses)
+        classpath += sourceSets.test.get().output
+    }
+}
