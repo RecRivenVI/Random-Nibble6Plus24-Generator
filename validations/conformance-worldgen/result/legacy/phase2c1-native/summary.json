@@ -1,0 +1,12 @@
+{
+  "status": "PASS",
+  "freshWorlds": 1,
+  "uniqueFixtures": 1,
+  "repeatsPerFixture": 1,
+  "dimensions": [
+    "minecraft:overworld"
+  ],
+  "hashes": [
+    "5c246f0529e1ae1388cdaf11d42a5a17cf4cb5fbf65f862db62b2dc9bd29edae"
+  ]
+}

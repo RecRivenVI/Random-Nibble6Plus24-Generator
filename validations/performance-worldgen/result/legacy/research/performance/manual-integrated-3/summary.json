@@ -1,0 +1,557 @@
+{
+  "windowSeconds": 170.6104802,
+  "integrated": true,
+  "markers": [],
+  "uniquePhysicalPositions": 4613,
+  "actualHolderPositions": 1391,
+  "viewDemand": 4613,
+  "playerLoadingAdmitted": 104,
+  "activeViewDemandsAtEnd": 0,
+  "waitingBeforePlayerTicketAtEnd": 0,
+  "withdrawn": 4613,
+  "peakPlayerAdmissionQueue": 4225,
+  "ticketAdds": {
+    "minecraft:player_spawn": 1,
+    "minecraft:player_simulation": 10,
+    "minecraft:unknown": 234,
+    "minecraft:player_loading": 104
+  },
+  "canonicalRequested": 42,
+  "canonicalCompleted": 42,
+  "canonicalPerSecond": 0.24617479506982828,
+  "full": 218,
+  "blockTicking": 157,
+  "entityTicking": 101,
+  "readyToSend": 157,
+  "packets": 155,
+  "artifactRepeats": [],
+  "admissionWaitSeconds": {
+    "n": 104,
+    "mean": 44.89972337692308,
+    "median": 34.07983275,
+    "p90": 114.9829739,
+    "max": 147.4310355
+  },
+  "prepareSeconds": {
+    "n": 42,
+    "mean": 1.4173107785714285,
+    "median": 0.867457,
+    "p90": 3.37954,
+    "max": 3.5288734
+  },
+  "requestedToReadySeconds": {
+    "n": 157,
+    "mean": 44.557318422292994,
+    "median": 28.671545,
+    "p90": 118.10599,
+    "max": 147.4305941
+  },
+  "peakActivePrepare": 9,
+  "peakExecutorQueue": 0,
+  "averageCpuLoad": 0.14741521940717317,
+  "sampledHeapPeak": 3701402808,
+  "aggregates": {
+    "identityCalls@Worker-Main-90": 18212,
+    "identityCalls@Worker-Main-91": 4304,
+    "identityCalls@Worker-Main-92": 7882,
+    "identityCalls@Worker-Main-93": 12567,
+    "identityCalls@Worker-Main-94": 4404,
+    "identityCalls@Worker-Main-95": 20514,
+    "identityCalls@Worker-Main-96": 3272,
+    "profileStatNanos@Worker-Main-101": 6481210700,
+    "identityCalls@Worker-Main-97": 6260,
+    "identityCalls@Worker-Main-98": 6771,
+    "profileStatNanos@Worker-Main-100": 2275853200,
+    "identityCalls@Worker-Main-99": 59516,
+    "profileStatNanos@Worker-Main-105": 11925116400,
+    "profileStatNanos@Worker-Main-104": 4688029900,
+    "profileStatNanos@Worker-Main-103": 5284338600,
+    "profileStatNanos@Worker-Main-102": 2397883500,
+    "profileStatNanos@Worker-Main-108": 4667384800,
+    "profileStatNanos@Worker-Main-107": 1763978700,
+    "profileStatNanos@Worker-Main-106": 965690600,
+    "profileStatNanos@Worker-Main-99": 28500556400,
+    "profileStatNanos@Worker-Main-98": 1799226200,
+    "profileStatNanos@Worker-Main-97": 3451410900,
+    "profileStatNanos@Worker-Main-96": 1325533800,
+    "identityNanos@Server thread": 98871205500,
+    "identityNanos@Worker-Main-82": 899555100,
+    "identityNanos@Worker-Main-83": 1570019200,
+    "profileStatCalls@Server thread": 259206,
+    "profileStatCalls@Worker-Main-102": 6666,
+    "profileStatCalls@Worker-Main-103": 15850,
+    "profileStatCalls@Worker-Main-100": 5893,
+    "profileStatCalls@Worker-Main-101": 16779,
+    "profileStatNanos@Worker-Main-84": 3440438700,
+    "profileStatNanos@Worker-Main-83": 1565933000,
+    "profileStatNanos@Worker-Main-82": 897105700,
+    "identityNanos@Worker-Main-93": 5522010600,
+    "identityNanos@Worker-Main-94": 1967379600,
+    "identityNanos@Worker-Main-91": 4024092800,
+    "profileStatCalls@Worker-Main-108": 15706,
+    "identityNanos@Worker-Main-92": 4799295300,
+    "profileStatCalls@Worker-Main-106": 2301,
+    "profileStatCalls@Worker-Main-107": 4727,
+    "identityNanos@Worker-Main-90": 5719135400,
+    "profileStatCalls@Worker-Main-104": 12523,
+    "profileStatCalls@Worker-Main-105": 25971,
+    "identityNanos@Worker-Main-88": 2916085900,
+    "identityNanos@Worker-Main-89": 2527318600,
+    "identityNanos@Worker-Main-86": 2654549300,
+    "identityNanos@Worker-Main-87": 7716264800,
+    "identityNanos@Worker-Main-84": 3452343800,
+    "identityNanos@Worker-Main-85": 1324199700,
+    "profileStatNanos@Worker-Main-91": 4017874600,
+    "profileStatNanos@Worker-Main-90": 5697793900,
+    "profileStatNanos@Worker-Main-95": 6085578800,
+    "profileStatNanos@Worker-Main-94": 1961569200,
+    "profileStatNanos@Worker-Main-93": 5504600800,
+    "profileStatNanos@Worker-Main-92": 4788609400,
+    "identityNanos@Worker-Main-99": 28569720200,
+    "identityNanos@Worker-Main-97": 3461084700,
+    "identityNanos@Worker-Main-98": 1807179000,
+    "identityNanos@Worker-Main-95": 6104529400,
+    "identityNanos@Worker-Main-96": 1330344100,
+    "profileStatNanos@Worker-Main-88": 2908057100,
+    "profileStatNanos@Worker-Main-87": 7697451300,
+    "profileStatNanos@Worker-Main-86": 2647468100,
+    "profileStatNanos@Worker-Main-85": 1319492600,
+    "profileStatNanos@Worker-Main-89": 2520015100,
+    "profileStatCalls@Worker-Main-82": 2324,
+    "profileStatCalls@Worker-Main-89": 6024,
+    "identityNanos@Worker-Main-105": 11959583400,
+    "identityNanos@Worker-Main-106": 968636100,
+    "identityNanos@Worker-Main-103": 5299981300,
+    "profileStatCalls@Worker-Main-87": 10935,
+    "profileStatCalls@Worker-Main-88": 6830,
+    "identityNanos@Worker-Main-104": 4699276700,
+    "profileStatCalls@Worker-Main-85": 3143,
+    "profileStatCalls@Worker-Main-86": 6630,
+    "profileStatNanos@Server thread": 98593291100,
+    "identityNanos@Worker-Main-107": 1769642600,
+    "profileStatCalls@Worker-Main-83": 4183,
+    "profileStatCalls@Worker-Main-84": 8669,
+    "identityNanos@Worker-Main-108": 4679755400,
+    "identityNanos@Worker-Main-101": 6497822200,
+    "identityNanos@Worker-Main-102": 2403838600,
+    "identityNanos@Worker-Main-100": 2281698400,
+    "profileStatCalls@Worker-Main-92": 7882,
+    "profileStatCalls@Worker-Main-93": 12567,
+    "profileStatCalls@Worker-Main-90": 18212,
+    "profileStatCalls@Worker-Main-91": 4304,
+    "profileStatCalls@Worker-Main-98": 6771,
+    "profileStatCalls@Worker-Main-99": 59516,
+    "profileStatCalls@Worker-Main-96": 3272,
+    "profileStatCalls@Worker-Main-97": 6260,
+    "profileStatCalls@Worker-Main-94": 4404,
+    "profileStatCalls@Worker-Main-95": 20514,
+    "identityCalls@Worker-Main-106": 2301,
+    "identityCalls@Worker-Main-105": 25971,
+    "identityCalls@Worker-Main-108": 15706,
+    "identityCalls@Worker-Main-107": 4727,
+    "identityCalls@Worker-Main-102": 6666,
+    "identityCalls@Worker-Main-101": 16779,
+    "identityCalls@Server thread": 259206,
+    "identityCalls@Worker-Main-104": 12523,
+    "identityCalls@Worker-Main-103": 15850,
+    "identityCalls@Worker-Main-100": 5893,
+    "identityCalls@Worker-Main-82": 2324,
+    "identityCalls@Worker-Main-83": 4183,
+    "identityCalls@Worker-Main-84": 8669,
+    "identityCalls@Worker-Main-85": 3143,
+    "identityCalls@Worker-Main-86": 6630,
+    "identityCalls@Worker-Main-87": 10935,
+    "identityCalls@Worker-Main-88": 6830,
+    "identityCalls@Worker-Main-89": 6024
+  },
+  "slowReadyChunks": [
+    {
+      "key": "minecraft:overworld:-6,8",
+      "localSeed": "7923049876832541490",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 147.4305941,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:-7,9",
+        "secondsAfterRequest": 147.4279428,
+        "readyGap": 0.0026513
+      }
+    },
+    {
+      "key": "minecraft:overworld:-7,-4",
+      "localSeed": "-7654166229235822284",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 147.4301258,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:-8,-5",
+        "secondsAfterRequest": 147.4296065,
+        "readyGap": 0.0005193
+      }
+    },
+    {
+      "key": "minecraft:overworld:-7,-3",
+      "localSeed": "2998684742633268613",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 140.3871108,
+      "packetEnqueuedSeconds": 143.6337032,
+      "readyToPacket": 3.2465924,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:-8,-4",
+        "secondsAfterRequest": 140.386674,
+        "readyGap": 0.0004368
+      }
+    },
+    {
+      "key": "minecraft:overworld:-5,8",
+      "localSeed": "-789350334259855530",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 134.958301,
+      "packetEnqueuedSeconds": 140.3780884,
+      "readyToPacket": 5.4197874,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:-6,9",
+        "secondsAfterRequest": 134.9581615,
+        "readyGap": 0.0001395
+      }
+    },
+    {
+      "key": "minecraft:overworld:4,8",
+      "localSeed": "-2250035919440520387",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 131.0421113,
+      "packetEnqueuedSeconds": 140.3794931,
+      "readyToPacket": 9.3373818,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:5,9",
+        "secondsAfterRequest": 131.0389991,
+        "readyGap": 0.0031122
+      }
+    },
+    {
+      "key": "minecraft:overworld:3,8",
+      "localSeed": "-3490153943337767244",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 131.041663,
+      "packetEnqueuedSeconds": 140.378293,
+      "readyToPacket": 9.33663,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:4,9",
+        "secondsAfterRequest": 131.0327257,
+        "readyGap": 0.0089373
+      }
+    },
+    {
+      "key": "minecraft:overworld:5,8",
+      "localSeed": "-789349727738684688",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 131.0413817,
+      "packetEnqueuedSeconds": 140.3784075,
+      "readyToPacket": 9.3370258,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:6,9",
+        "secondsAfterRequest": 131.0408143,
+        "readyGap": 0.0005674
+      }
+    },
+    {
+      "key": "minecraft:overworld:-1,-4",
+      "localSeed": "-4719994707895822158",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 129.6568652,
+      "packetEnqueuedSeconds": 140.3757079,
+      "readyToPacket": 10.7188427,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:0,-5",
+        "secondsAfterRequest": 129.6565398,
+        "readyGap": 0.0003254
+      }
+    },
+    {
+      "key": "minecraft:overworld:-4,8",
+      "localSeed": "-2250036493641841962",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 129.4554424,
+      "packetEnqueuedSeconds": 140.3780316,
+      "readyToPacket": 10.9225892,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:-5,9",
+        "secondsAfterRequest": 129.455297,
+        "readyGap": 0.0001454
+      }
+    },
+    {
+      "key": "minecraft:overworld:-3,8",
+      "localSeed": "-3490145553155937357",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 129.082971,
+      "packetEnqueuedSeconds": 140.3771609,
+      "readyToPacket": 11.2941899,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:-4,9",
+        "secondsAfterRequest": 129.0827134,
+        "readyGap": 0.0002576
+      }
+    },
+    {
+      "key": "minecraft:overworld:-2,-4",
+      "localSeed": "-3934756119131918061",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 128.7617292,
+      "packetEnqueuedSeconds": 140.3761666,
+      "readyToPacket": 11.6144374,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:-1,-5",
+        "secondsAfterRequest": 128.761464,
+        "readyGap": 0.0002652
+      }
+    },
+    {
+      "key": "minecraft:overworld:-3,-4",
+      "localSeed": "-1224621271216397271",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 128.4677504,
+      "packetEnqueuedSeconds": 140.3764799,
+      "readyToPacket": 11.9087295,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:-2,-5",
+        "secondsAfterRequest": 128.4676927,
+        "readyGap": 5.77e-05
+      }
+    },
+    {
+      "key": "minecraft:overworld:5,7",
+      "localSeed": "-810543359379571956",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 121.9114968,
+      "packetEnqueuedSeconds": 140.377997,
+      "readyToPacket": 18.4665002,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:6,8",
+        "secondsAfterRequest": 121.9112594,
+        "readyGap": 0.0002374
+      }
+    },
+    {
+      "key": "minecraft:overworld:5,6",
+      "localSeed": "-7851088434830997672",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 121.5698891,
+      "packetEnqueuedSeconds": 140.3780767,
+      "readyToPacket": 18.8081876,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:6,6",
+        "secondsAfterRequest": 121.5693633,
+        "readyGap": 0.0005258
+      }
+    },
+    {
+      "key": "minecraft:overworld:5,5",
+      "localSeed": "-9208708145721261432",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 121.5698488,
+      "packetEnqueuedSeconds": 140.3776691,
+      "readyToPacket": 18.8078203,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:6,6",
+        "secondsAfterRequest": 121.5695101,
+        "readyGap": 0.0003387
+      }
+    }
+  ],
+  "slowPacketChunks": [
+    {
+      "key": "minecraft:overworld:-7,-3",
+      "localSeed": "2998684742633268613",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 140.3871108,
+      "packetEnqueuedSeconds": 143.6337032,
+      "readyToPacket": 3.2465924,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:-8,-4",
+        "secondsAfterRequest": 140.386674,
+        "readyGap": 0.0004368
+      }
+    },
+    {
+      "key": "minecraft:overworld:4,8",
+      "localSeed": "-2250035919440520387",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 131.0421113,
+      "packetEnqueuedSeconds": 140.3794931,
+      "readyToPacket": 9.3373818,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:5,9",
+        "secondsAfterRequest": 131.0389991,
+        "readyGap": 0.0031122
+      }
+    },
+    {
+      "key": "minecraft:overworld:-7,7",
+      "localSeed": "-5389449728420854212",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 102.349755,
+      "packetEnqueuedSeconds": 140.3793101,
+      "readyToPacket": 38.0295551,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:-8,8",
+        "secondsAfterRequest": 102.3497087,
+        "readyGap": 4.63e-05
+      }
+    },
+    {
+      "key": "minecraft:overworld:-6,-4",
+      "localSeed": "690894158164411063",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 104.7323833,
+      "packetEnqueuedSeconds": 140.3789776,
+      "readyToPacket": 35.6465943,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:-6,-5",
+        "secondsAfterRequest": 104.7321728,
+        "readyGap": 0.0002105
+      }
+    },
+    {
+      "key": "minecraft:overworld:-7,-2",
+      "localSeed": "2806362460456326358",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 104.2004021,
+      "packetEnqueuedSeconds": 140.378626,
+      "readyToPacket": 36.1782239,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:-8,-3",
+        "secondsAfterRequest": 104.199931,
+        "readyGap": 0.0004711
+      }
+    },
+    {
+      "key": "minecraft:overworld:5,-3",
+      "localSeed": "2337268439379265888",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 118.10599,
+      "packetEnqueuedSeconds": 140.3785303,
+      "readyToPacket": 22.2725403,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:6,-4",
+        "secondsAfterRequest": 118.1059312,
+        "readyGap": 5.88e-05
+      }
+    },
+    {
+      "key": "minecraft:overworld:5,8",
+      "localSeed": "-789349727738684688",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 131.0413817,
+      "packetEnqueuedSeconds": 140.3784075,
+      "readyToPacket": 9.3370258,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:6,9",
+        "secondsAfterRequest": 131.0408143,
+        "readyGap": 0.0005674
+      }
+    },
+    {
+      "key": "minecraft:overworld:3,8",
+      "localSeed": "-3490153943337767244",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 131.041663,
+      "packetEnqueuedSeconds": 140.378293,
+      "readyToPacket": 9.33663,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:4,9",
+        "secondsAfterRequest": 131.0327257,
+        "readyGap": 0.0089373
+      }
+    },
+    {
+      "key": "minecraft:overworld:4,7",
+      "localSeed": "-8186530820758690812",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 52.2218349,
+      "packetEnqueuedSeconds": 140.3782636,
+      "readyToPacket": 88.1564287,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:5,8",
+        "secondsAfterRequest": 52.2217393,
+        "readyGap": 9.56e-05
+      }
+    },
+    {
+      "key": "minecraft:overworld:-5,-4",
+      "localSeed": "-5479798158424541916",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 104.7323433,
+      "packetEnqueuedSeconds": 140.3781003,
+      "readyToPacket": 35.645757,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:-6,-5",
+        "secondsAfterRequest": 104.7322801,
+        "readyGap": 6.32e-05
+      }
+    },
+    {
+      "key": "minecraft:overworld:-5,8",
+      "localSeed": "-789350334259855530",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 134.958301,
+      "packetEnqueuedSeconds": 140.3780884,
+      "readyToPacket": 5.4197874,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:-6,9",
+        "secondsAfterRequest": 134.9581615,
+        "readyGap": 0.0001395
+      }
+    },
+    {
+      "key": "minecraft:overworld:-6,-3",
+      "localSeed": "5481306291363690328",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 44.3341578,
+      "packetEnqueuedSeconds": 140.3780801,
+      "readyToPacket": 96.0439223,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:-7,-2",
+        "secondsAfterRequest": 44.3340229,
+        "readyGap": 0.0001349
+      }
+    },
+    {
+      "key": "minecraft:overworld:5,6",
+      "localSeed": "-7851088434830997672",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 121.5698891,
+      "packetEnqueuedSeconds": 140.3780767,
+      "readyToPacket": 18.8081876,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:6,6",
+        "secondsAfterRequest": 121.5693633,
+        "readyGap": 0.0005258
+      }
+    },
+    {
+      "key": "minecraft:overworld:-4,8",
+      "localSeed": "-2250036493641841962",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 129.4554424,
+      "packetEnqueuedSeconds": 140.3780316,
+      "readyToPacket": 10.9225892,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:-5,9",
+        "secondsAfterRequest": 129.455297,
+        "readyGap": 0.0001454
+      }
+    },
+    {
+      "key": "minecraft:overworld:5,7",
+      "localSeed": "-810543359379571956",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 121.9114968,
+      "packetEnqueuedSeconds": 140.377997,
+      "readyToPacket": 18.4665002,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:6,8",
+        "secondsAfterRequest": 121.9112594,
+        "readyGap": 0.0002374
+      }
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+{"mode":"close-error","inFlightAtClose":47,"blockedX":64,"blockedZ":63,"reportedFailure":"java.lang.IllegalStateException: EXPLICIT_ERROR_DURING_SHUTDOWN","reportedRoot":"java.lang.IllegalStateException: EXPLICIT_ERROR_DURING_SHUTDOWN","crashReports":1,"expectedTerminations":46,"inFlightAfterClose":0,"bindingsAfterClose":0,"status":"PASS"}

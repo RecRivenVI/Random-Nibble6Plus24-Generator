@@ -1,0 +1,487 @@
+{
+  "windowSeconds": 59.9948891,
+  "integrated": false,
+  "markers": [
+    {
+      "seconds": 0.0,
+      "phase": "WORKLOAD_START_frontier"
+    },
+    {
+      "seconds": 0.0463433,
+      "phase": "TICKET_VIEWER_ENTER_[125, -37]"
+    },
+    {
+      "seconds": 14.9945935,
+      "phase": "TICKET_VIEWER_MOVE_[127, -37]"
+    },
+    {
+      "seconds": 29.9950267,
+      "phase": "TICKET_VIEWER_MOVE_[129, -37]"
+    },
+    {
+      "seconds": 59.9948891,
+      "phase": "WORKLOAD_END"
+    }
+  ],
+  "uniquePhysicalPositions": 983,
+  "actualHolderPositions": 983,
+  "viewDemand": 45,
+  "playerLoadingAdmitted": 17,
+  "activeViewDemandsAtEnd": 25,
+  "waitingBeforePlayerTicketAtEnd": 12,
+  "withdrawn": 20,
+  "peakPlayerAdmissionQueue": 27,
+  "ticketAdds": {
+    "minecraft:player_simulation": 3,
+    "minecraft:player_loading": 17,
+    "minecraft:unknown": 1136
+  },
+  "canonicalRequested": 123,
+  "canonicalCompleted": 105,
+  "canonicalPerSecond": 1.750149080615602,
+  "full": 62,
+  "blockTicking": 31,
+  "entityTicking": 9,
+  "readyToSend": 31,
+  "packets": 0,
+  "artifactRepeats": [],
+  "admissionWaitSeconds": {
+    "n": 17,
+    "mean": 23.44383658235294,
+    "median": 21.2813947,
+    "p90": 55.3975349,
+    "max": 57.1810295
+  },
+  "prepareSeconds": {
+    "n": 105,
+    "mean": 7.1732441314285715,
+    "median": 7.0078241,
+    "p90": 11.3023629,
+    "max": 11.6641915
+  },
+  "requestedToReadySeconds": {
+    "n": 31,
+    "mean": 30.221901690322582,
+    "median": 27.4852849,
+    "p90": 36.2719919,
+    "max": 57.1885574
+  },
+  "peakActivePrepare": 27,
+  "peakExecutorQueue": 37,
+  "averageCpuLoad": 0.5975236397125062,
+  "sampledHeapPeak": 1724441184,
+  "aggregates": {
+    "identityNanos@Server thread": 334500,
+    "identityCalls@Server thread": 1,
+    "structureStartEvaluations.canonical": 65067,
+    "structureStartEvaluations.spawn": 22382
+  },
+  "slowReadyChunks": [
+    {
+      "key": "minecraft:overworld:126,-38",
+      "localSeed": "4559195247915357445",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 57.1885574,
+      "beforePrepare": 0.1613517,
+      "prepare": 11.6641915,
+      "afterPrepare": 45.3630142,
+      "segments": {
+        "request->prepareBegin": 0.1613517,
+        "prepareBegin->canonicalEnd": 11.6605706,
+        "canonicalEnd->prepareEnd": 0.0036209,
+        "prepareEnd->initializeBegin": 10.9628023,
+        "initializeBegin->initializeEnd": 0.0518303,
+        "initializeEnd->lightBegin": 0.0009427,
+        "lightBegin->lightEnd": 0.1076663,
+        "lightEnd->spawnBegin": 2.1551551,
+        "spawnBegin->spawnEnd": 0.2928639,
+        "spawnEnd->fullEnd": 0.0007888,
+        "fullEnd->ready": 31.7909648
+      },
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:126,-39",
+        "secondsAfterRequest": 36.1296591,
+        "readyGap": 21.0588983
+      }
+    },
+    {
+      "key": "minecraft:overworld:127,-39",
+      "localSeed": "-9191681274139812039",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 51.5624048,
+      "beforePrepare": 17.5123176,
+      "prepare": 5.0158668,
+      "afterPrepare": 29.0342204,
+      "segments": {
+        "request->prepareBegin": 17.5123176,
+        "prepareBegin->canonicalEnd": 5.0139674,
+        "canonicalEnd->prepareEnd": 0.0018994,
+        "prepareEnd->initializeBegin": 0.2678517,
+        "initializeBegin->initializeEnd": 0.0423956,
+        "initializeEnd->lightBegin": 0.0352337,
+        "lightBegin->lightEnd": 0.0731821,
+        "lightEnd->spawnBegin": 7.7217563,
+        "spawnBegin->spawnEnd": 0.9408086,
+        "spawnEnd->fullEnd": 0.0027093,
+        "fullEnd->ready": 19.9502831
+      },
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:126,-40",
+        "secondsAfterRequest": 51.5621528,
+        "readyGap": 0.000252
+      }
+    },
+    {
+      "key": "minecraft:overworld:127,-35",
+      "localSeed": "7504132023314395354",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 39.9390973,
+      "beforePrepare": 18.4445425,
+      "prepare": 4.1235769,
+      "afterPrepare": 17.3709779,
+      "segments": {
+        "request->prepareBegin": 18.4445425,
+        "prepareBegin->canonicalEnd": 4.1221828,
+        "canonicalEnd->prepareEnd": 0.0013941,
+        "prepareEnd->initializeBegin": 0.2237858,
+        "initializeBegin->initializeEnd": 0.0487151,
+        "initializeEnd->lightBegin": 0.0010637,
+        "lightBegin->lightEnd": 0.1075102,
+        "lightEnd->spawnBegin": 4.129205,
+        "spawnBegin->spawnEnd": 0.2638426,
+        "spawnEnd->fullEnd": 0.000663,
+        "fullEnd->ready": 12.5961925
+      },
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:128,-34",
+        "secondsAfterRequest": 39.9378783,
+        "readyGap": 0.001219
+      }
+    },
+    {
+      "key": "minecraft:overworld:129,-36",
+      "localSeed": "4050162664935782233",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 36.2719919,
+      "beforePrepare": -3.5005942,
+      "prepare": 8.265398,
+      "afterPrepare": 31.5071881,
+      "segments": {
+        "request->prepareBegin": -3.5005942,
+        "prepareBegin->canonicalEnd": 8.2634468,
+        "canonicalEnd->prepareEnd": 0.0019512,
+        "prepareEnd->initializeBegin": 3.0905208,
+        "initializeBegin->initializeEnd": 0.0635507,
+        "initializeEnd->lightBegin": 13.0186385,
+        "lightBegin->lightEnd": 0.0216709,
+        "lightEnd->spawnBegin": 3.3317454,
+        "spawnBegin->spawnEnd": 0.3517591,
+        "spawnEnd->fullEnd": 0.001247,
+        "fullEnd->ready": 11.6280557
+      },
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:130,-35",
+        "secondsAfterRequest": 36.2689156,
+        "readyGap": 0.0030763
+      }
+    },
+    {
+      "key": "minecraft:overworld:129,-35",
+      "localSeed": "5280934972537315033",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 36.2697168,
+      "beforePrepare": -14.7858279,
+      "prepare": 11.2790401,
+      "afterPrepare": 39.7765046,
+      "segments": {
+        "request->prepareBegin": -14.7858279,
+        "prepareBegin->canonicalEnd": 11.2753403,
+        "canonicalEnd->prepareEnd": 0.0036998,
+        "prepareEnd->initializeBegin": 11.3621971,
+        "initializeBegin->initializeEnd": 0.0642502,
+        "initializeEnd->lightBegin": 13.0174525,
+        "lightBegin->lightEnd": 0.0010974,
+        "lightEnd->spawnBegin": 0.2429682,
+        "spawnBegin->spawnEnd": 0.3235048,
+        "spawnEnd->fullEnd": 0.0015129,
+        "fullEnd->ready": 14.7635215
+      },
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:130,-35",
+        "secondsAfterRequest": 36.2687786,
+        "readyGap": 0.0009382
+      }
+    },
+    {
+      "key": "minecraft:overworld:127,-38",
+      "localSeed": "-7313802562373807274",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 36.1263021,
+      "beforePrepare": 20.3656771,
+      "prepare": 2.4015799,
+      "afterPrepare": 13.3590451,
+      "segments": {
+        "request->prepareBegin": 20.3656771,
+        "prepareBegin->canonicalEnd": 2.3999398,
+        "canonicalEnd->prepareEnd": 0.0016401,
+        "prepareEnd->initializeBegin": 0.0210308,
+        "initializeBegin->initializeEnd": 0.0482849,
+        "initializeEnd->lightBegin": 0.0010898,
+        "lightBegin->lightEnd": 0.1074859,
+        "lightEnd->spawnBegin": 4.6563124,
+        "spawnBegin->spawnEnd": 0.2903345,
+        "spawnEnd->fullEnd": 0.0006912,
+        "fullEnd->ready": 8.2338156
+      },
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:126,-39",
+        "secondsAfterRequest": 36.1259941,
+        "readyGap": 0.000308
+      }
+    },
+    {
+      "key": "minecraft:overworld:127,-36",
+      "localSeed": "6900263487383343721",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 35.5803283,
+      "beforePrepare": 20.1617072,
+      "prepare": 2.4186799,
+      "afterPrepare": 12.9999412,
+      "segments": {
+        "request->prepareBegin": 20.1617072,
+        "prepareBegin->canonicalEnd": 2.4170211,
+        "canonicalEnd->prepareEnd": 0.0016588,
+        "prepareEnd->initializeBegin": 0.2098606,
+        "initializeBegin->initializeEnd": 0.0487775,
+        "initializeEnd->lightBegin": 0.0010551,
+        "lightBegin->lightEnd": 0.1075214,
+        "lightEnd->spawnBegin": 3.8850695,
+        "spawnBegin->spawnEnd": 0.244082,
+        "spawnEnd->fullEnd": 0.0006807,
+        "fullEnd->ready": 8.5028944
+      },
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:128,-35",
+        "secondsAfterRequest": 35.5792665,
+        "readyGap": 0.0010618
+      }
+    },
+    {
+      "key": "minecraft:overworld:129,-39",
+      "localSeed": "-5436825453317122602",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 35.5745135,
+      "beforePrepare": -3.7167367,
+      "prepare": 8.9343364,
+      "afterPrepare": 30.3569138,
+      "segments": {
+        "request->prepareBegin": -3.7167367,
+        "prepareBegin->canonicalEnd": 8.9210082,
+        "canonicalEnd->prepareEnd": 0.0133282,
+        "prepareEnd->initializeBegin": 2.6420436,
+        "initializeBegin->initializeEnd": 0.0692299,
+        "initializeEnd->lightBegin": 13.0106359,
+        "lightBegin->lightEnd": 0.0217869,
+        "lightEnd->spawnBegin": 2.017553,
+        "spawnBegin->spawnEnd": 0.4576562,
+        "spawnEnd->fullEnd": 0.0030217,
+        "fullEnd->ready": 12.1349866
+      },
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:129,-40",
+        "secondsAfterRequest": 35.573935,
+        "readyGap": 0.0005785
+      }
+    },
+    {
+      "key": "minecraft:overworld:128,-39",
+      "localSeed": "-8686962629955781269",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 35.5717386,
+      "beforePrepare": -14.7857879,
+      "prepare": 11.3969968,
+      "afterPrepare": 38.9605297,
+      "segments": {
+        "request->prepareBegin": -14.7857879,
+        "prepareBegin->canonicalEnd": 11.3926733,
+        "canonicalEnd->prepareEnd": 0.0043235,
+        "prepareEnd->initializeBegin": 11.2400074,
+        "initializeBegin->initializeEnd": 0.0418154,
+        "initializeEnd->lightBegin": 0.0360248,
+        "lightBegin->lightEnd": 0.0723896,
+        "lightEnd->spawnBegin": 8.7507887,
+        "spawnBegin->spawnEnd": 3.4401696,
+        "spawnEnd->fullEnd": 0.002784,
+        "fullEnd->ready": 15.3765502
+      },
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:129,-40",
+        "secondsAfterRequest": 35.5715598,
+        "readyGap": 0.0001788
+      }
+    },
+    {
+      "key": "minecraft:overworld:129,-38",
+      "localSeed": "6938583519458552044",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 31.9905093,
+      "beforePrepare": -14.7831736,
+      "prepare": 11.1017211,
+      "afterPrepare": 35.6719618,
+      "segments": {
+        "request->prepareBegin": -14.7831736,
+        "prepareBegin->canonicalEnd": 11.0591883,
+        "canonicalEnd->prepareEnd": 0.0425328,
+        "prepareEnd->initializeBegin": 11.539026,
+        "initializeBegin->initializeEnd": 0.0617771,
+        "initializeEnd->lightBegin": 13.0203828,
+        "lightBegin->lightEnd": 0.0010493,
+        "lightEnd->spawnBegin": 0.5665692,
+        "spawnBegin->spawnEnd": 1.4716437,
+        "spawnEnd->fullEnd": 0.0026256,
+        "fullEnd->ready": 9.0088881
+      },
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:130,-39",
+        "secondsAfterRequest": 31.9898449,
+        "readyGap": 0.0006644
+      }
+    },
+    {
+      "key": "minecraft:overworld:128,-35",
+      "localSeed": "2304708531573591871",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 31.4906657,
+      "beforePrepare": -14.7833153,
+      "prepare": 11.331205,
+      "afterPrepare": 34.942776,
+      "segments": {
+        "request->prepareBegin": -14.7833153,
+        "prepareBegin->canonicalEnd": 11.32701,
+        "canonicalEnd->prepareEnd": 0.004195,
+        "prepareEnd->initializeBegin": 11.3006214,
+        "initializeBegin->initializeEnd": 0.0470605,
+        "initializeEnd->lightBegin": 0.0276644,
+        "lightBegin->lightEnd": 0.0809302,
+        "lightEnd->spawnBegin": 12.1921877,
+        "spawnBegin->spawnEnd": 0.4366307,
+        "spawnEnd->fullEnd": 0.0027871,
+        "fullEnd->ready": 10.854894
+      },
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:129,-34",
+        "secondsAfterRequest": 31.4887375,
+        "readyGap": 0.0019282
+      }
+    },
+    {
+      "key": "minecraft:overworld:127,-37",
+      "localSeed": "-4252907596380904167",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 30.6708623,
+      "beforePrepare": 14.1343976,
+      "prepare": 6.7642717,
+      "afterPrepare": 9.772193,
+      "segments": {
+        "request->prepareBegin": 14.1343976,
+        "prepareBegin->canonicalEnd": 6.7596698,
+        "canonicalEnd->prepareEnd": 0.0046019,
+        "prepareEnd->initializeBegin": 1.8922987,
+        "initializeBegin->initializeEnd": 0.0489306,
+        "initializeEnd->lightBegin": 0.0010418,
+        "lightBegin->lightEnd": 0.1075402,
+        "lightEnd->spawnBegin": 2.9866642,
+        "spawnBegin->spawnEnd": 0.898299,
+        "spawnEnd->fullEnd": 0.0008232,
+        "fullEnd->ready": 3.8365953
+      },
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:128,-38",
+        "secondsAfterRequest": 30.6702656,
+        "readyGap": 0.0005967
+      }
+    },
+    {
+      "key": "minecraft:overworld:126,-35",
+      "localSeed": "-5126192226543910200",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 28.7192574,
+      "beforePrepare": 17.4804758,
+      "prepare": 4.9242093,
+      "afterPrepare": 6.3145723,
+      "segments": {
+        "request->prepareBegin": 17.4804758,
+        "prepareBegin->canonicalEnd": 4.9220693,
+        "canonicalEnd->prepareEnd": 0.00214,
+        "prepareEnd->initializeBegin": 0.3905875,
+        "initializeBegin->initializeEnd": 0.0495702,
+        "initializeEnd->lightBegin": 0.0010232,
+        "lightBegin->lightEnd": 0.1075631,
+        "lightEnd->spawnBegin": 2.6809826,
+        "spawnBegin->spawnEnd": 0.3055426,
+        "spawnEnd->fullEnd": 0.0008188,
+        "fullEnd->ready": 2.7784843
+      },
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:127,-34",
+        "secondsAfterRequest": 28.7189475,
+        "readyGap": 0.0003099
+      }
+    },
+    {
+      "key": "minecraft:overworld:126,-37",
+      "localSeed": "7673186413624936990",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 27.9016492,
+      "beforePrepare": 0.1628227,
+      "prepare": 11.28407,
+      "afterPrepare": 16.4547565,
+      "segments": {
+        "request->prepareBegin": 0.1628227,
+        "prepareBegin->canonicalEnd": 11.281041,
+        "canonicalEnd->prepareEnd": 0.003029,
+        "prepareEnd->initializeBegin": 11.3429725,
+        "initializeBegin->initializeEnd": 0.05171,
+        "initializeEnd->lightBegin": 0.0007668,
+        "lightBegin->lightEnd": 0.1078074,
+        "lightEnd->spawnBegin": 0.5593277,
+        "spawnBegin->spawnEnd": 0.282006,
+        "spawnEnd->fullEnd": 0.0011037,
+        "fullEnd->ready": 4.1090624
+      },
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:127,-38",
+        "secondsAfterRequest": 27.8975441,
+        "readyGap": 0.0041051
+      }
+    },
+    {
+      "key": "minecraft:overworld:125,-36",
+      "localSeed": "-3701928069085428405",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 27.6076192,
+      "beforePrepare": 0.1626209,
+      "prepare": 11.2722276,
+      "afterPrepare": 16.1727707,
+      "segments": {
+        "request->prepareBegin": 0.1626209,
+        "prepareBegin->canonicalEnd": 11.2497215,
+        "canonicalEnd->prepareEnd": 0.0225061,
+        "prepareEnd->initializeBegin": 11.3546534,
+        "initializeBegin->initializeEnd": 0.0519956,
+        "initializeEnd->lightBegin": 0.0007347,
+        "lightBegin->lightEnd": 0.1078476,
+        "lightEnd->spawnBegin": 0.2788412,
+        "spawnBegin->spawnEnd": 0.2803432,
+        "spawnEnd->fullEnd": 0.0074708,
+        "fullEnd->ready": 4.0908842
+      },
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:124,-35",
+        "secondsAfterRequest": 27.60707,
+        "readyGap": 0.0005492
+      }
+    }
+  ],
+  "slowPacketChunks": []
+}

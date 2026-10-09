@@ -1,1011 +1,300 @@
-# AGENTS.md
+# 仓库目录与命名规范
 
-## Repository Philosophy
+本文件适用于整个仓库，定义 Minecraft Multi-Target Mod、非 Mod 组件、运行实例、文档和产品验证的目录职责与命名方式。
 
-This repository follows an **Explicit Target Governance** model for multi-version, multi-loader Minecraft Java development.
-
-The primary goals are:
-
-1. **Local understandability over abstraction.**
-2. **Explicit structure over hidden automation.**
-3. **Stable, independently operable targets over inheritance chains.**
-4. **Proven sharing over speculative sharing.**
-5. **Simple standard APIs over custom frameworks.**
-6. **Behavioral correctness over preserving historical implementation.**
-
-A developer should be able to enter the repository, inspect the directory tree, run a small number of `gradlew` commands, and quickly understand what targets exist and how each target is built and tested.
-
-Do not optimize the repository for minimum line count, minimum duplication, or maximum abstraction at the expense of this property.
-
----
-
-# 1. Target Model
-
-Every supported combination of:
+## 1. 总体结构
 
 ```text
-Minecraft version × Mod loader
+Project/
+├── versions/<target>/
+│   ├── src/
+│   ├── build.gradle.kts
+│   └── target.properties
+├── instances/<target>/
+│   ├── client/
+│   ├── client-multiplayer/
+│   └── server/
+├── components/<component>/
+├── documents/
+│   ├── usage/
+│   ├── development/
+│   ├── design/
+│   ├── project/
+│   ├── reference/
+│   └── release/
+├── validations/<type>-<topic>/
+│   ├── task/
+│   ├── instance/
+│   ├── result/
+│   ├── validation.md
+│   └── validation-guide.md
+├── README.md
+├── AGENTS.md
+├── instance.properties
+├── local.properties
+├── gradle/
+│   ├── configuration/
+│   │   ├── settings.gradle.kts
+│   │   ├── build.gradle.kts
+│   │   └── src/
+│   └── wrapper/
+│       ├── gradle-wrapper.jar
+│       └── gradle-wrapper.properties
+├── gradlew
+├── gradlew.bat
+├── build.gradle.kts
+├── settings.gradle.kts
+├── gradle.properties
+├── .git/
+└── .gitignore
 ```
 
-is an explicit **Target**.
+目录树表示内容的归属和允许的位置，不要求为展示结构而创建空目录。`<target>`、`<component>`、`<type>`、`<topic>` 和 `<number>` 是命名占位符，使用时替换为实际名称或编号。
 
-Target IDs use:
+## 2. Minecraft Target：versions/
+
+`versions/` 保存 Minecraft Multi-Target Mod 的源码与构建配置。每个 `versions/<target>/` 等价于一个 Minecraft Mod 源码根目录，其内部源码、资源、构建配置和代码风格遵循对应生态。
+
+### Target 命名
+
+格式为 `<minecraft>-<loader>`：
+
+- `<minecraft>` 使用 Minecraft: Java Edition 版本号。
+- `<loader>` 使用小写加载器名称，仅允许 `neoforge`、`forge`、`fabric`、`quilt`。
+- 示例：`1.20.1-forge`、`1.21.1-neoforge`、`26.1.2-neoforge`、`26.2-fabric`、`26.2-neoforge`。
+
+### Target 文件职责
+
+| 位置 | 职责 |
+| --- | --- |
+| `src/` | 对应生态的原生源码与资源布局 |
+| `build.gradle.kts` | Target 插件、依赖、构建与运行适配 |
+| `target.properties` | Minecraft、Loader、Java 等 Target Facts |
+
+Gradle project path 使用单数命名空间：
 
 ```text
-<minecraft-version>-<loader>
+versions/<target>/ → :version:<target>
 ```
 
-Examples:
+物理目录仍为复数 `versions/`，由根 `settings.gradle.kts` 显式注册并映射到相应的 Gradle project path。
+
+## 3. Minecraft 实例：instances/
+
+`instances/` 保存 Minecraft Multi-Target Mod 的运行实例。`instances/<target>/` 中的 `<target>` 与对应源码 Target 的名称一致。
+
+| 目录 | 职责与内部布局 |
+| --- | --- |
+| `client/` | 客户端实例；本目录等价于 `.minecraft/`，直接存放 Minecraft 实例数据 |
+| `client-multiplayer/` | 多人游戏客户端实例；本目录等价于 `.minecraft/`，直接存放 Minecraft 实例数据 |
+| `server/` | 服务端实例；本目录等价于 NeoForge、Forge、Fabric、Quilt 服务端安装目录 |
+
+客户端实例内部不再套一层 `.minecraft/`；服务端保持相应生态的原生安装目录布局。实例目录是运行数据的位置，不是独立的 Mod 源码模块。
+
+## 4. 非 Mod 组件：components/
+
+`components/` 保存非 Minecraft Mod 的产品组件。每个 `components/<component>/` 是对应生态的传统源码根目录，内部结构与代码风格遵循该生态。
+
+### Component 命名
+
+- 按组件职责命名，使用小写英文字母、数字和单词间的连字符 `-`。
+- 连字符用于连接单词，不放在名称首尾，也不连续使用。
+- 同一项目内组件名不得重复。
+- 避免 `common`、`utils`、`misc` 等职责不明确的名称。
+- 示例：`protocol-schema`、`runtime-safety`、`companion`、`web-console`、`config-editor`。
+
+参与 Gradle 构建的组件使用单数命名空间：
 
 ```text
-1.20.1-forge
-1.21.1-neoforge
-26.1.2-neoforge
-26.2-neoforge
-26.2-fabric
+components/<component>/ → :component:<component>
 ```
 
-Minecraft version comes first because Minecraft-version differences are generally the dominant compatibility boundary.
+物理目录仍为复数 `components/`。其他生态组件保留自己的原生构建入口，不因位于 `components/` 就必须成为 Gradle 模块。
 
-Do not use loader-first target names such as:
+## 5. 项目文档：documents/
+
+`documents/` 仅使用以下六个一级分类。各分类下直接放文档，不再创建分类子目录；根目录不放普通项目文档，没有内容的分类不要求创建空目录。
+
+| 分类 | 主要职责 | 推荐的 `<type>` |
+| --- | --- | --- |
+| `usage/` | 产品安装、配置、操作与使用问题处理 | `installation`、`configuration`、`guide`、`troubleshooting`、`compatibility`、`limitation`、`faq` |
+| `development/` | 开发环境、构建、协作、测试、调试与移植 | `setup`、`build`、`workflow`、`testing`、`debugging`、`porting`、`contribution`、`compatibility` |
+| `design/` | 系统概念、架构、机制、模型、流程、生命周期与安全设计 | `overview`、`concept`、`architecture`、`mechanism`、`model`、`flow`、`lifecycle`、`security` |
+| `project/` | 产品范围、提案、计划、状态、里程碑、技术债与阶段记录 | `overview`、`scope`、`proposal`、`plan`、`status`、`milestone`、`debt` |
+| `reference/` | 接口、协议、结构、命令、配置、属性、事件、格式与术语的查阅资料 | `api`、`protocol`、`schema`、`command`、`configuration`、`property`、`event`、`format`、`version`、`glossary`、`example` |
+| `release/` | 发布说明、变更、升级、迁移、支持与弃用 | `release`、`changelog`、`upgrade`、`migration`、`support`、`deprecation` |
+
+普通文档统一使用 `<type>-<topic>.md`。另有两种专用格式：
 
 ```text
-forge-1.20.1
-fabric-26.2
+documents/design/adr-<number>-<topic>.md
+documents/project/phase-<number>-<topic>.md
 ```
 
----
+- `adr`：架构或设计决策记录。
+- `phase`：阶段目标、实施与历史记录。
 
-# 2. Target Directory Layout
+### 文档命名要素
 
-All real product targets are flat children of:
+- `<type>` 使用单个简短的小写英文词，表示整份文档的主要形式或职责。
+- 推荐词只是优先词汇，不构成白名单；没有合适推荐词时，允许根据实际职责选择新的 `<type>`。
+- 同一个 `<type>` 可以出现在不同分类中，不要求全局唯一；分类决定主要职责，`<type>` 只在所在分类语境内解释。
+- `<topic>` 使用小写英文字母、数字和连字符；不允许首尾连字符或连续连字符，可以由字母或数字开头、结尾。
+- `<number>` 使用自然数编号，允许 `0`；可在编号后使用点号连接子编号，区分同编号下的子文档，例如 `1`、`2`、`2.1`、`2.10`。它表示编号层级，不按数学小数合并不同编号。
 
-```text
-versions/
-```
+这些规则约束文档位置和文件名，不规定正文的固定章节或格式。按整份文档的主要职责选择分类与 `<type>`，允许正文同时涉及多个相关主题；不要为了追求分类纯度或覆盖推荐类型而拆分、创建文档。
 
-Example:
+### 容易混淆的职责边界
 
-```text
-versions/
-├─ 1.20.1-forge/
-├─ 1.21.1-neoforge/
-├─ 26.1.2-neoforge/
-├─ 26.2-neoforge/
-└─ 26.2-fabric/
-```
+| 文档位置 | 主要职责 |
+| --- | --- |
+| `usage/configuration-*` / `reference/configuration-*` | 前者讲用户如何配置；后者提供配置项的准确、完整定义 |
+| `usage/compatibility-*` / `development/compatibility-*` | 前者面向用户说明环境、Mod、硬件等能否正常使用；后者面向开发和集成过程说明兼容要求 |
+| `design/overview-*` / `project/overview-*` | 前者说明系统内部如何组成和运行；后者说明产品或项目整体是什么、范围与方向是什么 |
+| `development/porting-*` | 源码跨 Minecraft 版本、Loader、平台或 API 的移植 |
+| `release/upgrade-*` | 用户或部署方升级版本的说明 |
+| `release/migration-*` | 版本变化引起的数据、配置、接口或部署迁移 |
+| `project/plan-*` | 已确定方向的实施计划，也可包含尚未实施的内部迁移方案 |
 
-Each target is a real Gradle subproject.
+### 标准文件与现有内容
 
-A target normally owns:
+`documents/` 的治理规则不禁止 GitHub、许可证、构建工具或其他生态约定要求放在仓库根目录的标准文件，例如 `README.md`、`LICENSE`、`CONTRIBUTING.md`、`SECURITY.md`、`CODE_OF_CONDUCT.md`。这些文件保留其标准名称和位置，不因文档目录规范而擅自移动，也不要求套用 `<type>-<topic>.md`。
 
-```text
-versions/<target>/
-├─ build.gradle.kts
-└─ src/
-```
+规则允许的位置与类型不等于必须创建的文件清单。规范调整本身不授权创建、拆分、移动现有文档或清理旧目录；实际整理应根据用户明确的任务范围处理。
 
-A target directory must represent an actual implementation.
+## 6. 产品验证：validations/
 
-Do **not** create:
+`validations/` 用于产品级验收、回归、集成、兼容、跨 Target 一致性、协议符合性、性能、稳定性、安全性以及长期机器证据。它不等同于普通单元测试、JUnit 或 GameTest；普通源码测试仍属于对应源码和构建体系，不为统一目录而搬入这里。
 
-* empty future targets;
-* placeholder target directories;
-* speculative loader nodes;
-* version skeletons that are not currently being implemented.
+每项产品验证按 `validations/<type>-<topic>/` 集中组织，将任务、运行实例、结果与说明放在同一个验证项目下。
 
-A future target is created only when work on that target actually begins.
+### 验证项目命名
 
----
+- `<type>` 表示验证的主要目的，使用单个简短的小写英文词。
+- 推荐：`feature`、`regression`、`integration`、`compatibility`、`parity`、`conformance`、`performance`、`stability`、`migration`、`security`。
+- 推荐词只是优先词汇，不构成白名单；没有合适推荐词时，允许根据验证的实际目的选择新的 `<type>`。
+- `<topic>` 表示被验证的能力、问题或边界，使用与文档主题相同的字符规则。
 
-# 3. Targets Are Siblings
+以下三种验证目的应明确区分，不混用：
 
-Targets do not inherit implementation from one another.
+| `<type>` | 要证明什么 |
+| --- | --- |
+| `compatibility` | 不同环境、Mod、组件等能否共同工作 |
+| `parity` | 不同 Target / Loader 的行为是否一致 |
+| `conformance` | 是否符合明确的协议、Schema 或合同 |
 
-Do not create dependency chains such as:
+### 验证项目内容
 
-```text
-1.20.1-forge
-    ↓
-1.21.1-neoforge
-    ↓
-26.1.2-neoforge
-    ↓
-26.2-neoforge
-```
+| 位置 | 职责 |
+| --- | --- |
+| `task/` | 验证程序、断言、输入与辅助工具；不限制内部目录结构 |
+| `instance/` | 可选的验证专用实例；保存实例运行内容，以及不值得长期保存的验证结果与机器证据 |
+| `result/` | 从 `instance/` 中提取的值得长期保存的验证结果与机器证据；不限制内部目录结构 |
+| `validation.md` | 面向开发者和 Agent 的完整测试目标、测试内容、操作说明与验收说明 |
+| `validation-guide.md` | 可选的简易版说明，面向一般用户介绍测试目标、测试内容、操作与验收；尽可能简洁易懂，并提供可直接从仓库根目录运行的命令 |
 
-in Gradle or source ownership.
+`validation.md` 和 `validation-guide.md` 直接放在验证项目根目录，不放进 `task/`，也不额外套一层 `documents/`。两份说明有不同的读者定位，不要求固定正文模板。
 
-All targets are siblings:
+### 验证实例的 Git 策略
 
-```text
-versions/
-├─ A
-├─ B
-├─ C
-└─ D
-```
+`validations/<type>-<topic>/instance/` 默认忽略运行内容，同时允许 Git 遍历子目录；通过 `.gitignore` 的显式 negation 白名单放行指定文件。
 
-A target may be the **porting reference** for another target, but that is a development relationship, not a build dependency.
+不要将父目录整体排除到无法重新包含指定文件。长期结果放入 `result/`，运行数据和临时证据留在默认忽略的 `instance/`。
 
----
+## 7. 根文件与基础设施
 
-# 4. Baseline Is Semantic, Not Structural
+| 文件或目录 | 职责 |
+| --- | --- |
+| `README.md` | 面向人的模板说明与使用入口 |
+| `AGENTS.md` | Coding Agent 的仓库开发规范 |
+| `instance.properties` | 仓库共享的实例运行默认值 |
+| `local.properties` | 本机工具路径与实例覆盖；Git ignored |
+| `gradle/` | Gradle 基础设施 |
+| `gradle/configuration/` | 统一 properties 配置插件及其原生测试；作为 included build 显式接入，不是产品组件 |
+| `gradle/wrapper/` | 官方 Gradle Wrapper |
+| `gradle/wrapper/gradle-wrapper.jar` | Wrapper 启动与发行包下载程序 |
+| `gradle/wrapper/gradle-wrapper.properties` | Gradle 版本、下载地址与校验值 |
+| `gradlew` | Unix Gradle Wrapper 入口 |
+| `gradlew.bat` | Windows Gradle Wrapper 入口 |
+| `build.gradle.kts` | 仓库共同构建协调 |
+| `settings.gradle.kts` | 显式注册分层 Gradle 模块及其目录映射 |
+| `gradle.properties` | 项目身份、版本与运行环境 Profile |
+| `.git/` | Git 元数据 |
+| `.gitignore` | 构建输出、本机配置与实例内容的忽略规则 |
 
-A repository may designate one target as its current **Baseline**.
+## 8. Properties 配置系统
 
-The Baseline answers:
+统一实现为 `gradle/configuration/` 中的 `raven.repository-configuration` 插件，根 build 只负责应用和聚合。根扩展 `repositoryConfig` 是 Project/Target/Instance 配置的消费入口；详细 API 与 Loader 接入边界见 [配置指南](documents/development/guide-configuration.md)。不要在每个 Target 再实现一套解析器。
 
-> What implementation defines the intended behavior of this product?
+### 四层职责
 
-It does **not** mean:
+| 文件 | 唯一负责的事实 |
+| --- | --- |
+| `gradle.properties` | Project Facts：`mod_id`、`mod_name`、`mod_group`、`mod_version`、`mod_environment`；其他项目事实使用 `mod_*` |
+| `versions/<target>/target.properties` | Target Facts：`minecraft_version`、`loader`、`loader_version`、`java_version`，以及真实需要的 mappings / API 等版本 |
+| `instance.properties` | Repository Instance Defaults：共享的实例运行属性 |
+| `local.properties` | 可选本机 JDK / Launcher 路径，以及最终实例运行覆盖；Git ignored |
 
-> Other targets inherit code from this target.
+同一个事实只保留一个权威来源。项目身份不复制到 Target Facts；实例内存、玩家名、窗口和本机路径不放进 Project/Target Facts。构建脚本与 Loader metadata 消费权威值，不另行硬编码。不要引入 `.env`、其他 local 文件或 per-instance properties 作为平行配置来源。
 
-The Baseline may differ between repositories.
+使用 UTF-8 和 Java properties 语法，重复键报错。本机路径推荐正斜杠；相对路径以仓库根为基准。插件显式读取这四类文件，`-Pmod_*` 等不构成第二套事实覆盖层。根 gradle.properties 允许同时保留 org.gradle.* 原生构建设置，由 Gradle 按其原生优先级消费；它们不属于 Project Facts，不从 repositoryConfig.projectFacts 返回，也不参与 instance Cascade。构建 JVM 内存不等于 Minecraft 实例内存，不复制到实例配置。
 
-It is not required to be:
+### Profile
 
-* the oldest target;
-* the newest target;
-* Forge;
-* Fabric;
-* NeoForge.
+`mod_environment` 仅允许 `client`、`server`、`both`，表示 Mod 的主要运行环境，不是额外的 distribution 合同。
 
-The best current reference implementation should serve as the behavioral authority.
+| Profile | client | client-multiplayer | server | 验证重点 |
+| --- | --- | --- | --- | --- |
+| client | 部署 | 部署 | 不部署 | Modded Client 连接未安装该 Mod 的服务器 |
+| server | 按项目需要 | 不部署 | 部署 | 未安装该 Mod 的客户端连接 Modded Server |
+| both | 部署 | 部署 | 部署 | 单人 / Integrated Server、Dedicated Multiplayer、两端一致性 |
 
-The Baseline may change over the lifetime of the project without changing the sibling relationship between targets.
+插件提供通常的部署建议，不自动复制 JAR 或生成 Loader metadata。真实项目仍要完成对应部署与网络验证。
 
----
+### 所有实例属性使用同一个 Cascade
 
-# 5. Porting References
-
-When porting to a new target, prefer a stable existing target with the smallest meaningful difference.
-
-Prefer transitions such as:
-
-```text
-26.2-neoforge
-→
-26.2-fabric
-```
-
-when investigating loader differences.
-
-Prefer:
-
-```text
-26.1.2-neoforge
-→
-26.2-neoforge
-```
-
-when investigating Minecraft/API-version differences.
-
-Whenever practical:
-
-> A port edge should change only one major dimension at a time.
-
-The repository does not need every project to have the same historical target graph.
-
-Different repositories may have different origins and porting paths.
-
----
-
-# 6. Do Not Pre-Abstract
-
-New implementation belongs to the concrete target first.
-
-Do not begin a new repository by creating speculative layers such as:
-
-```text
-common/
-shared/
-core/
-platform/
-compat/
-bridge/
-api/
-impl/
-```
-
-unless there is already concrete evidence that the layer is necessary.
-
-Code duplication is allowed.
-
-A duplicated implementation that is easy to understand is preferable to an abstraction that requires several files and indirections to understand one operation.
-
-Use this rule:
-
-> **Abstraction follows evidence.**
-
-Do not abstract because code *might* be shared later.
-
----
-
-# 7. Shared Code Promotion
-
-Shared code may be introduced only after multiple real targets demonstrate stable equivalent behavior.
-
-A candidate for sharing should satisfy all or nearly all of the following:
-
-1. Equivalent implementations already exist in multiple targets.
-2. Their behavior is known to be the same.
-3. The shared form is stable across those targets.
-4. Sharing measurably reduces total complexity.
-5. A target remains easy to understand after the extraction.
-6. The abstraction does not hide important Minecraft-version or loader-specific behavior.
-
-If sharing reduces duplicated lines but increases navigation cost or conceptual complexity, do not share.
-
-Do not optimize for DRY at the expense of readability.
-
----
-
-# 8. Shared Facts Are Different From Shared Implementation
-
-Stable repository-level product identity should normally have one source of truth.
-
-Examples:
-
-```text
-Mod ID
-Mod display name
-Maven group
-artifact base name
-release version
-author
-```
-
-These belong at repository/root level when they are genuinely common.
-
-Target-specific facts belong to the target.
-
-Examples:
-
-```text
-Minecraft version
-loader version
-Fabric API version
-Forge version
-NeoForge version
-mappings
-Java toolchain
-target-specific dependencies
-target-specific plugins
-```
-
-Do not turn the root `gradle.properties` into a database containing every target's dependency matrix.
-
-Use this ownership rule:
-
-> **“What product is this?” belongs to the root.**
-
-> **“How does this target build and run?” belongs to the target.**
-
----
-
-# 9. Java Identity
-
-For repositories owned through GitHub, prefer:
-
-```text
-Maven group:
-io.github.<owner>
-
-Java package root:
-io.github.<owner>.<modid>
-```
-
-Example:
-
-```text
-mod_id=examplemod
-maven_group=io.github.example
-
-package:
-io.github.example.examplemod
-```
-
-Minecraft version and loader name do not belong in the Java package root.
-
-Avoid:
-
-```text
-io.github.example.examplemod.fabric
-io.github.example.examplemod.v121
-```
-
-unless the code itself genuinely represents a loader-specific or version-specific concept inside a shared source tree.
-
-Target directories already express the target identity.
-
----
-
-# 10. Gradle Must Stay Explicit
-
-`settings.gradle.kts` should explicitly declare real targets.
-
-Example:
-
-```kotlin
-include(":versions:1.20.1-forge")
-include(":versions:1.21.1-neoforge")
-include(":versions:26.2-neoforge")
-include(":versions:26.2-fabric")
-```
-
-Prefer explicit declarations over:
-
-```text
-automatic target discovery
-directory scanning
-generated matrices
-dynamic loader detection
-implicit target activation
-```
-
-The root `build.gradle.kts` should remain thin.
-
-Root tasks may aggregate real target tasks, but the root must not become a hidden framework that decides what each target means.
-
-Avoid introducing, without demonstrated need:
-
-```text
-buildSrc/
-Convention Plugins
-custom target frameworks
-dynamic source-set matrices
-automatic loader selection
-generated target graphs
-```
-
-Do not introduce Stonecutter or an equivalent conditional-source framework unless the user explicitly chooses that governance model.
-
----
-
-# 11. Standard Target Task Contract
-
-A real target should expose a predictable Gradle interface wherever applicable.
-
-Expected tasks include:
-
-```text
-build
-test
-runClient
-runClientMultiplayer
-runServer
-```
-
-Not every target must have meaningful JVM unit tests, but `build` and the relevant run configurations should remain obvious.
-
-The primary user-facing command shape is:
-
-```text
-gradlew :versions:<target>:<task>
-```
-
-Examples:
-
-```powershell
-.\gradlew.bat :versions:1.20.1-forge:build
-.\gradlew.bat :versions:26.2-neoforge:runClient
-.\gradlew.bat :versions:26.2-fabric:runServer
-```
-
-Do not replace this with opaque parameter-driven dispatch such as:
-
-```text
-gradlew runClient -Pversion=... -Ploader=...
-```
-
-unless explicitly requested.
-
-Explicit project paths are preferred.
-
----
-
-# 12. Run Instance Layout
-
-Development instances live under repository-root:
-
-```text
-runs/<target>/
-```
-
-A target may expose:
-
-```text
-runs/<target>/
-├─ client/
-├─ client-multiplayer/
-└─ server/
-```
-
-`client` is the normal development client.
-
-`client-multiplayer` is a second independent client profile used for multiplayer/LAN/server testing.
-
-`server` is the dedicated server profile.
-
-The latter two may be omitted for projects that genuinely do not need them, but a reference repository may deliberately implement all three.
-
-`runs/` is local runtime state and must not be committed.
-
-Typical ignore rule:
-
-```gitignore
-/runs/
-```
-
----
-
-# 13. Local Developer Configuration
-
-Machine-specific developer configuration belongs in:
-
-```text
-/local.properties
-```
-
-`local.properties` is optional and Git ignored.
-
-Example:
-
-```gitignore
-/local.properties
-```
-
-Do not create a tracked `run.properties` merely to provide editable defaults.
-
-Defaults that are part of the target's development behavior should live directly in the relevant build logic.
-
-`local.properties` should only override local developer values.
-
-Example:
+每个文件内按以下顺序，从高到低选择第一个存在的键：
 
 ```properties
-player.client.name=LocalPlayer
+instance.[<target>].<variant>.<property>
+instance.[<target>].<property>
+instance.<variant>.<property>
+instance.<property>
 ```
 
-Partial overrides must be allowed.
+Target ID 必须整体放在方括号中。先在 `instance.properties` 求共享默认，再在可选 `local.properties` 独立求本机覆盖；本机有任何匹配键就覆盖共享结果，文件优先级高于 specificity。不得先合并文件再搜索，也不得将不同层级的 extra args 全部拼接。
 
-The repository must work when `local.properties` does not exist.
+键存在但值为空仍是显式覆盖。空 extra args 或 `[]` 清除共享追加值；选中空或无效的内存等数值时报错，不静默回退。没有匹配的可选属性时使用生态默认。自定义扁平 runtime property 也复用这条 Cascade。
 
----
+基础属性为 `memory`、`width`、`height`、`playerName`、`extraJvmArgs`、`extraGameArgs`。内存是游戏 JVM 最大堆，不是 Gradle daemon 内存；宽高是正整数像素，玩家名为 3–16 个 ASCII 字母、数字或下划线。server 不消费窗口与玩家名。
 
-# 14. Client Player Profiles
+产品验证可在 `task/` 中定义必要的场景输入和固定夹具约束，例如测试身份及隔离工作目录；它们不是第五级实例覆盖。场景身份只保留一个来源供客户端、权限名单和断言共同消费。若已解析的 `playerName` 与场景要求不同，启动前报错；未设置或相同时使用场景身份，避免重复生成参数。不要把普通运行偏好伪装成夹具约束，也不要为保留验证默认行为要求用户改动日常实例配置。
 
-Where multiple development clients exist, use separate player identities.
+追加参数支持 `=[` 开始、独占一行 `]` 结束的多行列表：每个非空行 trim 首尾后作为完整字面参数，内部空格、反斜杠、Unicode、引号保持，块内不解释注释、转义或续行；兼容旧单行 JSON。空块、[]、空值清除共享 extras。JVM 和游戏参数分别解析，最终顺序为生态参数 + 项目必要参数 + 最终列表，不经 shell 或再次拆分。
 
-Conceptually:
+分别完成 memory 和 extraJvmArgs 的 Cascade 后，最终列表的唯一合法 `-Xmx` 优先于 memory（包括共享列表覆盖本机 memory）；无 -Xmx 或清空列表则回落 memory。重复/非法 -Xmx 报错。适配器用 `effectiveMemory()` 配置原生堆，只追加 `jvmArgumentsWithoutMaxHeap()`，不能重复发射 -Xmx。游戏 `--width`、`--height`、`--username`、`--gameDir` 仍使用专用设置。
 
-```text
-runClient
-→ client player
+### 本机工具与真实接入
 
-runClientMultiplayer
-→ second player
-```
+本版支持 `java.<major>.home` 和 `launcher.prism.path`。JDK 路径使用时验证 java/javac 及实际版本；Launcher 路径可查询和校验，不自动启动。缺少 local 文件不阻止构建，也不要求创建空 local 文件。
 
-Names should be validated only when the corresponding client task runs.
+普通 JavaExec 可显式使用 `JavaExecAdapter.configure(...)`，接入工作目录、堆、参数和可选本机 JDK。无本机 JDK 路径时使用 Gradle toolchain。Loader 专用运行任务优先接入其原生 API，不能假定所有 Loader 都是普通 JavaExec；编译 toolchain 读取 Target 的 `java_version` 配置。
 
-Invalid client configuration must not block unrelated operations such as:
+`verifyConfiguration` 明确检查声明值、已注册 Target 和配置过的工具；`printInstanceConfiguration` 查询真实 Target 的最终值与来源，不打印追加参数内容。`check` 聚合插件单元测试和 Gradle TestKit 功能测试。自定义配置的 Provider 读取须保留，以正确跟踪配置缓存中的文件变化与可选文件出现/消失。
 
-```text
-build
-test
-runServer
-```
+本项目只有已注册的 26.2-fabric Target。Java 探针通过只证明配置和普通 JavaExec 接线，不证明游戏、部署或人工验收通过；实际 Loom 接线还需独立任务模型验证。测试临时工程不注册到正式项目，不创建假产品模块。
 
-The two multiplayer-testing client identities should not resolve to the same player name.
+## 9. 本项目事实与行为边界
 
----
-
-# 15. Project Mod vs External Test Mods
-
-During development, the project itself should normally be loaded through the loader/Gradle development source-set mechanism.
-
-Do not copy the project's own built JAR into:
-
-```text
-runs/<target>/<profile>/mods/
-```
-
-for ordinary development runs.
-
-Doing so can create duplicate-mod or stale-JAR ambiguity.
-
-External development/test mods may be manually placed into the standard instance:
-
-```text
-mods/
-```
-
-unless an explicit automated dependency-management system is later introduced.
-
-Do not create speculative third-party-mod management infrastructure unless requested.
-
----
-
-# 16. `src/main` and `src/client`
-
-Where the loader/tooling provides a real compile-time client boundary, use it.
-
-For Fabric/Loom, prefer:
-
-```text
-src/
-├─ main/
-└─ client/
-```
-
-when the project contains client-only code.
-
-Typical ownership:
-
-```text
-src/main/
-→ blocks
-→ items
-→ registries
-→ world logic
-→ server-safe data
-
-src/client/
-→ renderers
-→ models
-→ client initialization
-→ client-only resources
-```
-
-This split is not cosmetic.
-
-It provides a real environment boundary and helps prevent client-only APIs from leaking into dedicated-server code.
-
-Do not add extra source-set categories merely for organizational aesthetics.
-
----
-
-# 17. Prefer Standard Minecraft and Loader APIs
-
-Use implementation layers in this order of preference:
-
-1. Vanilla Minecraft standard mechanism.
-2. Loader-standard mechanism.
-3. Existing mature library when genuinely justified.
-4. Small project-specific implementation.
-5. Custom framework.
-
-The fifth option should be rare.
-
-Do not implement:
-
-```text
-RegistryManager
-PlatformManager
-FactoryFramework
-CompatibilityFacade
-ServiceLayer
-generic wrapper stacks
-```
-
-around APIs that are already simple and readable.
-
-If:
-
-```java
-Registry.register(...)
-```
-
-is clearer than a custom registry framework, use it directly.
-
----
-
-# 18. Preserve Intent, Not Historical Implementation
-
-Old code is a knowledge source, not an architectural requirement.
-
-When rewriting:
-
-> **Preserve intended product behavior, not implementation structure.**
-
-Historical code may be:
-
-* deleted;
-* merged;
-* split;
-* renamed;
-* replaced;
-* simplified.
-
-Do not keep a complex abstraction merely because the old implementation used it.
-
-If historical compatibility is explicitly out of scope, do not introduce compatibility layers for old:
-
-```text
-registry IDs
-resource paths
-block states
-class names
-world saves
-```
-
-unless the user explicitly requests compatibility.
-
----
-
-# 19. Rendering and Model Principle
-
-When working with custom rendering:
-
-> Asset geometry is authoritative.
-
-Model:
-
-```text
-geometry
-origin
-pivot
-local rotations
-```
-
-should not be silently corrected by arbitrary project-specific transforms.
-
-Runtime transforms should have an explicit semantic purpose such as:
-
-```text
-coordinate-space conversion
-whole-model direction rotation
-Minecraft ItemDisplayContext presentation
-framework-coordinate adaptation
-```
-
-Avoid empirical per-model corrections such as:
-
-```text
-model A translate +0.23
-model B scale 0.97
-model C rotate 17°
-```
-
-unless the product itself genuinely requires a unique transformation.
-
-For block direction changes, conceptually treat the standard Minecraft block as:
-
-```text
-0..16 × 0..16 × 0..16
-```
-
-with macro center:
-
-```text
-(8,8,8)
-```
-
-or:
-
-```text
-(0.5,0.5,0.5)
-```
-
-in world block units.
-
-Local asset pivots are not the same thing as whole-block orientation pivots.
-
----
-
-# 20. Validation Has Separate Layers
-
-Do not collapse all validation into a single “works” state.
-
-At minimum distinguish:
-
-```text
-Build
-Runtime
-Functional / Visual Acceptance
-```
-
-Example:
-
-```text
-build                PASS
-runClient            PASS
-runServer            PASS
-visual orientation   PENDING
-```
-
-A successful Gradle build does not prove visual correctness.
-
-A client reaching the title screen does not prove:
-
-```text
-models
-textures
-placement directions
-animations
-GUI
-world rendering
-```
-
-are correct.
-
-Report what was actually verified.
-
----
-
-# 21. Dedicated Server Safety
-
-Client success does not prove server safety.
-
-Where the product is expected to load on a dedicated server, run:
-
-```text
-runServer
-```
-
-and verify that it reaches a normal ready state.
-
-Client-only code must remain outside server execution paths.
-
-Do not infer server compatibility from successful client compilation.
-
----
-
-# 22. Multiplayer Reference Testing
-
-Where the repository provides the full run topology, prefer validating:
-
-```text
-server
-+
-client
-+
-client-multiplayer
-```
-
-simultaneously.
-
-This proves that:
-
-* run directories are independent;
-* player identities are independent;
-* the target can support real client/server testing;
-* local runtime state does not collide.
-
-Do not use this requirement to force every ordinary project to maintain unnecessary profiles.
-
----
-
-# 23. Repository Should Be Self-Describing
-
-Do not depend on large amounts of governance documentation to explain ordinary structure.
-
-The repository should communicate its structure directly through:
-
-```text
-versions/
-runs/
-settings.gradle.kts
-gradle.properties
-target build.gradle.kts
-source-set names
-clear package names
-clear class names
-```
-
-Do not add:
-
-```text
-README
-docs/
-architecture documents
-workflow documentation
-```
-
-unless explicitly requested.
-
-`AGENTS.md` itself is the agent-governance exception.
-
-Do not create additional documentation merely because a refactor occurred.
-
----
-
-# 24. Do Not Add CI or Workflows Without Request
-
-Do not create:
-
-```text
-.github/workflows/
-CI pipelines
-release workflows
-automatic publication
-dependency bots
-```
-
-unless explicitly requested.
-
-The repository's local Gradle interface remains authoritative.
-
----
-
-# 25. Do Not Create Git History Without Permission
-
-Unless the user explicitly requests it:
-
-* do not create commits;
-* do not push;
-* do not create branches;
-* do not rewrite history;
-* do not create tags.
-
-Large tasks may modify the working tree and perform validation without creating Git history.
-
-At the end, report:
-
-```text
-branch
-HEAD
-git status
-staged state
-```
-
-and clearly state whether any commit/push/branch operation occurred.
-
----
-
-# 26. Agent Work Protocol
-
-Before significant implementation work, establish:
-
-```text
-Repository:
-Target:
-Baseline:
-Direct Port Reference:
-Change category:
-```
-
-Change category should normally be one of:
-
-```text
-product behavior
-Minecraft-version adaptation
-loader adaptation
-target-specific adaptation
-build infrastructure
-runtime/test infrastructure
-```
-
-Before modifying a target, understand:
-
-1. What behavior is intended?
-2. Which existing target is the closest reference?
-3. What dimension is actually changing?
-4. Which files are owned by this target?
-5. Which other targets could be affected?
-
-Do not silently expand the task into repository-wide architectural work.
-
----
-
-# 27. Agent Completion Report
-
-After meaningful work, report factual results.
-
-Include as applicable:
-
-```text
-Modified target
-Modified shared/root files
-Build result
-Runtime result
-Server result
-Tests
-Artifact result
-Functional deviations
-Remaining manual acceptance
-Git status
-```
-
-Do not claim:
-
-```text
-visual PASS
-functional PASS
-server compatible
-```
-
-without actually verifying those properties.
-
----
-
-# 28. Architecture Changes Require Evidence
-
-Do not introduce repository-wide architecture merely because it is theoretically cleaner.
-
-Examples requiring strong justification and normally explicit user approval:
-
-```text
-common/
-shared/
-core/
-platform/
-compat/
-buildSrc/
-Convention Plugins
-Stonecutter
-automatic target discovery
-source generation frameworks
-dependency-management frameworks
-```
-
-A new abstraction must solve a demonstrated problem.
-
-Do not manufacture future problems to justify present abstractions.
-
----
-
-# 29. Reference Repository Principle
-
-A reference repository should demonstrate **working capabilities**, not speculative architecture.
-
-It is appropriate for a reference repository to fully exercise:
-
-```text
-build
-client
-multiplayer client
-dedicated server
-local overrides
-main/client separation
-artifact production
-```
-
-It is not appropriate to create:
-
-```text
-fake targets
-empty shared layers
-unused compatibility infrastructure
-future loader scaffolding
-```
-
-merely to demonstrate that they could exist.
-
-A capability becomes part of the reference model only after it is actually needed and verified.
-
----
-
-# 30. Final Decision Rule
-
-When choices conflict, use the following priorities:
-
-```text
-Understandability > abstraction purity
-Explicitness      > hidden automation
-Correct behavior  > historical implementation
-Stable targets    > inheritance chains
-Proven sharing    > speculative sharing
-Standard API      > custom framework
-Simple concrete code > clever generic code
-```
-
-The repository is successful when a developer can enter it after months away and quickly answer:
-
-```text
-What targets exist?
-Where is each target implemented?
-How do I build one?
-How do I run its client?
-How do I run its server?
-Where is its local runtime state?
-Which configuration is global?
-Which configuration belongs only to this target?
-```
-
-without first reverse-engineering a custom build framework.
-
-That property is more important than minimizing duplicate source files.
+- 当前唯一真实 Target：`versions/26.2-fabric`，Gradle 地址 `:version:26.2-fabric`。没有非 Mod 组件或其它已实现 Target；不要创建占位模块。
+- 项目身份保持根 `gradle.properties` 为权威；Target 依赖与 Java 版本保持 `target.properties` 为权威。未经授权不升级 Minecraft、Loader、Loom、Gradle 或依赖。
+- 原生 JUnit 与测试夹具留在 Target 的 `src/test/java`；产品验证程序、脚本和测试 Mod 资源在 `validations/*/task`，由 Target 的原有 test source set 显式接入。生产 Mixin 直接链接的 gated 验证 hooks 保留在 Target，避免改变 JAR 装载与运行行为。
+- 日常实例只有现有 client/server。验证专项配置不能冒充 client-multiplayer，也不能合并为一个共享运行实例。
+- Seed Algorithm V1、WorldOptions.seed() 权威、Feature Ordering V1、Mosaic format V2、9-writer FEATURES 与 Structure Overlay 为冻结产品合同，不得未经授权改变。
+- Repair C 的历史验收为 PASS；D1 候选裁剪的历史结论为 correctness 通过、性能 PARTIAL。保存已有工作不代表升级验收状态；不要自动进入 D2、V3、WorldPreset 或 Preview。
+- 普通 Vanilla 保持原路径；Mosaic 身份缺失、损坏和真正生成错误继续 fail closed。预期关闭取消、POI 主线程归属等已确认修复不得退化。
+- 保留的产品证据不得改写 SHA、时间、失败或签名；归档 PASS 不能代替当前源码验证。
+- 分别报告 Build、Runtime、Functional/Visual。没有运行产品不能宣称游戏/服务器/视觉 PASS。不得使用 GUI 自动化替代用户人工验收。
+- 测试使用受限并发，单个高负载 JVM，保留用户 CPU 资源；不得为了测试更改生产线程模型或调度。
+- 仅操作当前 Git 根。未经明确授权不创建提交、推送、分支或 tag；不丢弃已有未提交工作。
+- 没有实际需求不加 CI、通用框架或共享层；构建与原生测试不等于自动目录治理。

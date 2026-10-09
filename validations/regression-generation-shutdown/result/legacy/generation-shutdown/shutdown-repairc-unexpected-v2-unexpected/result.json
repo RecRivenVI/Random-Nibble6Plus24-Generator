@@ -1,0 +1,1 @@
+{"mode":"unexpected","reportedFailure":"java.util.concurrent.CancellationException: UNEXPECTED_NON_LIFECYCLE_CANCELLATION","reportedRoot":"java.util.concurrent.CancellationException: UNEXPECTED_NON_LIFECYCLE_CANCELLATION","crashReports":1,"expectedTerminations":0,"inFlightAfterClose":0,"bindingsAfterClose":0,"status":"PASS"}

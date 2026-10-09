@@ -1,0 +1,1 @@
+{"concentricExclusionFallback":true,"status":"PASS","seeds":1,"positiveTargets":40,"falseNegatives":0,"ordinaryTargets":16,"ordinaryTargetsNeedingSearch":2,"ordinaryBiomeSearches":2,"eagerOrdinaryEquivalentSearches":2048,"nativeOracleSlots":128,"positiveSlotsConsidered":5120,"positiveBiomeSearches":40,"vanillaStateUnscoped":true,"availableProcessors":4,"elapsedSeconds":5.5274341}

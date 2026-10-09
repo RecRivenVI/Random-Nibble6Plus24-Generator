@@ -1,0 +1,21 @@
+{
+  "disposable": true,
+  "productionBaseline": "c2d9fa1d8f7d48ac84081b7727ef28e446980fa0",
+  "masterSeed": 123456789,
+  "dimension": "minecraft:overworld",
+  "target": "125,-37",
+  "structures": "no-stronghold",
+  "lazy": "off",
+  "view": 8,
+  "simulation": 8,
+  "seconds": 60,
+  "moveSeconds": 2,
+  "moveChunks": 1,
+  "moves": 29,
+  "activeProcessorCount": 4,
+  "affinityMask": "0xF00",
+  "priority": "BelowNormal",
+  "gradleWorkers": 2,
+  "simultaneousTestInstances": 1,
+  "created": "2026-09-05T03:00:53.3110661Z"
+}

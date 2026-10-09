@@ -1,0 +1,79 @@
+{
+  "label": "repair-d1-4cpu-baseline-1",
+  "seconds": 59.9982597,
+  "closedContexts": 174.0,
+  "canonicalPerSecond": 2.9000841169398117,
+  "fullPerSecond": 0.0,
+  "sendPerSecond": 0.0,
+  "full": 0,
+  "sendReady": 0,
+  "structureCpuPercent": 13.510080965232577,
+  "strongholdCpuPercent": 0.20638196539133194,
+  "structureMillisPerClosedTarget": 288.80025057471266,
+  "candidatePreparationMillisPerTarget": 0.0,
+  "setChecksBeforePerTarget": 8993.0,
+  "setChecksAfterPerTarget": 8993.0,
+  "checksReductionPercent": 0,
+  "startsPerTarget": 18.56896551724138,
+  "validStartsPerTarget": 3.793103448275862,
+  "jigsawPerTarget": 0.4482758620689655,
+  "validPiecesPerTarget": 361.4712643678161,
+  "observedTemplateMonitorWaitMillis": 25971.373900000002,
+  "canonicalWorkerWallMillis": 360097.1748000001,
+  "templateWaitSharePercent": 7.212323705240021,
+  "cpuPercent": 10.64095369848382,
+  "serverOneCorePercent": 0.6621229912580492,
+  "peakQueued": 108,
+  "peakActive": 21,
+  "maxLagMs": null,
+  "coverage": [
+    {
+      "seconds": 10,
+      "wanted": 289,
+      "ready": 0,
+      "fraction": 0.0,
+      "currentViewport": 289,
+      "currentViewportReady": 0,
+      "currentViewportFraction": 0.0
+    },
+    {
+      "seconds": 20,
+      "wanted": 288,
+      "ready": 0,
+      "fraction": 0.0,
+      "currentViewport": 289,
+      "currentViewportReady": 0,
+      "currentViewportFraction": 0.0
+    },
+    {
+      "seconds": 30,
+      "wanted": 289,
+      "ready": 0,
+      "fraction": 0.0,
+      "currentViewport": 289,
+      "currentViewportReady": 0,
+      "currentViewportFraction": 0.0
+    },
+    {
+      "seconds": 45,
+      "wanted": 289,
+      "ready": 0,
+      "fraction": 0.0,
+      "currentViewport": 289,
+      "currentViewportReady": 0,
+      "currentViewportFraction": 0.0
+    },
+    {
+      "seconds": 55,
+      "wanted": 289,
+      "ready": 0,
+      "fraction": 0.0,
+      "currentViewport": 289,
+      "currentViewportReady": 0,
+      "currentViewportFraction": 0.0
+    }
+  ],
+  "identityFileCalls": 2,
+  "spawnCarried": 1,
+  "spawnCold": null
+}

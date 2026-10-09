@@ -1,0 +1,79 @@
+{
+  "label": "repair-d1-4cpu-candidate-1",
+  "seconds": 59.9970333,
+  "closedContexts": 174.0,
+  "canonicalPerSecond": 2.900143397590294,
+  "fullPerSecond": 0.016667490790748817,
+  "sendPerSecond": 0.0,
+  "full": 1,
+  "sendReady": 0,
+  "structureCpuPercent": 13.21978913219789,
+  "strongholdCpuPercent": 0.210867802108678,
+  "structureMillisPerClosedTarget": 276.9803591954023,
+  "candidatePreparationMillisPerTarget": 0.2405344827586207,
+  "setChecksBeforePerTarget": 8993.0,
+  "setChecksAfterPerTarget": 1593.942528735632,
+  "checksReductionPercent": 82.27574192443421,
+  "startsPerTarget": 18.39080459770115,
+  "validStartsPerTarget": 3.8505747126436782,
+  "jigsawPerTarget": 0.47126436781609193,
+  "validPiecesPerTarget": 379.55172413793105,
+  "observedTemplateMonitorWaitMillis": 22687.733100000012,
+  "canonicalWorkerWallMillis": 227839.14229999992,
+  "templateWaitSharePercent": 9.957785510852506,
+  "cpuPercent": 10.625440437288281,
+  "serverOneCorePercent": 1.0594051630871701,
+  "peakQueued": 95,
+  "peakActive": 12,
+  "maxLagMs": null,
+  "coverage": [
+    {
+      "seconds": 10,
+      "wanted": 289,
+      "ready": 0,
+      "fraction": 0.0,
+      "currentViewport": 289,
+      "currentViewportReady": 0,
+      "currentViewportFraction": 0.0
+    },
+    {
+      "seconds": 20,
+      "wanted": 289,
+      "ready": 0,
+      "fraction": 0.0,
+      "currentViewport": 289,
+      "currentViewportReady": 0,
+      "currentViewportFraction": 0.0
+    },
+    {
+      "seconds": 30,
+      "wanted": 289,
+      "ready": 0,
+      "fraction": 0.0,
+      "currentViewport": 289,
+      "currentViewportReady": 0,
+      "currentViewportFraction": 0.0
+    },
+    {
+      "seconds": 45,
+      "wanted": 289,
+      "ready": 0,
+      "fraction": 0.0,
+      "currentViewport": 289,
+      "currentViewportReady": 0,
+      "currentViewportFraction": 0.0
+    },
+    {
+      "seconds": 55,
+      "wanted": 289,
+      "ready": 0,
+      "fraction": 0.0,
+      "currentViewport": 289,
+      "currentViewportReady": 0,
+      "currentViewportFraction": 0.0
+    }
+  ],
+  "identityFileCalls": 2,
+  "spawnCarried": 1,
+  "spawnCold": null
+}

@@ -1,0 +1,1 @@
+{"mode":"close-unexpected","reportedFailure":"java.util.concurrent.CancellationException: UNEXPECTED_CANCELLATION_DURING_SHUTDOWN","reportedRoot":"java.util.concurrent.CancellationException: UNEXPECTED_CANCELLATION_DURING_SHUTDOWN","crashReports":1,"expectedTerminations":48,"inFlightAfterClose":0,"bindingsAfterClose":0,"status":"PASS"}

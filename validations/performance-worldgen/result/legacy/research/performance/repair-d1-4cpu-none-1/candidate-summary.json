@@ -1,0 +1,79 @@
+{
+  "label": "repair-d1-4cpu-none-1",
+  "seconds": 60.0012511,
+  "closedContexts": 243.0,
+  "canonicalPerSecond": 4.049915552510871,
+  "fullPerSecond": 0.5999874892608698,
+  "sendPerSecond": 0.21666214889975854,
+  "full": 36,
+  "sendReady": 13,
+  "structureCpuPercent": 1.2277821400528233,
+  "strongholdCpuPercent": 0.0,
+  "structureMillisPerClosedTarget": 0.40972592592592594,
+  "candidatePreparationMillisPerTarget": 0.0,
+  "setChecksBeforePerTarget": 0.0,
+  "setChecksAfterPerTarget": 0.0,
+  "checksReductionPercent": 0,
+  "startsPerTarget": 0.0,
+  "validStartsPerTarget": 0.0,
+  "jigsawPerTarget": 0.0,
+  "validPiecesPerTarget": 0.0,
+  "observedTemplateMonitorWaitMillis": 6.4274,
+  "canonicalWorkerWallMillis": 515761.4566000001,
+  "templateWaitSharePercent": 0.00124619626335994,
+  "cpuPercent": 11.738417543296208,
+  "serverOneCorePercent": 1.9595531286754861,
+  "peakQueued": 107,
+  "peakActive": 21,
+  "maxLagMs": null,
+  "coverage": [
+    {
+      "seconds": 10,
+      "wanted": 289,
+      "ready": 0,
+      "fraction": 0.0,
+      "currentViewport": 289,
+      "currentViewportReady": 0,
+      "currentViewportFraction": 0.0
+    },
+    {
+      "seconds": 20,
+      "wanted": 289,
+      "ready": 0,
+      "fraction": 0.0,
+      "currentViewport": 289,
+      "currentViewportReady": 0,
+      "currentViewportFraction": 0.0
+    },
+    {
+      "seconds": 30,
+      "wanted": 289,
+      "ready": 0,
+      "fraction": 0.0,
+      "currentViewport": 289,
+      "currentViewportReady": 0,
+      "currentViewportFraction": 0.0
+    },
+    {
+      "seconds": 45,
+      "wanted": 289,
+      "ready": 0,
+      "fraction": 0.0,
+      "currentViewport": 289,
+      "currentViewportReady": 0,
+      "currentViewportFraction": 0.0
+    },
+    {
+      "seconds": 55,
+      "wanted": 289,
+      "ready": 7,
+      "fraction": 0.02422145328719723,
+      "currentViewport": 289,
+      "currentViewportReady": 7,
+      "currentViewportFraction": 0.02422145328719723
+    }
+  ],
+  "identityFileCalls": 2,
+  "spawnCarried": 36,
+  "spawnCold": null
+}

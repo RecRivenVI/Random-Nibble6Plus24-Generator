@@ -1,0 +1,12 @@
+{
+  "status": "PASS",
+  "orders": [
+    "row-major",
+    "reverse",
+    "shuffle",
+    "parallel"
+  ],
+  "chunksPerOrder": 9,
+  "identicalChunkHashes": 9,
+  "modifiedNeighborPreserved": true
+}

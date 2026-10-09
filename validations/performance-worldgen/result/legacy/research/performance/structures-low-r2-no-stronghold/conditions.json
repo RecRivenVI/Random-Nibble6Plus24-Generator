@@ -1,0 +1,15 @@
+{
+  "disposable": true,
+  "productionBaseline": "c2d9fa1d8f7d48ac84081b7727ef28e446980fa0",
+  "masterSeed": 123456789,
+  "dimension": "minecraft:overworld",
+  "target": "125,-37",
+  "structures": "no-stronghold",
+  "view": 2,
+  "simulation": 2,
+  "seconds": 60,
+  "moveSeconds": 2,
+  "moveChunks": 1,
+  "moves": 29,
+  "created": "2026-09-05T00:53:20.0704714Z"
+}

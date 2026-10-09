@@ -1,7 +1,11 @@
-/.gradle/
+.gradle/
+.kotlin/
 /build/
 /local.properties
-/runs/
+/instances/**
+!/instances/**/
+/validations/*/instance/**
+!/validations/*/instance/**/
+# No instance files are currently whitelisted. Add exact file negations only after review.
 /versions/*/logs/
-/versions/*/run/
 **/build/

@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "id": "randomnibble6plus24generator",
+  "id": "${mod_id}",
   "version": "${version}",
-  "name": "Random Nibble6Plus24 Generator",
+  "name": "${mod_name}",
   "authors": [
-    "RecRivenVI"
+    "${mod_author}"
   ],
-  "environment": "*",
+  "environment": "${mod_environment}",
   "entrypoints": {
     "main": [
       "io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator"
@@ -16,9 +16,9 @@
     "randomnibble6plus24generator.mixins.json"
   ],
   "depends": {
-    "fabricloader": ">=0.19.3",
+    "fabricloader": ">=${loader_version}",
     "fabric-registry-sync-v0": "*",
-    "minecraft": "~26.2",
-    "java": ">=25"
+    "minecraft": "~${minecraft_version}",
+    "java": ">=${java_version}"
   }
 }

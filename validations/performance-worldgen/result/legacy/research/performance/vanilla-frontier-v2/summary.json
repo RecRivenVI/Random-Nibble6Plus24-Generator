@@ -1,0 +1,235 @@
+{
+  "windowSeconds": 59.9877656,
+  "integrated": false,
+  "markers": [
+    {
+      "seconds": 0.0,
+      "phase": "WORKLOAD_START_frontier"
+    },
+    {
+      "seconds": 0.042757,
+      "phase": "TICKET_VIEWER_ENTER_[125, -37]"
+    },
+    {
+      "seconds": 14.9879038,
+      "phase": "TICKET_VIEWER_MOVE_[127, -37]"
+    },
+    {
+      "seconds": 29.9887858,
+      "phase": "TICKET_VIEWER_MOVE_[129, -37]"
+    },
+    {
+      "seconds": 59.9877656,
+      "phase": "WORKLOAD_END"
+    }
+  ],
+  "uniquePhysicalHolders": 1085,
+  "viewDemand": 45,
+  "playerLoadingAdmitted": 45,
+  "activeViewDemandsAtEnd": 0,
+  "waitingBeforePlayerTicketAtEnd": 0,
+  "withdrawn": 45,
+  "ticketAdds": {
+    "minecraft:player_simulation": 3,
+    "minecraft:player_loading": 45,
+    "minecraft:unknown": 6041
+  },
+  "canonicalRequested": 0,
+  "canonicalCompleted": 0,
+  "canonicalPerSecond": 0.0,
+  "full": 117,
+  "blockTicking": 77,
+  "entityTicking": 45,
+  "readyToSend": 77,
+  "packets": 0,
+  "artifactRepeats": [],
+  "admissionWaitSeconds": {
+    "n": 45,
+    "mean": 1.5593725022222222,
+    "median": 0.5323357,
+    "p90": 3.5195764,
+    "max": 3.5815462
+  },
+  "prepareSeconds": {
+    "n": 0
+  },
+  "requestedToReadySeconds": {
+    "n": 77,
+    "mean": 0.010573868831168808,
+    "median": 0.6178402,
+    "p90": 2.7964514,
+    "max": 14.6311532
+  },
+  "peakActivePrepare": 0,
+  "peakExecutorQueue": 0,
+  "averageCpuLoad": 0.028579620813233737,
+  "sampledHeapPeak": 462444936,
+  "aggregates": {},
+  "slowReadyChunks": [
+    {
+      "key": "minecraft:overworld:131,-40",
+      "localSeed": "123456789",
+      "requestOrigin": "PUBLIC_REQUEST",
+      "readySeconds": 14.6311532,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:132,-41",
+        "secondsAfterRequest": 14.6308469,
+        "readyGap": 0.0003063
+      }
+    },
+    {
+      "key": "minecraft:overworld:131,-34",
+      "localSeed": "123456789",
+      "requestOrigin": "PUBLIC_REQUEST",
+      "readySeconds": 14.6307712,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:132,-33",
+        "secondsAfterRequest": 14.6306197,
+        "readyGap": 0.0001515
+      }
+    },
+    {
+      "key": "minecraft:overworld:129,-34",
+      "localSeed": "123456789",
+      "requestOrigin": "PUBLIC_REQUEST",
+      "readySeconds": 11.9392157,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:130,-33",
+        "secondsAfterRequest": 11.9389488,
+        "readyGap": 0.0002669
+      }
+    },
+    {
+      "key": "minecraft:overworld:129,-40",
+      "localSeed": "123456789",
+      "requestOrigin": "PUBLIC_REQUEST",
+      "readySeconds": 11.8870938,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:130,-41",
+        "secondsAfterRequest": 11.8866663,
+        "readyGap": 0.0004275
+      }
+    },
+    {
+      "key": "minecraft:overworld:123,-39",
+      "localSeed": "123456789",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 3.3156616,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:122,-40",
+        "secondsAfterRequest": 3.3149723,
+        "readyGap": 0.0006893
+      }
+    },
+    {
+      "key": "minecraft:overworld:123,-38",
+      "localSeed": "123456789",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 2.799958,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:122,-37",
+        "secondsAfterRequest": 2.7821677,
+        "readyGap": 0.0177903
+      }
+    },
+    {
+      "key": "minecraft:overworld:123,-35",
+      "localSeed": "123456789",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 2.7986733,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:122,-34",
+        "secondsAfterRequest": 2.7828152,
+        "readyGap": 0.0158581
+      }
+    },
+    {
+      "key": "minecraft:overworld:124,-39",
+      "localSeed": "123456789",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 2.7964514,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:123,-40",
+        "secondsAfterRequest": 2.7936229,
+        "readyGap": 0.0028285
+      }
+    },
+    {
+      "key": "minecraft:overworld:126,-39",
+      "localSeed": "123456789",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 2.7957983,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:127,-40",
+        "secondsAfterRequest": 2.7788952,
+        "readyGap": 0.0169031
+      }
+    },
+    {
+      "key": "minecraft:overworld:127,-39",
+      "localSeed": "123456789",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 2.7955907,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:128,-40",
+        "secondsAfterRequest": 2.7783166,
+        "readyGap": 0.0172741
+      }
+    },
+    {
+      "key": "minecraft:overworld:123,-37",
+      "localSeed": "123456789",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 2.7955358,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:122,-36",
+        "secondsAfterRequest": 2.7775625,
+        "readyGap": 0.0179733
+      }
+    },
+    {
+      "key": "minecraft:overworld:123,-36",
+      "localSeed": "123456789",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 2.7951545,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:122,-35",
+        "secondsAfterRequest": 2.7770966,
+        "readyGap": 0.0180579
+      }
+    },
+    {
+      "key": "minecraft:overworld:125,-39",
+      "localSeed": "123456789",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 2.7939706,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:126,-40",
+        "secondsAfterRequest": 2.7769493,
+        "readyGap": 0.0170213
+      }
+    },
+    {
+      "key": "minecraft:overworld:127,-35",
+      "localSeed": "123456789",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 2.5300026,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:128,-34",
+        "secondsAfterRequest": 2.5259295,
+        "readyGap": 0.0040731
+      }
+    },
+    {
+      "key": "minecraft:overworld:124,-38",
+      "localSeed": "123456789",
+      "requestOrigin": "VIEW_DEMAND",
+      "readySeconds": 2.5262341,
+      "lastNeighborFull": {
+        "key": "minecraft:overworld:123,-39",
+        "secondsAfterRequest": 2.522259,
+        "readyGap": 0.0039751
+      }
+    }
+  ]
+}
