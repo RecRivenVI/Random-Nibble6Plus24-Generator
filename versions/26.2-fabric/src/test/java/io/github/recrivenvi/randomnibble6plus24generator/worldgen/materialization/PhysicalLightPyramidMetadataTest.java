@@ -2,15 +2,12 @@ package io.github.recrivenvi.randomnibble6plus24generator.worldgen.materializati
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+import io.github.recrivenvi.randomnibble6plus24generator.test.MinecraftTestBootstrap;
 import java.util.List;
-
 import net.minecraft.world.level.chunk.status.ChunkPyramid;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
-
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-
-import io.github.recrivenvi.randomnibble6plus24generator.test.MinecraftTestBootstrap;
 
 class PhysicalLightPyramidMetadataTest {
 
@@ -28,7 +25,8 @@ class PhysicalLightPyramidMetadataTest {
         assertEquals(-1, light.blockStateWriteRadius());
         assertEquals(List.of(ChunkStatus.FEATURES), initialize.directDependencies().asList());
         assertEquals(10, initialize.accumulatedDependencies().getRadius());
-        assertEquals(List.of(ChunkStatus.INITIALIZE_LIGHT, ChunkStatus.INITIALIZE_LIGHT),
+        assertEquals(
+                List.of(ChunkStatus.INITIALIZE_LIGHT, ChunkStatus.INITIALIZE_LIGHT),
                 light.directDependencies().asList());
         assertEquals(11, light.accumulatedDependencies().getRadius());
         assertEquals(ChunkStatus.INITIALIZE_LIGHT, light.accumulatedDependencies().get(0));

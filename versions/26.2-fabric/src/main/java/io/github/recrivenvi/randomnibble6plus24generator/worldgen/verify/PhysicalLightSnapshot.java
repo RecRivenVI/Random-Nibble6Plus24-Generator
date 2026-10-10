@@ -7,7 +7,6 @@ import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.Map;
 import java.util.TreeMap;
-
 import net.minecraft.core.SectionPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
@@ -53,9 +52,7 @@ public final class PhysicalLightSnapshot {
     }
 
     public static PhysicalLightSnapshot capture(
-            ServerLevel level,
-            ChunkAccess chunk,
-            String preLightFeatureHash) {
+            ServerLevel level, ChunkAccess chunk, String preLightFeatureHash) {
         LevelLightEngine engine = level.getChunkSource().getLightEngine();
         Map<Integer, String> block = new TreeMap<>();
         Map<Integer, String> sky = new TreeMap<>();
@@ -156,11 +153,17 @@ public final class PhysicalLightSnapshot {
     }
 
     public int blockLightValue(ServerLevel level, net.minecraft.core.BlockPos pos) {
-        return level.getChunkSource().getLightEngine().getLayerListener(LightLayer.BLOCK).getLightValue(pos);
+        return level.getChunkSource()
+                .getLightEngine()
+                .getLayerListener(LightLayer.BLOCK)
+                .getLightValue(pos);
     }
 
     public int skyLightValue(ServerLevel level, net.minecraft.core.BlockPos pos) {
-        return level.getChunkSource().getLightEngine().getLayerListener(LightLayer.SKY).getLightValue(pos);
+        return level.getChunkSource()
+                .getLightEngine()
+                .getLayerListener(LightLayer.SKY)
+                .getLightValue(pos);
     }
 
     private String calculateHash(boolean includePreLightFeatureHash) {
@@ -172,14 +175,16 @@ public final class PhysicalLightSnapshot {
             update(digest, status);
             digest.update((byte) (lightCorrect ? 1 : 0));
             if (includePreLightFeatureHash) update(digest, preLightFeatureHash);
-            blockLight.forEach((section, data) -> {
-                update(digest, section);
-                update(digest, data);
-            });
-            skyLight.forEach((section, data) -> {
-                update(digest, section);
-                update(digest, data);
-            });
+            blockLight.forEach(
+                    (section, data) -> {
+                        update(digest, section);
+                        update(digest, data);
+                    });
+            skyLight.forEach(
+                    (section, data) -> {
+                        update(digest, section);
+                        update(digest, data);
+                    });
             for (int value : skyLightSources) update(digest, value);
             return HexFormat.of().formatHex(digest.digest());
         } catch (NoSuchAlgorithmException exception) {
@@ -190,10 +195,11 @@ public final class PhysicalLightSnapshot {
     private static String layerMapHash(Map<Integer, String> values) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            values.forEach((section, data) -> {
-                update(digest, section);
-                update(digest, data);
-            });
+            values.forEach(
+                    (section, data) -> {
+                        update(digest, section);
+                        update(digest, data);
+                    });
             return HexFormat.of().formatHex(digest.digest());
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException(exception);
@@ -202,15 +208,16 @@ public final class PhysicalLightSnapshot {
 
     private static Map<Integer, String> layerHashes(Map<Integer, String> values) {
         Map<Integer, String> result = new TreeMap<>();
-        values.forEach((section, data) -> {
-            try {
-                MessageDigest digest = MessageDigest.getInstance("SHA-256");
-                update(digest, data);
-                result.put(section, HexFormat.of().formatHex(digest.digest()));
-            } catch (NoSuchAlgorithmException exception) {
-                throw new IllegalStateException(exception);
-            }
-        });
+        values.forEach(
+                (section, data) -> {
+                    try {
+                        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+                        update(digest, data);
+                        result.put(section, HexFormat.of().formatHex(digest.digest()));
+                    } catch (NoSuchAlgorithmException exception) {
+                        throw new IllegalStateException(exception);
+                    }
+                });
         return java.util.Collections.unmodifiableMap(result);
     }
 

@@ -1,17 +1,15 @@
 package io.github.recrivenvi.randomnibble6plus24generator.mixin;
 
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.PhysicalMosaicTrace;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.level.material.Fluid;
-import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.block.Block;
-
+import net.minecraft.world.level.material.Fluid;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.PhysicalMosaicTrace;
 
 /** Development-only counters for Vanilla physical runtime ticks. */
 @Mixin(ServerLevel.class)
@@ -34,5 +32,4 @@ abstract class ServerLevelLifecycleTraceMixin {
             Entity entity, CallbackInfo callbackInfo) {
         PhysicalMosaicTrace.recordRuntimeTick((ServerLevel) (Object) this, "entity");
     }
-
 }

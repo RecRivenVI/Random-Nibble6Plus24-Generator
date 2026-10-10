@@ -5,7 +5,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
-
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.status.ChunkPyramid;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
@@ -13,14 +12,11 @@ import net.minecraft.world.level.chunk.status.ChunkStep;
 
 /** Frozen FEATURES writer ordering contract for Mosaic format version 2. */
 public record FeatureOrderingPlan(
-        int algorithmVersion,
-        int blockStateWriteRadius,
-        List<ChunkPos> writers) {
+        int algorithmVersion, int blockStateWriteRadius, List<ChunkPos> writers) {
 
     public static final int TARGET_LOCAL_ZX_ROW_MAJOR_V1 = 1;
-    private static final Comparator<ChunkPos> Z_THEN_X = Comparator
-            .comparingInt(ChunkPos::z)
-            .thenComparingInt(ChunkPos::x);
+    private static final Comparator<ChunkPos> Z_THEN_X =
+            Comparator.comparingInt(ChunkPos::z).thenComparingInt(ChunkPos::x);
 
     public FeatureOrderingPlan {
         writers = List.copyOf(writers);

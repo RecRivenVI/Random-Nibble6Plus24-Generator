@@ -1,7 +1,0 @@
-{
-  "required": true,
-  "package": "io.github.recrivenvi.randomnibble6plus24generator.research.mixin",
-  "compatibilityLevel": "JAVA_25",
-  "mixins": ["ProbeServerMixin"],
-  "injectors": {"defaultRequire": 1}
-}

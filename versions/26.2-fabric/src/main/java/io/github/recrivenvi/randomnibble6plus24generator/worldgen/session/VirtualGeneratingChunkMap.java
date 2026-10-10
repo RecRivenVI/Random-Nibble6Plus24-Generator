@@ -5,15 +5,14 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-
 import net.minecraft.server.level.ChunkGenerationTask;
-import net.minecraft.server.level.GenerationChunkHolder;
 import net.minecraft.server.level.GeneratingChunkMap;
+import net.minecraft.server.level.GenerationChunkHolder;
 import net.minecraft.util.StaticCache2D;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.ChunkAccess;
-import net.minecraft.world.level.chunk.ProtoChunk;
 import net.minecraft.world.level.chunk.LightChunk;
+import net.minecraft.world.level.chunk.ProtoChunk;
 import net.minecraft.world.level.chunk.UpgradeData;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.level.chunk.status.ChunkStep;
@@ -29,9 +28,9 @@ final class VirtualGeneratingChunkMap implements GeneratingChunkMap {
 
     @Override
     public GenerationChunkHolder acquireGeneration(long packedPos) {
-        VirtualGenerationChunkHolder holder = holders.computeIfAbsent(
-                packedPos,
-                key -> new VirtualGenerationChunkHolder(ChunkPos.unpack(key)));
+        VirtualGenerationChunkHolder holder =
+                holders.computeIfAbsent(
+                        packedPos, key -> new VirtualGenerationChunkHolder(ChunkPos.unpack(key)));
         holder.increaseGenerationRefCount();
         return holder;
     }
@@ -54,10 +53,11 @@ final class VirtualGeneratingChunkMap implements GeneratingChunkMap {
 
         ChunkAccess parent = holder.getChunkIfPresentUnchecked(step.targetStatus().getParent());
         if (parent == null) {
-            throw new IllegalStateException("Virtual parent chunk is missing for "
-                    + holder.getPos()
-                    + " at "
-                    + step.targetStatus());
+            throw new IllegalStateException(
+                    "Virtual parent chunk is missing for "
+                            + holder.getPos()
+                            + " at "
+                            + step.targetStatus());
         }
         return step.apply(context.worldGenContext(), cache, parent);
     }
@@ -84,8 +84,8 @@ final class VirtualGeneratingChunkMap implements GeneratingChunkMap {
     LightChunk chunkForLighting(int x, int z) {
         VirtualGenerationChunkHolder holder = holders.get(ChunkPos.pack(x, z));
         if (holder == null || holder.getLatestStatus() == null) {
-            throw new PhysicalWorldAccessException("virtual light lookup outside generated frontier: "
-                    + new ChunkPos(x, z));
+            throw new PhysicalWorldAccessException(
+                    "virtual light lookup outside generated frontier: " + new ChunkPos(x, z));
         }
         ChunkAccess chunk = holder.getChunkIfPresentUnchecked(holder.getLatestStatus());
         if (chunk == null) {
@@ -96,7 +96,10 @@ final class VirtualGeneratingChunkMap implements GeneratingChunkMap {
 
     Set<ChunkPos> chunksAtOrBeyond(ChunkStatus status) {
         return holders.values().stream()
-                .filter(holder -> holder.getLatestStatus() != null && holder.getLatestStatus().isOrAfter(status))
+                .filter(
+                        holder ->
+                                holder.getLatestStatus() != null
+                                        && holder.getLatestStatus().isOrAfter(status))
                 .map(GenerationChunkHolder::getPos)
                 .collect(java.util.stream.Collectors.toUnmodifiableSet());
     }

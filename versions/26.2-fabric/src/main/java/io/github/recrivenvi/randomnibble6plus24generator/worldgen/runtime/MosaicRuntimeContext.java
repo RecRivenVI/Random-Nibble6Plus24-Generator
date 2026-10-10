@@ -1,14 +1,12 @@
 package io.github.recrivenvi.randomnibble6plus24generator.worldgen.runtime;
 
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile.MosaicWorldProfile;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.seed.MosaicSeedResolver;
 import java.util.Objects;
-
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.levelgen.WorldGenSettings;
-
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile.MosaicWorldProfile;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.seed.MosaicSeedResolver;
 
 public final class MosaicRuntimeContext {
 

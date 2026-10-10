@@ -3,6 +3,8 @@ package io.github.recrivenvi.randomnibble6plus24generator.worldgen.seed;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
+import io.github.recrivenvi.randomnibble6plus24generator.test.MinecraftTestBootstrap;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile.MosaicWorldProfile;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -12,16 +14,11 @@ import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.Level;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
-
-import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.level.Level;
-
-import io.github.recrivenvi.randomnibble6plus24generator.test.MinecraftTestBootstrap;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile.MosaicWorldProfile;
 
 class MosaicSeedResolverDomainIndependenceTest {
 
@@ -77,7 +74,8 @@ class MosaicSeedResolverDomainIndependenceTest {
                     expected.get(index).longValue(),
                     resolver.resolvePreviewSeed(masterSeed, Level.END, chunkPos, index));
         }
-        assertEquals(authoritative, resolver.resolveLocalWorldSeed(masterSeed, Level.END, chunkPos));
+        assertEquals(
+                authoritative, resolver.resolveLocalWorldSeed(masterSeed, Level.END, chunkPos));
     }
 
     @Test
@@ -93,8 +91,11 @@ class MosaicSeedResolverDomainIndependenceTest {
             List<Future<Long>> previews = new ArrayList<>();
             for (long index = 0; index < 4_096; index++) {
                 long previewIndex = index;
-                previews.add(executor.submit(
-                        () -> resolver.resolvePreviewSeed(masterSeed, Level.NETHER, chunkPos, previewIndex)));
+                previews.add(
+                        executor.submit(
+                                () ->
+                                        resolver.resolvePreviewSeed(
+                                                masterSeed, Level.NETHER, chunkPos, previewIndex)));
             }
             for (Future<Long> preview : previews) {
                 preview.get();
@@ -103,6 +104,7 @@ class MosaicSeedResolverDomainIndependenceTest {
             executor.shutdownNow();
         }
 
-        assertEquals(authoritative, resolver.resolveLocalWorldSeed(masterSeed, Level.NETHER, chunkPos));
+        assertEquals(
+                authoritative, resolver.resolveLocalWorldSeed(masterSeed, Level.NETHER, chunkPos));
     }
 }

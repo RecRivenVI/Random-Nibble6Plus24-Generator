@@ -1,5 +1,6 @@
 package io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure;
 
+import io.github.recrivenvi.randomnibble6plus24generator.mixin.StructurePlacementAccessor;
 import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.IdentityHashMap;
@@ -9,7 +10,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.function.Supplier;
-
 import net.minecraft.core.Holder;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.biome.BiomeSource;
@@ -24,12 +24,10 @@ import net.minecraft.world.level.levelgen.structure.placement.ConcentricRingsStr
 import net.minecraft.world.level.levelgen.structure.placement.RandomSpreadStructurePlacement;
 import net.minecraft.world.level.levelgen.structure.placement.StructurePlacement;
 
-import io.github.recrivenvi.randomnibble6plus24generator.mixin.StructurePlacementAccessor;
-
 /**
- * Exact finite view of Vanilla concentric-ring positions. No placement/RNG algorithm
- * lives here: Vanilla still calculates every slot and consumes every random.fork().
- * Only its independent 112-block biome-search suppliers can be skipped.
+ * Exact finite view of Vanilla concentric-ring positions. No placement/RNG algorithm lives here:
+ * Vanilla still calculates every slot and consumes every random.fork(). Only its independent
+ * 112-block biome-search suppliers can be skipped.
  */
 public final class ConcentricRingScope {
     private static final int MIN_V2_QUERY_RADIUS = 11;
@@ -46,7 +44,12 @@ public final class ConcentricRingScope {
     private final LongAdder fullRingFallbacks = new LongAdder();
     private final LongAdder ringNanos = new LongAdder();
 
-    public enum Fallback { NONE, UNPROVEN_BIOME_SOURCE, UNPROVEN_PLACEMENT, CONCENTRIC_EXCLUSION }
+    public enum Fallback {
+        NONE,
+        UNPROVEN_BIOME_SOURCE,
+        UNPROVEN_PLACEMENT,
+        CONCENTRIC_EXCLUSION
+    }
 
     ConcentricRingScope(ChunkPos target, long localSeed, int queryRadius, Fallback fallback) {
         if (queryRadius < 0) throw new IllegalArgumentException("Negative ring query radius");
@@ -58,23 +61,30 @@ public final class ConcentricRingScope {
 
     public static ConcentricRingScope forV2Target(
             ChunkPos target, long localSeed, BiomeSource biomes, List<Holder<StructureSet>> sets) {
-        Fallback fallback = supportsBiomeSource(biomes.getClass())
-                ? placementFallback(sets) : Fallback.UNPROVEN_BIOME_SOURCE;
+        Fallback fallback =
+                supportsBiomeSource(biomes.getClass())
+                        ? placementFallback(sets)
+                        : Fallback.UNPROVEN_BIOME_SOURCE;
         return new ConcentricRingScope(target, localSeed, v2QueryRadius(), fallback);
     }
 
     public static int v2QueryRadius() {
         var features = ChunkPyramid.GENERATION_PYRAMID.getStepTo(ChunkStatus.FEATURES);
-        int derived = features.blockStateWriteRadius()
-                + features.accumulatedDependencies().getRadiusOf(ChunkStatus.STRUCTURE_STARTS);
+        int derived =
+                features.blockStateWriteRadius()
+                        + features.accumulatedDependencies()
+                                .getRadiusOf(ChunkStatus.STRUCTURE_STARTS);
         // This repair does not reduce the proven V2 frontier even if metadata shrinks.
         return Math.max(MIN_V2_QUERY_RADIUS, derived);
     }
 
     static boolean supportsBiomeSource(Class<?> type) {
-        // Exact classes, not instanceof: an unknown subclass can override the search radius semantics.
-        return type == MultiNoiseBiomeSource.class || type == FixedBiomeSource.class
-                || type == TheEndBiomeSource.class || type == CheckerboardColumnBiomeSource.class;
+        // Exact classes, not instanceof: an unknown subclass can override the search radius
+        // semantics.
+        return type == MultiNoiseBiomeSource.class
+                || type == FixedBiomeSource.class
+                || type == TheEndBiomeSource.class
+                || type == CheckerboardColumnBiomeSource.class;
     }
 
     private static Fallback placementFallback(List<Holder<StructureSet>> roots) {
@@ -88,12 +98,14 @@ public final class ConcentricRingScope {
                     && placement.getClass() != ConcentricRingsStructurePlacement.class) {
                 return Fallback.UNPROVEN_PLACEMENT;
             }
-            var exclusion = ((StructurePlacementAccessor) placement)
-                    .randomnibble6plus24generator$exclusionZone();
+            var exclusion =
+                    ((StructurePlacementAccessor) placement)
+                            .randomnibble6plus24generator$exclusionZone();
             if (exclusion.isPresent()) {
                 StructurePlacement other = exclusion.get().otherSet().value().placement();
                 if (other instanceof ConcentricRingsStructurePlacement) {
-                    // Exclusion searches can extend beyond the target frontier. Keep full Vanilla results.
+                    // Exclusion searches can extend beyond the target frontier. Keep full Vanilla
+                    // results.
                     return Fallback.CONCENTRIC_EXCLUSION;
                 }
                 pending.add(other);
@@ -108,15 +120,23 @@ public final class ConcentricRingScope {
     }
 
     public boolean mayReachQueryRange(int initialX, int initialZ) {
-        return Math.abs((long) initialX - target.x()) <= queryRadius + (long) BIOME_SEARCH_CHUNK_DISPLACEMENT
-                && Math.abs((long) initialZ - target.z()) <= queryRadius + (long) BIOME_SEARCH_CHUNK_DISPLACEMENT;
+        return Math.abs((long) initialX - target.x())
+                        <= queryRadius + (long) BIOME_SEARCH_CHUNK_DISPLACEMENT
+                && Math.abs((long) initialZ - target.z())
+                        <= queryRadius + (long) BIOME_SEARCH_CHUNK_DISPLACEMENT;
     }
 
     public void requireQueryInRange(int x, int z) {
         if (fallback == Fallback.NONE && !contains(x, z)) {
-            throw new IllegalStateException("Concentric-ring query escaped isolated V2 scope: target="
-                    + target + ", localSeed=" + localSeed + ", radius=" + queryRadius
-                    + ", query=" + new ChunkPos(x, z));
+            throw new IllegalStateException(
+                    "Concentric-ring query escaped isolated V2 scope: target="
+                            + target
+                            + ", localSeed="
+                            + localSeed
+                            + ", radius="
+                            + queryRadius
+                            + ", query="
+                            + new ChunkPos(x, z));
         }
     }
 
@@ -126,7 +146,8 @@ public final class ConcentricRingScope {
         if (fallback == Fallback.NONE && !mayReachQueryRange(initialX, initialZ)) {
             skipped.increment();
             // This value is provably outside the query domain and is removed by finish().
-            // Keeping the slot here preserves the native sequence/fork order without scheduling its work.
+            // Keeping the slot here preserves the native sequence/fork order without scheduling its
+            // work.
             return CompletableFuture.completedFuture(new ChunkPos(initialX, initialZ));
         }
         searches.increment();
@@ -144,12 +165,27 @@ public final class ConcentricRingScope {
                 : nativeOrder;
     }
 
-    /** Constant-size, state-owned diagnostics; no global cache, world reference, log or profiler dependency. */
+    /**
+     * Constant-size, state-owned diagnostics; no global cache, world reference, log or profiler
+     * dependency.
+     */
     public Metrics metrics() {
-        return new Metrics(queryRadius, fallback, slots.sum(), searches.sum(), skipped.sum(),
-                fullRingFallbacks.sum(), ringNanos.sum());
+        return new Metrics(
+                queryRadius,
+                fallback,
+                slots.sum(),
+                searches.sum(),
+                skipped.sum(),
+                fullRingFallbacks.sum(),
+                ringNanos.sum());
     }
 
-    public record Metrics(int queryRadius, Fallback fallback, long slotsConsidered, long biomeSearches,
-            long searchesSkipped, long fullRingFallbacks, long ringWallNanos) {}
+    public record Metrics(
+            int queryRadius,
+            Fallback fallback,
+            long slotsConsidered,
+            long biomeSearches,
+            long searchesSkipped,
+            long fullRingFallbacks,
+            long ringWallNanos) {}
 }

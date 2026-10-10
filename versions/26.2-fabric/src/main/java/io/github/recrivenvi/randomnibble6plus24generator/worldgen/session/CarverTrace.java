@@ -6,5 +6,4 @@ public record CarverTrace(
         int sourceChunkCount,
         int configuredCarverCount,
         int changedBlockCount,
-        int carvingMaskBitCount) {
-}
+        int carvingMaskBitCount) {}

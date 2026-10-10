@@ -7,8 +7,7 @@ public final class MinecraftTestBootstrap {
 
     private static boolean bootstrapped;
 
-    private MinecraftTestBootstrap() {
-    }
+    private MinecraftTestBootstrap() {}
 
     public static synchronized void ensureBootstrapped() {
         if (bootstrapped) {

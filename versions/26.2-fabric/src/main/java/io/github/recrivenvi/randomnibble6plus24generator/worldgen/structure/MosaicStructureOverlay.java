@@ -1,5 +1,8 @@
 package io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure;
 
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicPhysicalMaterializer;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.fastutil.longs.LongSet;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -7,16 +10,12 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
-
-import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
-import it.unimi.dsi.fastutil.longs.LongSet;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.Registry;
 import net.minecraft.core.SectionPos;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.ChunkPos;
@@ -26,21 +25,17 @@ import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.levelgen.structure.StructureCheckResult;
 import net.minecraft.world.level.levelgen.structure.StructureStart;
 
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicPhysicalMaterializer;
-
 /**
  * Runtime structure view for one already-loaded physical Mosaic Chunk.
  *
- * <p>Vanilla's {@code StructureManager} follows structure-reference entries
- * into other Chunks. That is correct for one ordinary world seed, but would
- * merge independent Mosaic universes at a physical boundary. This view only
- * observes starts and pieces stored by the queried physical Chunk itself; it
- * never loads a Chunk and therefore cannot silently import another local seed.
+ * <p>Vanilla's {@code StructureManager} follows structure-reference entries into other Chunks. That
+ * is correct for one ordinary world seed, but would merge independent Mosaic universes at a
+ * physical boundary. This view only observes starts and pieces stored by the queried physical Chunk
+ * itself; it never loads a Chunk and therefore cannot silently import another local seed.
  */
 public final class MosaicStructureOverlay {
 
-    private MosaicStructureOverlay() {
-    }
+    private MosaicStructureOverlay() {}
 
     public static boolean active(LevelAccessor level) {
         return level instanceof ServerLevel serverLevel
@@ -48,9 +43,7 @@ public final class MosaicStructureOverlay {
     }
 
     public static List<StructureStart> startsForStructure(
-            LevelAccessor level,
-            ChunkPos chunkPos,
-            Predicate<Structure> matcher) {
+            LevelAccessor level, ChunkPos chunkPos, Predicate<Structure> matcher) {
         ServerLevel server = server(level).orElseThrow();
         LevelChunk chunk = loadedChunk(server, chunkPos);
         if (chunk == null) return List.of();
@@ -63,62 +56,53 @@ public final class MosaicStructureOverlay {
     }
 
     public static List<StructureStart> startsForStructure(
-            LevelAccessor level,
-            SectionPos sectionPos,
-            Structure structure) {
+            LevelAccessor level, SectionPos sectionPos, Structure structure) {
         ServerLevel server = server(level).orElseThrow();
         ChunkPos chunkPos = sectionPos.chunk();
         LevelChunk chunk = loadedChunk(server, chunkPos);
         if (chunk == null) return List.of();
-        StructureStart start = startsForLoadedOwner(server, chunkPos).stream()
-                .filter(candidate -> candidate.getStructure() == structure)
-                .findFirst()
-                .orElse(null);
+        StructureStart start =
+                startsForLoadedOwner(server, chunkPos).stream()
+                        .filter(candidate -> candidate.getStructure() == structure)
+                        .findFirst()
+                        .orElse(null);
         trace("startsForStructureSection", server, chunkPos);
         return start != null && start.isValid() ? List.of(start) : List.of();
     }
 
-    public static StructureStart structureAt(LevelAccessor level, BlockPos blockPos, Structure structure) {
+    public static StructureStart structureAt(
+            LevelAccessor level, BlockPos blockPos, Structure structure) {
         ServerLevel server = server(level).orElseThrow();
         ChunkPos chunkPos = ChunkPos.containing(blockPos);
         LevelChunk chunk = loadedChunk(server, chunkPos);
         if (chunk == null) return StructureStart.INVALID_START;
-        StructureStart start = startsForLoadedOwner(server, chunkPos).stream()
-                .filter(candidate -> candidate.getStructure() == structure)
-                .filter(candidate -> candidate.getBoundingBox().isInside(blockPos))
-                .findFirst()
-                .orElse(null);
+        StructureStart start =
+                startsForLoadedOwner(server, chunkPos).stream()
+                        .filter(candidate -> candidate.getStructure() == structure)
+                        .filter(candidate -> candidate.getBoundingBox().isInside(blockPos))
+                        .findFirst()
+                        .orElse(null);
         trace("getStructureAt", server, chunkPos);
-        return start != null && start.isValid()
-                ? start
-                : StructureStart.INVALID_START;
+        return start != null && start.isValid() ? start : StructureStart.INVALID_START;
     }
 
     public static StructureStart structureWithPieceAt(
-            LevelAccessor level,
-            BlockPos blockPos,
-            Structure structure) {
+            LevelAccessor level, BlockPos blockPos, Structure structure) {
         return structureWithPieceAt(level, blockPos, holder -> holder.value() == structure);
     }
 
     public static StructureStart structureWithPieceAt(
-            LevelAccessor level,
-            BlockPos blockPos,
-            TagKey<Structure> tag) {
+            LevelAccessor level, BlockPos blockPos, TagKey<Structure> tag) {
         return structureWithPieceAt(level, blockPos, holder -> holder.is(tag));
     }
 
     public static StructureStart structureWithPieceAt(
-            LevelAccessor level,
-            BlockPos blockPos,
-            HolderSet<Structure> structures) {
+            LevelAccessor level, BlockPos blockPos, HolderSet<Structure> structures) {
         return structureWithPieceAt(level, blockPos, structures::contains);
     }
 
     public static StructureStart structureWithPieceAt(
-            LevelAccessor level,
-            BlockPos blockPos,
-            Predicate<Holder<Structure>> matcher) {
+            LevelAccessor level, BlockPos blockPos, Predicate<Holder<Structure>> matcher) {
         ServerLevel server = server(level).orElseThrow();
         ChunkPos chunkPos = ChunkPos.containing(blockPos);
         LevelChunk chunk = loadedChunk(server, chunkPos);
@@ -126,7 +110,10 @@ public final class MosaicStructureOverlay {
         Registry<Structure> registry = server.registryAccess().lookupOrThrow(Registries.STRUCTURE);
         for (StructureStart start : startsForLoadedOwner(server, chunkPos)) {
             Holder<Structure> holder = registry.wrapAsHolder(start.getStructure());
-            if (start != null && start.isValid() && matcher.test(holder) && hasPiece(start, blockPos)) {
+            if (start != null
+                    && start.isValid()
+                    && matcher.test(holder)
+                    && hasPiece(start, blockPos)) {
                 trace("getStructureWithPieceAt", server, chunkPos);
                 return start;
             }
@@ -140,17 +127,17 @@ public final class MosaicStructureOverlay {
         ChunkPos chunkPos = ChunkPos.containing(blockPos);
         LevelChunk chunk = loadedChunk(server, chunkPos);
         if (chunk == null) return false;
-        boolean result = startsForLoadedOwner(server, chunkPos).stream()
-                .anyMatch(start -> start.isValid() && hasPiece(start, blockPos));
+        boolean result =
+                startsForLoadedOwner(server, chunkPos).stream()
+                        .anyMatch(start -> start.isValid() && hasPiece(start, blockPos));
         trace("hasAnyStructureAt", server, chunkPos);
         return result;
     }
 
     /**
-     * Returns only target-local starts. The reference set intentionally
-     * contains the start's own ChunkPos so Vanilla callers such as
-     * ChunkGenerator#getMobsAt can continue using fillStartsForStructure
-     * without following physical-neighbor references.
+     * Returns only target-local starts. The reference set intentionally contains the start's own
+     * ChunkPos so Vanilla callers such as ChunkGenerator#getMobsAt can continue using
+     * fillStartsForStructure without following physical-neighbor references.
      */
     public static Map<Structure, LongSet> allStructuresAt(LevelAccessor level, BlockPos blockPos) {
         ServerLevel server = server(level).orElseThrow();

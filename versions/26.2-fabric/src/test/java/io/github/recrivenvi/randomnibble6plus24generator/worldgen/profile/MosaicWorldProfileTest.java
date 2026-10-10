@@ -4,15 +4,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import java.util.Arrays;
-
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-
-import net.minecraft.world.level.Level;
-
 import io.github.recrivenvi.randomnibble6plus24generator.test.MinecraftTestBootstrap;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.seed.MosaicSeedResolver;
+import java.util.Arrays;
+import net.minecraft.world.level.Level;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 class MosaicWorldProfileTest {
 
@@ -34,16 +31,25 @@ class MosaicWorldProfileTest {
 
     @Test
     void profileDoesNotContainASecondMasterSeedAuthority() {
-        assertFalse(Arrays.stream(MosaicWorldProfile.class.getRecordComponents())
-                .anyMatch(component -> component.getName().equals("masterSeed")));
+        assertFalse(
+                Arrays.stream(MosaicWorldProfile.class.getRecordComponents())
+                        .anyMatch(component -> component.getName().equals("masterSeed")));
     }
 
     @Test
     void profileRejectsNonPositiveVersionNumbers() {
-        assertThrows(IllegalArgumentException.class, () -> new MosaicWorldProfile(0, 1, 1, 1, Level.OVERWORLD));
-        assertThrows(IllegalArgumentException.class, () -> new MosaicWorldProfile(2, 0, 1, 1, Level.OVERWORLD));
-        assertThrows(IllegalArgumentException.class, () -> new MosaicWorldProfile(2, 1, 0, 1, Level.OVERWORLD));
-        assertThrows(IllegalArgumentException.class, () -> new MosaicWorldProfile(2, 1, 1, 0, Level.OVERWORLD));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new MosaicWorldProfile(0, 1, 1, 1, Level.OVERWORLD));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new MosaicWorldProfile(2, 0, 1, 1, Level.OVERWORLD));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new MosaicWorldProfile(2, 1, 0, 1, Level.OVERWORLD));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new MosaicWorldProfile(2, 1, 1, 0, Level.OVERWORLD));
     }
 
     @Test

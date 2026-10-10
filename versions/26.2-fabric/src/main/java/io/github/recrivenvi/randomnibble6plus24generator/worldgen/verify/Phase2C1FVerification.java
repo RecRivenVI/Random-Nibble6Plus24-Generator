@@ -1,5 +1,16 @@
 package io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.identity.MosaicWorldIdentity;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile.MosaicWorldProfile;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.seed.MosaicSeedResolver;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.FeatureStableGenerationRun;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.GenerationContextRegistry;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.IsolatedGenerationSession;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -10,12 +21,6 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.QuartPos;
@@ -23,35 +28,27 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerChunkCache;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.ai.village.poi.PoiManager;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.block.entity.BlockEntity;
-import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.levelgen.structure.StructureStart;
 
-import io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.identity.MosaicWorldIdentity;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile.MosaicWorldProfile;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.seed.MosaicSeedResolver;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.FeatureStableGenerationRun;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.GenerationContextRegistry;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.IsolatedGenerationSession;
-
 /** Explicit Phase 2C1F plan export and unrelated-host isolated batch consumer. */
 public final class Phase2C1FVerification {
 
-    private static final String PREFIX = "randomnibble6plus24generator.phase2c1f.";
+    private static final String PREFIX =
+            io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator.MOD_ID
+                    + ".phase2c1f.";
 
-    private Phase2C1FVerification() {
-    }
+    private Phase2C1FVerification() {}
 
     public static void runIfRequested(MinecraftServer server) {
         String planOutput = System.getProperty(PREFIX + "exportPlan");
@@ -76,8 +73,11 @@ public final class Phase2C1FVerification {
             JsonObject json = new JsonObject();
             json.addProperty("id", fixtureId(index));
             json.addProperty("masterSeed", Long.toString(fixture.masterSeed()));
-            json.addProperty("localSeed", Long.toString(resolver.resolveLocalWorldSeed(
-                    fixture.masterSeed(), fixture.dimension(), fixture.target())));
+            json.addProperty(
+                    "localSeed",
+                    Long.toString(
+                            resolver.resolveLocalWorldSeed(
+                                    fixture.masterSeed(), fixture.dimension(), fixture.target())));
             json.addProperty("dimension", fixture.dimension().identifier().toString());
             json.addProperty("chunkX", fixture.target().x());
             json.addProperty("chunkZ", fixture.target().z());
@@ -87,20 +87,27 @@ public final class Phase2C1FVerification {
     }
 
     private static String fixtureId(int index) {
-        String group = index < 8 ? "ow-origin" : index < 40 ? "ow-nonorigin" : index < 56 ? "nether" : "end";
+        String group =
+                index < 8
+                        ? "ow-origin"
+                        : index < 40 ? "ow-nonorigin" : index < 56 ? "nether" : "end";
         return String.format(java.util.Locale.ROOT, "%s-%02d", group, index);
     }
 
     private static void runManifest(MinecraftServer server, Path manifest, Path output) {
         if (MosaicWorldIdentity.isMosaicWorld(server)) {
-            throw new IllegalStateException("Phase 2C1F consumer requires an ordinary unrelated host world");
+            throw new IllegalStateException(
+                    "Phase 2C1F consumer requires an ordinary unrelated host world");
         }
         long hostSeed = server.getWorldGenSettings().options().seed();
         JsonArray fixtures;
         try {
-            fixtures = JsonParser.parseString(Files.readString(manifest, StandardCharsets.UTF_8)).getAsJsonArray();
+            fixtures =
+                    JsonParser.parseString(Files.readString(manifest, StandardCharsets.UTF_8))
+                            .getAsJsonArray();
         } catch (IOException exception) {
-            throw new IllegalStateException("Unable to read Phase 2C1F manifest " + manifest, exception);
+            throw new IllegalStateException(
+                    "Unable to read Phase 2C1F manifest " + manifest, exception);
         }
         JsonArray results = new JsonArray();
         long totalRuntimeMs = 0L;
@@ -115,8 +122,9 @@ public final class Phase2C1FVerification {
             coarsePeakHeap = Math.max(coarsePeakHeap, runtime.totalMemory() - runtime.freeMemory());
         }
         if (GenerationContextRegistry.bindingCount() != 0) {
-            throw new IllegalStateException("Generation context leak after Phase 2C1F batch: "
-                    + GenerationContextRegistry.bindingCount());
+            throw new IllegalStateException(
+                    "Generation context leak after Phase 2C1F batch: "
+                            + GenerationContextRegistry.bindingCount());
         }
         JsonObject summary = new JsonObject();
         summary.addProperty("status", "PASS");
@@ -125,45 +133,65 @@ public final class Phase2C1FVerification {
         summary.addProperty("totalRuntimeMs", totalRuntimeMs);
         summary.addProperty("heapBeforeMiB", heapBefore / 1024L / 1024L);
         summary.addProperty("coarsePeakHeapMiB", coarsePeakHeap / 1024L / 1024L);
-        summary.addProperty("heapAfterMiB", (runtime.totalMemory() - runtime.freeMemory()) / 1024L / 1024L);
+        summary.addProperty(
+                "heapAfterMiB", (runtime.totalMemory() - runtime.freeMemory()) / 1024L / 1024L);
         summary.add("results", results);
         write(output, summary.toString());
         RandomNibble6Plus24Generator.LOGGER.info(
                 "Phase 2C1F independent isolated batch PASS fixtures={} hostSeed={} runtimeMs={}",
-                results.size(), hostSeed, totalRuntimeMs);
+                results.size(),
+                hostSeed,
+                totalRuntimeMs);
     }
 
-    private static JsonObject runFixture(MinecraftServer server, long hostSeed, JsonObject fixture) {
+    private static JsonObject runFixture(
+            MinecraftServer server, long hostSeed, JsonObject fixture) {
         String id = fixture.get("id").getAsString();
         long masterSeed = Long.parseLong(fixture.get("masterSeed").getAsString());
         long expectedLocalSeed = Long.parseLong(fixture.get("localSeed").getAsString());
-        ResourceKey<Level> dimension = ResourceKey.create(
-                Registries.DIMENSION, Identifier.parse(fixture.get("dimension").getAsString()));
-        ChunkPos target = new ChunkPos(fixture.get("chunkX").getAsInt(), fixture.get("chunkZ").getAsInt());
+        ResourceKey<Level> dimension =
+                ResourceKey.create(
+                        Registries.DIMENSION,
+                        Identifier.parse(fixture.get("dimension").getAsString()));
+        ChunkPos target =
+                new ChunkPos(fixture.get("chunkX").getAsInt(), fixture.get("chunkZ").getAsInt());
         if (hostSeed == expectedLocalSeed) {
             throw new IllegalStateException("Unrelated host seed equals local seed for " + id);
         }
         ServerLevel level = server.getLevel(dimension);
-        if (level == null) throw new IllegalStateException("Missing Phase 2C1F dimension " + dimension.identifier());
+        if (level == null)
+            throw new IllegalStateException(
+                    "Missing Phase 2C1F dimension " + dimension.identifier());
         MosaicWorldProfile profile = MosaicWorldProfile.current();
-        long actualLocalSeed = new MosaicSeedResolver(profile)
-                .resolveLocalWorldSeed(masterSeed, dimension, target);
+        long actualLocalSeed =
+                new MosaicSeedResolver(profile)
+                        .resolveLocalWorldSeed(masterSeed, dimension, target);
         if (actualLocalSeed != expectedLocalSeed) {
             throw new IllegalStateException("Manifest local seed mismatch for " + id);
         }
 
         PhysicalHostSnapshot before = PhysicalHostSnapshot.capture(level, target);
         long started = System.nanoTime();
-        FeatureStableGenerationRun run = new IsolatedGenerationSession(profile)
-                .generateFeaturesStable(level, masterSeed, target);
+        FeatureStableGenerationRun run =
+                new IsolatedGenerationSession(profile)
+                        .generateFeaturesStable(level, masterSeed, target);
         long generationFinished = System.nanoTime();
-        FeatureStableSnapshot isolated = FeatureStableSnapshot.capture(
-                dimension.identifier().toString(), run.targetChunk(), level.registryAccess());
+        FeatureStableSnapshot isolated =
+                FeatureStableSnapshot.capture(
+                        dimension.identifier().toString(),
+                        run.targetChunk(),
+                        level.registryAccess());
         long snapshotFinished = System.nanoTime();
         long runtimeMs = (snapshotFinished - started) / 1_000_000L;
         PhysicalHostSnapshot after = PhysicalHostSnapshot.capture(level, target);
         if (!before.equals(after)) {
-            throw new IllegalStateException("Physical host side effect for " + id + ": before=" + before + ", after=" + after);
+            throw new IllegalStateException(
+                    "Physical host side effect for "
+                            + id
+                            + ": before="
+                            + before
+                            + ", after="
+                            + after);
         }
         if (run.metrics().virtualStorageScanCount() != 0L) {
             throw new IllegalStateException("Physical storage scan during Phase 2C1F " + id);
@@ -173,29 +201,45 @@ public final class Phase2C1FVerification {
         }
         assertKnownLevelEscapes(run, id);
 
-        FeatureStableSnapshot nativeSnapshot = FeatureStableSnapshot.read(
-                Path.of(fixture.get("nativeSnapshot").getAsString()));
+        FeatureStableSnapshot nativeSnapshot =
+                FeatureStableSnapshot.read(Path.of(fixture.get("nativeSnapshot").getAsString()));
         FeatureStageSnapshot.Diff diff = nativeSnapshot.diff(isolated);
         if (!diff.equivalent()) {
             throw new IllegalStateException(
-                    "Independent Native FEATURES mismatch " + id + ": first=" + diff.firstDifference()
-                            + ", differingBlocks=" + diff.differingBlocks()
-                            + ", metadata=" + nativeSnapshot.deterministicMetadataDifference(isolated));
+                    "Independent Native FEATURES mismatch "
+                            + id
+                            + ": first="
+                            + diff.firstDifference()
+                            + ", differingBlocks="
+                            + diff.differingBlocks()
+                            + ", metadata="
+                            + nativeSnapshot.deterministicMetadataDifference(isolated));
         }
         long nativeInvocationCount = fixture.get("nativeFeatureSeedInvocationCount").getAsLong();
         String nativeSequenceHash = fixture.get("nativeFeatureSeedSequenceHash").getAsString();
         long nativeDecorationReads = fixture.get("nativeDecorationSeedReads").getAsLong();
         String nativeVisibleBiomes = fixture.get("nativeFeatureVisibleBiomeSequence").getAsString();
         if (nativeInvocationCount != run.featureTrace().featureSeedInvocationCount()
-                || !nativeSequenceHash.equals(Long.toUnsignedString(
-                        run.featureTrace().featureSeedSequenceHash(), 16))
+                || !nativeSequenceHash.equals(
+                        Long.toUnsignedString(run.featureTrace().featureSeedSequenceHash(), 16))
                 || nativeDecorationReads != run.featureTrace().decorationSeedReads()
-                || !nativeVisibleBiomes.equals(run.featureTrace().featureVisibleBiomeSequence().toString())) {
+                || !nativeVisibleBiomes.equals(
+                        run.featureTrace().featureVisibleBiomeSequence().toString())) {
             throw new IllegalStateException(
-                    "Native/isolated FEATURES RNG trace mismatch " + id
-                            + " native=" + nativeInvocationCount + "/" + nativeSequenceHash + "/" + nativeDecorationReads
-                            + " isolated=" + run.featureTrace().featureSeedInvocationCount() + "/"
-                            + Long.toUnsignedString(run.featureTrace().featureSeedSequenceHash(), 16) + "/"
+                    "Native/isolated FEATURES RNG trace mismatch "
+                            + id
+                            + " native="
+                            + nativeInvocationCount
+                            + "/"
+                            + nativeSequenceHash
+                            + "/"
+                            + nativeDecorationReads
+                            + " isolated="
+                            + run.featureTrace().featureSeedInvocationCount()
+                            + "/"
+                            + Long.toUnsignedString(
+                                    run.featureTrace().featureSeedSequenceHash(), 16)
+                            + "/"
                             + run.featureTrace().decorationSeedReads());
         }
 
@@ -211,14 +255,21 @@ public final class Phase2C1FVerification {
         result.addProperty("generationRuntimeMs", (generationFinished - started) / 1_000_000L);
         result.addProperty("snapshotCostMs", (snapshotFinished - generationFinished) / 1_000_000L);
         result.addProperty("virtualChunks", run.metrics().virtualChunkCount());
-        result.addProperty("virtualStatusDistribution", run.featureTrace().virtualStatusDistribution().toString());
-        result.addProperty("featureSeedInvocationCount", run.featureTrace().featureSeedInvocationCount());
-        result.addProperty("featureSeedSequenceHash", Long.toUnsignedString(
-                run.featureTrace().featureSeedSequenceHash(), 16));
+        result.addProperty(
+                "virtualStatusDistribution",
+                run.featureTrace().virtualStatusDistribution().toString());
+        result.addProperty(
+                "featureSeedInvocationCount", run.featureTrace().featureSeedInvocationCount());
+        result.addProperty(
+                "featureSeedSequenceHash",
+                Long.toUnsignedString(run.featureTrace().featureSeedSequenceHash(), 16));
         result.addProperty("decorationSeedReads", run.featureTrace().decorationSeedReads());
-        result.addProperty("featureVisibleBiomeSequence", run.featureTrace().featureVisibleBiomeSequence().toString());
+        result.addProperty(
+                "featureVisibleBiomeSequence",
+                run.featureTrace().featureVisibleBiomeSequence().toString());
         result.addProperty("writers", run.featureTrace().requestedWriters().size());
-        result.addProperty("maxConcurrentFeatureWriters", run.featureTrace().maxConcurrentFeatureWriters());
+        result.addProperty(
+                "maxConcurrentFeatureWriters", run.featureTrace().maxConcurrentFeatureWriters());
         result.addProperty("blockEntities", isolated.blockEntityCount());
         result.addProperty("instantiatedBlockEntities", isolated.instantiatedBlockEntityCount());
         result.addProperty("pendingBlockEntityNbt", isolated.pendingBlockEntityNbtCount());
@@ -233,10 +284,12 @@ public final class Phase2C1FVerification {
         result.addProperty("fluidTicksData", isolated.fluidTickData().toString());
         result.addProperty("structureStarts", isolated.structureStartData().toString());
         result.addProperty("paleMossRouteHits", run.featureTrace().paleMossGeneratorRedirects());
-        result.addProperty("cappedProcessorRouteHits", run.featureTrace().cappedProcessorSeedRedirects());
+        result.addProperty(
+                "cappedProcessorRouteHits", run.featureTrace().cappedProcessorSeedRedirects());
         result.addProperty("suppressedPoiUpdates", run.metrics().suppressedPhysicalPoiUpdates());
         result.addProperty("physicalStorageScans", run.metrics().virtualStorageScanCount());
-        result.addProperty("physicalLevelEscapes", run.featureTrace().physicalLevelEscapeSummary().toString());
+        result.addProperty(
+                "physicalLevelEscapes", run.featureTrace().physicalLevelEscapeSummary().toString());
         result.addProperty("featureWrites", run.featureTrace().featureWriteSummary().toString());
         return result;
     }
@@ -244,19 +297,30 @@ public final class Phase2C1FVerification {
     private static void assertKnownLevelEscapes(FeatureStableGenerationRun run, String id) {
         for (String caller : run.featureTrace().physicalLevelEscapeSummary().keySet()) {
             if (caller.equals("net.minecraft.world.level.StructureManager.forWorldGenRegion")
-                    || caller.startsWith("net.minecraft.world.level.levelgen.feature.EndSpikeFeature.")
-                    || caller.startsWith("net.minecraft.world.level.levelgen.feature.treedecorators.PaleMossDecorator.")
-                    || caller.startsWith("net.minecraft.world.level.levelgen.structure.templatesystem.CappedProcessor.")
-                    || caller.startsWith("net.minecraft.world.level.levelgen.structure.structures.EndCityPieces$")
-                    || caller.startsWith("net.minecraft.world.level.levelgen.structure.structures.MineshaftPieces$")
-                    || caller.startsWith("net.minecraft.world.level.levelgen.structure.structures.OceanMonumentPieces$")
-                    || caller.startsWith("net.minecraft.world.level.levelgen.structure.structures.OceanRuinPieces$")
-                    || caller.startsWith("net.minecraft.world.level.levelgen.structure.structures.SwampHutPiece.")
-                    || caller.startsWith("net.minecraft.world.level.levelgen.structure.structures.WoodlandMansionPieces$")
-                    || caller.startsWith("net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate.")) {
+                    || caller.startsWith(
+                            "net.minecraft.world.level.levelgen.feature.EndSpikeFeature.")
+                    || caller.startsWith(
+                            "net.minecraft.world.level.levelgen.feature.treedecorators.PaleMossDecorator.")
+                    || caller.startsWith(
+                            "net.minecraft.world.level.levelgen.structure.templatesystem.CappedProcessor.")
+                    || caller.startsWith(
+                            "net.minecraft.world.level.levelgen.structure.structures.EndCityPieces$")
+                    || caller.startsWith(
+                            "net.minecraft.world.level.levelgen.structure.structures.MineshaftPieces$")
+                    || caller.startsWith(
+                            "net.minecraft.world.level.levelgen.structure.structures.OceanMonumentPieces$")
+                    || caller.startsWith(
+                            "net.minecraft.world.level.levelgen.structure.structures.OceanRuinPieces$")
+                    || caller.startsWith(
+                            "net.minecraft.world.level.levelgen.structure.structures.SwampHutPiece.")
+                    || caller.startsWith(
+                            "net.minecraft.world.level.levelgen.structure.structures.WoodlandMansionPieces$")
+                    || caller.startsWith(
+                            "net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate.")) {
                 continue;
             }
-            throw new IllegalStateException("Unknown physical getLevel escape in " + id + ": " + caller);
+            throw new IllegalStateException(
+                    "Unknown physical getLevel escape in " + id + ": " + caller);
         }
     }
 
@@ -272,8 +336,9 @@ public final class Phase2C1FVerification {
             int entities = 0;
             for (Entity ignored : level.getAllEntities()) entities++;
             BlockPos center = target.getMiddleBlockPosition(level.getSeaLevel());
-            long poiCount = level.getPoiManager().getCountInRange(
-                    ignored -> true, center, 32, PoiManager.Occupancy.ANY);
+            long poiCount =
+                    level.getPoiManager()
+                            .getCountInRange(ignored -> true, center, 32, PoiManager.Occupancy.ANY);
             return new PhysicalHostSnapshot(
                     level.getChunkSource().getLoadedChunksCount(),
                     entities,
@@ -289,7 +354,8 @@ public final class Phase2C1FVerification {
             for (int z = target.z() - 1; z <= target.z() + 1; z++) {
                 for (int x = target.x() - 1; x <= target.x() + 1; x++) {
                     LevelChunk chunk = source.getChunkNow(x, z);
-                    update(digest, x); update(digest, z);
+                    update(digest, x);
+                    update(digest, z);
                     if (chunk == null) {
                         update(digest, "absent");
                         continue;
@@ -300,9 +366,16 @@ public final class Phase2C1FVerification {
                     for (int y = chunk.getMinY(); y < chunk.getMinY() + chunk.getHeight(); y++) {
                         for (int localZ = 0; localZ < 16; localZ++) {
                             for (int localX = 0; localX < 16; localX++) {
-                                update(digest, chunk.getBlockState(cursor.set(
-                                        chunk.getPos().getMinBlockX() + localX, y,
-                                        chunk.getPos().getMinBlockZ() + localZ)).toString());
+                                update(
+                                        digest,
+                                        chunk.getBlockState(
+                                                        cursor.set(
+                                                                chunk.getPos().getMinBlockX()
+                                                                        + localX,
+                                                                y,
+                                                                chunk.getPos().getMinBlockZ()
+                                                                        + localZ))
+                                                .toString());
                             }
                         }
                     }
@@ -313,10 +386,14 @@ public final class Phase2C1FVerification {
                     for (int qy = 0; qy < quartHeight; qy++) {
                         for (int qz = 0; qz < 4; qz++) {
                             for (int qx = 0; qx < 4; qx++) {
-                                Holder<Biome> biome = chunk.getNoiseBiome(
-                                        minQuartX + qx, minQuartY + qy, minQuartZ + qz);
-                                update(digest, biome.unwrapKey()
-                                        .map(key -> key.identifier().toString()).orElse(biome.toString()));
+                                Holder<Biome> biome =
+                                        chunk.getNoiseBiome(
+                                                minQuartX + qx, minQuartY + qy, minQuartZ + qz);
+                                update(
+                                        digest,
+                                        biome.unwrapKey()
+                                                .map(key -> key.identifier().toString())
+                                                .orElse(biome.toString()));
                             }
                         }
                     }
@@ -326,15 +403,22 @@ public final class Phase2C1FVerification {
                     }
                     TreeMap<String, String> starts = new TreeMap<>();
                     var structures = level.registryAccess().lookupOrThrow(Registries.STRUCTURE);
-                    for (Map.Entry<Structure, StructureStart> entry : chunk.getAllStarts().entrySet()) {
-                        starts.put(String.valueOf(structures.getKey(entry.getKey())), entry.getValue().toString());
+                    for (Map.Entry<Structure, StructureStart> entry :
+                            chunk.getAllStarts().entrySet()) {
+                        starts.put(
+                                String.valueOf(structures.getKey(entry.getKey())),
+                                entry.getValue().toString());
                     }
                     update(digest, starts.toString());
                     update(digest, chunk.getAllReferences().toString());
                     TreeMap<String, String> blockEntities = new TreeMap<>();
-                    for (Map.Entry<BlockPos, BlockEntity> entry : chunk.getBlockEntities().entrySet()) {
-                        blockEntities.put(entry.getKey().toShortString(),
-                                entry.getValue().saveWithFullMetadata(level.registryAccess()).toString());
+                    for (Map.Entry<BlockPos, BlockEntity> entry :
+                            chunk.getBlockEntities().entrySet()) {
+                        blockEntities.put(
+                                entry.getKey().toShortString(),
+                                entry.getValue()
+                                        .saveWithFullMetadata(level.registryAccess())
+                                        .toString());
                     }
                     update(digest, blockEntities.toString());
                 }
@@ -358,18 +442,25 @@ public final class Phase2C1FVerification {
     }
 
     private static void update(MessageDigest digest, int value) {
-        digest.update(new byte[] {(byte) (value >>> 24), (byte) (value >>> 16), (byte) (value >>> 8), (byte) value});
+        digest.update(
+                new byte[] {
+                    (byte) (value >>> 24), (byte) (value >>> 16), (byte) (value >>> 8), (byte) value
+                });
     }
 
     private static void update(MessageDigest digest, long value) {
-        digest.update(new byte[] {
-                (byte) (value >>> 56), (byte) (value >>> 48), (byte) (value >>> 40), (byte) (value >>> 32),
-                (byte) (value >>> 24), (byte) (value >>> 16), (byte) (value >>> 8), (byte) value});
+        digest.update(
+                new byte[] {
+                    (byte) (value >>> 56), (byte) (value >>> 48), (byte) (value >>> 40),
+                            (byte) (value >>> 32),
+                    (byte) (value >>> 24), (byte) (value >>> 16), (byte) (value >>> 8), (byte) value
+                });
     }
 
     private static String require(String suffix) {
         String value = System.getProperty(PREFIX + suffix);
-        if (value == null || value.isBlank()) throw new IllegalArgumentException("Missing " + PREFIX + suffix);
+        if (value == null || value.isBlank())
+            throw new IllegalArgumentException("Missing " + PREFIX + suffix);
         return value;
     }
 
@@ -378,7 +469,8 @@ public final class Phase2C1FVerification {
             Files.createDirectories(output.toAbsolutePath().normalize().getParent());
             Files.writeString(output, value, StandardCharsets.UTF_8);
         } catch (IOException exception) {
-            throw new IllegalStateException("Unable to write Phase 2C1F output " + output, exception);
+            throw new IllegalStateException(
+                    "Unable to write Phase 2C1F output " + output, exception);
         }
     }
 }

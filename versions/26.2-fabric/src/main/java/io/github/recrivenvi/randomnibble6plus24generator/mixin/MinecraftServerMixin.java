@@ -1,53 +1,52 @@
 package io.github.recrivenvi.randomnibble6plus24generator.mixin;
 
+import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
+import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.identity.MosaicRuntimeContextOwner;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.identity.MosaicWorldIdentity;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.identity.MosaicWorldRuntimeState;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicPhysicalMaterializer;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.MosaicStructureOverlayStore;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.NativeVanillaControlHarness;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.NativeVanillaFeatureControlHarness;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.NativeVanillaFeatureOrderProbe;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2AVerification;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2BVerification;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2C1FCoverageScan;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2C1FVerification;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2C1RootCauseVerification;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2C1StageBisectionHarness;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2C1Verification;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2DTransportVerification;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2DVerification;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3AFaultVerification;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3APhysicalMaterializationVerification;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3APhysicalPatchVerification;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3AReloadVerification;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3BVerification;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3C1Verification;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3C2ProductionVerification;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3C2RSpawnVerification;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3C3ANormalVanillaVerification;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3C3AOverlayVerification;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3C3BLocateVerification;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.progress.LevelLoadListener;
 import net.minecraft.world.level.storage.ServerLevelData;
-
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
-import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
-import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.identity.MosaicWorldIdentity;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.identity.MosaicRuntimeContextOwner;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.identity.MosaicWorldRuntimeState;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2AVerification;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2BVerification;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2C1Verification;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2C1RootCauseVerification;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2C1StageBisectionHarness;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2C1FVerification;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2C1FCoverageScan;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2DVerification;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2DTransportVerification;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.NativeVanillaControlHarness;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.NativeVanillaFeatureOrderProbe;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.NativeVanillaFeatureControlHarness;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3APhysicalMaterializationVerification;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3APhysicalPatchVerification;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3AFaultVerification;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3AReloadVerification;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3BVerification;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3C1Verification;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3C2ProductionVerification;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3C3AOverlayVerification;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3C3ANormalVanillaVerification;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3C3BLocateVerification;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3C2RSpawnVerification;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicPhysicalMaterializer;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.MosaicStructureOverlayStore;
-
 @Mixin(MinecraftServer.class)
 abstract class MinecraftServerMixin implements MosaicRuntimeContextOwner {
 
     @Unique
-    private final MosaicWorldRuntimeState randomnibble6plus24generator$identity = new MosaicWorldRuntimeState();
+    private final MosaicWorldRuntimeState randomnibble6plus24generator$identity =
+            new MosaicWorldRuntimeState();
 
     @Override
     public MosaicWorldRuntimeState randomnibble6plus24generator$worldIdentity() {
@@ -55,7 +54,8 @@ abstract class MinecraftServerMixin implements MosaicRuntimeContextOwner {
     }
 
     @Inject(method = "createLevels", at = @At("HEAD"))
-    private void randomnibble6plus24generator$armNativeControlBeforePhysicalGeneration(CallbackInfo callbackInfo) {
+    private void randomnibble6plus24generator$armNativeControlBeforePhysicalGeneration(
+            CallbackInfo callbackInfo) {
         MosaicWorldIdentity.bootstrapNewWorldProfileIfNeeded((MinecraftServer) (Object) this);
         Phase3APhysicalMaterializationVerification.bootstrapProfileIfRequested(
                 (MinecraftServer) (Object) this);
@@ -69,9 +69,11 @@ abstract class MinecraftServerMixin implements MosaicRuntimeContextOwner {
 
     @Redirect(
             method = "createLevels",
-            at = @At(
-                    value = "INVOKE",
-                    target = "Lnet/minecraft/server/MinecraftServer;setInitialSpawn(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/level/storage/ServerLevelData;ZZLnet/minecraft/server/level/progress/LevelLoadListener;)V"))
+            at =
+                    @At(
+                            value = "INVOKE",
+                            target =
+                                    "Lnet/minecraft/server/MinecraftServer;setInitialSpawn(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/level/storage/ServerLevelData;ZZLnet/minecraft/server/level/progress/LevelLoadListener;)V"))
     private void randomnibble6plus24generator$skipInitialSpawnOnlyForPhase3AFixture(
             ServerLevel level,
             ServerLevelData levelData,
@@ -104,16 +106,21 @@ abstract class MinecraftServerMixin implements MosaicRuntimeContextOwner {
 
     @Inject(
             method = "createLevels",
-            at = @At(
-                    value = "INVOKE",
-                    target = "Lnet/minecraft/server/MinecraftServer;setInitialSpawn(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/level/storage/ServerLevelData;ZZLnet/minecraft/server/level/progress/LevelLoadListener;)V",
-                    shift = At.Shift.BEFORE))
-    private void randomnibble6plus24generator$runNativeOriginBeforeSpawnSelection(CallbackInfo callbackInfo) {
-        NativeVanillaFeatureControlHarness.runBeforeInitialSpawnIfRequested((MinecraftServer) (Object) this);
+            at =
+                    @At(
+                            value = "INVOKE",
+                            target =
+                                    "Lnet/minecraft/server/MinecraftServer;setInitialSpawn(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/level/storage/ServerLevelData;ZZLnet/minecraft/server/level/progress/LevelLoadListener;)V",
+                            shift = At.Shift.BEFORE))
+    private void randomnibble6plus24generator$runNativeOriginBeforeSpawnSelection(
+            CallbackInfo callbackInfo) {
+        NativeVanillaFeatureControlHarness.runBeforeInitialSpawnIfRequested(
+                (MinecraftServer) (Object) this);
     }
 
     @Inject(method = "createLevels", at = @At("RETURN"))
-    private void randomnibble6plus24generator$validateMosaicIdentityBeforeLevelPreparation(CallbackInfo callbackInfo) {
+    private void randomnibble6plus24generator$validateMosaicIdentityBeforeLevelPreparation(
+            CallbackInfo callbackInfo) {
         MosaicWorldIdentity.validateServerAfterLevelCreation((MinecraftServer) (Object) this);
         Phase2AVerification.runIfRequested((MinecraftServer) (Object) this);
         Phase2BVerification.runIfRequested((MinecraftServer) (Object) this);
@@ -137,12 +144,14 @@ abstract class MinecraftServerMixin implements MosaicRuntimeContextOwner {
     }
 
     @Inject(method = "prepareLevels", at = @At("HEAD"), cancellable = true)
-    private void randomnibble6plus24generator$skipSpawnPreparationAfterPhase3AVerification(CallbackInfo callbackInfo) {
+    private void randomnibble6plus24generator$skipSpawnPreparationAfterPhase3AVerification(
+            CallbackInfo callbackInfo) {
         if (Phase3APhysicalMaterializationVerification.skipPrepareLevelsIfCompleted()
                 || Phase3BVerification.skipPrepareLevelsIfCompleted()
                 || Phase3C1Verification.skipPrepareLevelsIfCompleted()
                 || Phase3C3AOverlayVerification.skipPrepareLevelsIfRequested()
-                || Phase3C3BLocateVerification.skipPrepareLevelsIfRequested()) callbackInfo.cancel();
+                || Phase3C3BLocateVerification.skipPrepareLevelsIfRequested())
+            callbackInfo.cancel();
     }
 
     @Inject(method = "tickServer", at = @At("RETURN"))
@@ -156,20 +165,28 @@ abstract class MinecraftServerMixin implements MosaicRuntimeContextOwner {
     }
 
     @Inject(method = "stopServer", at = @At("HEAD"))
-    private void randomnibble6plus24generator$cancelMosaicMaterializationsOnStop(CallbackInfo callbackInfo) {
+    private void randomnibble6plus24generator$cancelMosaicMaterializationsOnStop(
+            CallbackInfo callbackInfo) {
         Phase3BVerification.cleanupExactStatusHolders((MinecraftServer) (Object) this);
         MosaicPhysicalMaterializer.shutdown((MinecraftServer) (Object) this);
     }
 
-    @Inject(method = "stopServer", at = @At(value = "INVOKE", target =
-            "Lnet/minecraft/server/MinecraftServer;saveAllChunks(ZZZ)Z", shift = At.Shift.BEFORE))
-    private void randomnibble6plus24generator$drainMosaicWorkersBeforeSave(CallbackInfo callbackInfo) {
+    @Inject(
+            method = "stopServer",
+            at =
+                    @At(
+                            value = "INVOKE",
+                            target = "Lnet/minecraft/server/MinecraftServer;saveAllChunks(ZZZ)Z",
+                            shift = At.Shift.BEFORE))
+    private void randomnibble6plus24generator$drainMosaicWorkersBeforeSave(
+            CallbackInfo callbackInfo) {
         MosaicPhysicalMaterializer.finishShutdown((MinecraftServer) (Object) this);
         MosaicStructureOverlayStore.clear((MinecraftServer) (Object) this);
     }
 
     @WrapMethod(method = "stopServer")
-    private void randomnibble6plus24generator$releaseIdentityAfterSaveAndClose(Operation<Void> original) {
+    private void randomnibble6plus24generator$releaseIdentityAfterSaveAndClose(
+            Operation<Void> original) {
         try {
             original.call();
         } catch (RuntimeException | Error failure) {

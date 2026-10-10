@@ -1,0 +1,31 @@
+{
+    "dimensions": {
+        "minecraft:overworld": {
+            "type": "minecraft:overworld",
+            "generator": {
+                "type": "randomnibble6plus24generator:mosaic",
+                "biome_source": {"type": "minecraft:multi_noise", "preset": "minecraft:overworld"},
+                "settings": "minecraft:overworld",
+                "mosaic_profile": {"format_version": 2, "seed_derivation_algorithm_version": 1, "feature_ordering_algorithm_version": 1, "presentation_algorithm_version": 1, "primary_dimension": "minecraft:overworld"}
+            }
+        },
+        "minecraft:the_nether": {
+            "type": "minecraft:the_nether",
+            "generator": {
+                "type": "randomnibble6plus24generator:mosaic",
+                "biome_source": {"type": "minecraft:multi_noise", "preset": "minecraft:nether"},
+                "settings": "minecraft:nether",
+                "mosaic_profile": {"format_version": 2, "seed_derivation_algorithm_version": 1, "feature_ordering_algorithm_version": 1, "presentation_algorithm_version": 1, "primary_dimension": "minecraft:overworld"}
+            }
+        },
+        "minecraft:the_end": {
+            "type": "minecraft:the_end",
+            "generator": {
+                "type": "randomnibble6plus24generator:mosaic",
+                "biome_source": {"type": "minecraft:the_end"},
+                "settings": "minecraft:end",
+                "mosaic_profile": {"format_version": 2, "seed_derivation_algorithm_version": 1, "feature_ordering_algorithm_version": 1, "presentation_algorithm_version": 1, "primary_dimension": "minecraft:overworld"}
+            }
+        }
+    }
+}

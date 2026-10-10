@@ -1,5 +1,6 @@
 package io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify;
 
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.GenerationContextRegistry;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataInputStream;
@@ -24,7 +25,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.QuartPos;
@@ -43,24 +43,21 @@ import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.chunk.ProtoChunk;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
-import net.minecraft.world.level.chunk.status.WorldGenContext;
 import net.minecraft.world.level.chunk.status.ChunkStep;
+import net.minecraft.world.level.chunk.status.WorldGenContext;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
 import net.minecraft.world.level.levelgen.RandomState;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.levelgen.structure.StructureStart;
 
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.GenerationContextRegistry;
-
 /** Temporary, ignored Phase 2C1R writer-frontier evidence recorder. */
 public final class FeatureFrontierEvidence {
 
     private static final int FORMAT_VERSION = 1;
     private static final int MAGIC = 0x32433152;
-    private static final Comparator<ChunkPos> Z_THEN_X = Comparator
-            .comparingInt(ChunkPos::z)
-            .thenComparingInt(ChunkPos::x);
+    private static final Comparator<ChunkPos> Z_THEN_X =
+            Comparator.comparingInt(ChunkPos::z).thenComparingInt(ChunkPos::x);
     private static final AtomicReference<Session> ACTIVE = new AtomicReference<>();
 
     public enum Mode {
@@ -79,11 +76,9 @@ public final class FeatureFrontierEvidence {
             ChunkPos chunkPos,
             String field,
             String nativeValue,
-            String isolatedValue) {
-    }
+            String isolatedValue) {}
 
-    private FeatureFrontierEvidence() {
-    }
+    private FeatureFrontierEvidence() {}
 
     public static void begin(
             Mode mode,
@@ -91,7 +86,8 @@ public final class FeatureFrontierEvidence {
             ResourceKey<Level> dimension,
             ChunkPos target,
             List<ChunkPos> writers) {
-        Session session = new Session(mode, root.toAbsolutePath().normalize(), dimension, target, writers);
+        Session session =
+                new Session(mode, root.toAbsolutePath().normalize(), dimension, target, writers);
         if (!ACTIVE.compareAndSet(null, session)) {
             throw new IllegalStateException("FEATURES frontier evidence session is already active");
         }
@@ -99,17 +95,21 @@ public final class FeatureFrontierEvidence {
             Files.createDirectories(session.root);
         } catch (IOException exception) {
             ACTIVE.compareAndSet(session, null);
-            throw new IllegalStateException("Unable to create FEATURES evidence root " + session.root, exception);
+            throw new IllegalStateException(
+                    "Unable to create FEATURES evidence root " + session.root, exception);
         }
     }
 
     public static void beginStageProbe(
-            Mode mode,
-            Path root,
-            ResourceKey<Level> dimension,
-            ChunkPos probe) {
-        Session session = new Session(
-                mode, root.toAbsolutePath().normalize(), dimension, probe, List.of(), probe);
+            Mode mode, Path root, ResourceKey<Level> dimension, ChunkPos probe) {
+        Session session =
+                new Session(
+                        mode,
+                        root.toAbsolutePath().normalize(),
+                        dimension,
+                        probe,
+                        List.of(),
+                        probe);
         if (!ACTIVE.compareAndSet(null, session)) {
             throw new IllegalStateException("FEATURES stage evidence session is already active");
         }
@@ -117,7 +117,8 @@ public final class FeatureFrontierEvidence {
             Files.createDirectories(session.root);
         } catch (IOException exception) {
             ACTIVE.compareAndSet(session, null);
-            throw new IllegalStateException("Unable to create stage evidence root " + session.root, exception);
+            throw new IllegalStateException(
+                    "Unable to create stage evidence root " + session.root, exception);
         }
     }
 
@@ -141,15 +142,18 @@ public final class FeatureFrontierEvidence {
             ChunkAccess writer,
             Phase phase) {
         Session session = ACTIVE.get();
-        if (session == null || session.mode != mode
+        if (session == null
+                || session.mode != mode
                 || !worldGenContext.level().dimension().equals(session.dimension)) {
             return;
         }
-        Integer writerIndex = session.writerIndices.get(ChunkPos.pack(writer.getPos().x(), writer.getPos().z()));
+        Integer writerIndex =
+                session.writerIndices.get(ChunkPos.pack(writer.getPos().x(), writer.getPos().z()));
         if (writerIndex == null) {
             return;
         }
-        Checkpoint checkpoint = snapshot(session, writerIndex, writer.getPos(), phase, worldGenContext, cache);
+        Checkpoint checkpoint =
+                snapshot(session, writerIndex, writer.getPos(), phase, worldGenContext, cache);
         checkpoint.write(checkpointPath(session.root, writerIndex, phase));
         session.record(writerIndex, phase);
     }
@@ -172,14 +176,17 @@ public final class FeatureFrontierEvidence {
             net.minecraft.world.level.block.state.BlockState state) {
         Session session = ACTIVE.get();
         if (session != null && session.mode == mode) {
-            session.featureWrites.add(new FeatureWrite(
-                    feature, pos.getX(), pos.getY(), pos.getZ(), state.toString()));
+            session.featureWrites.add(
+                    new FeatureWrite(
+                            feature, pos.getX(), pos.getY(), pos.getZ(), state.toString()));
         }
     }
 
     public static String firstFeatureWriteDivergence(Path nativeRoot, Path isolatedRoot) {
-        List<FeatureWrite> nativeWrites = readFeatureWrites(nativeRoot.resolve("feature-writes.bin.gz"));
-        List<FeatureWrite> isolatedWrites = readFeatureWrites(isolatedRoot.resolve("feature-writes.bin.gz"));
+        List<FeatureWrite> nativeWrites =
+                readFeatureWrites(nativeRoot.resolve("feature-writes.bin.gz"));
+        List<FeatureWrite> isolatedWrites =
+                readFeatureWrites(isolatedRoot.resolve("feature-writes.bin.gz"));
         int common = Math.min(nativeWrites.size(), isolatedWrites.size());
         for (int index = 0; index < common; index++) {
             FeatureWrite nativeWrite = nativeWrites.get(index);
@@ -190,10 +197,16 @@ public final class FeatureFrontierEvidence {
         }
         return nativeWrites.size() == isolatedWrites.size()
                 ? "none"
-                : "common=" + common + ",nativeSize=" + nativeWrites.size()
-                        + ",isolatedSize=" + isolatedWrites.size()
-                        + ",nextNative=" + (common < nativeWrites.size() ? nativeWrites.get(common) : "none")
-                        + ",nextIsolated=" + (common < isolatedWrites.size() ? isolatedWrites.get(common) : "none");
+                : "common="
+                        + common
+                        + ",nativeSize="
+                        + nativeWrites.size()
+                        + ",isolatedSize="
+                        + isolatedWrites.size()
+                        + ",nextNative="
+                        + (common < nativeWrites.size() ? nativeWrites.get(common) : "none")
+                        + ",nextIsolated="
+                        + (common < isolatedWrites.size() ? isolatedWrites.get(common) : "none");
     }
 
     public static void abort(Mode mode) {
@@ -208,8 +221,10 @@ public final class FeatureFrontierEvidence {
         Path isolatedPath = isolatedRoot.toAbsolutePath().normalize();
         for (int writer = 0; writer < writerCount; writer++) {
             for (Phase phase : Phase.values()) {
-                Checkpoint nativeCheckpoint = Checkpoint.read(checkpointPath(nativePath, writer, phase));
-                Checkpoint isolatedCheckpoint = Checkpoint.read(checkpointPath(isolatedPath, writer, phase));
+                Checkpoint nativeCheckpoint =
+                        Checkpoint.read(checkpointPath(nativePath, writer, phase));
+                Checkpoint isolatedCheckpoint =
+                        Checkpoint.read(checkpointPath(isolatedPath, writer, phase));
                 Divergence divergence = nativeCheckpoint.firstDifference(isolatedCheckpoint);
                 if (divergence != null) {
                     return divergence;
@@ -220,47 +235,53 @@ public final class FeatureFrontierEvidence {
     }
 
     public static List<String> checkpointDifferences(
-            Path nativeRoot,
-            Path isolatedRoot,
-            int writerIndex,
-            Phase phase) {
-        Checkpoint nativeCheckpoint = Checkpoint.read(checkpointPath(
-                nativeRoot.toAbsolutePath().normalize(), writerIndex, phase));
-        Checkpoint isolatedCheckpoint = Checkpoint.read(checkpointPath(
-                isolatedRoot.toAbsolutePath().normalize(), writerIndex, phase));
+            Path nativeRoot, Path isolatedRoot, int writerIndex, Phase phase) {
+        Checkpoint nativeCheckpoint =
+                Checkpoint.read(
+                        checkpointPath(
+                                nativeRoot.toAbsolutePath().normalize(), writerIndex, phase));
+        Checkpoint isolatedCheckpoint =
+                Checkpoint.read(
+                        checkpointPath(
+                                isolatedRoot.toAbsolutePath().normalize(), writerIndex, phase));
         return nativeCheckpoint.allDifferences(isolatedCheckpoint);
     }
 
     public static void captureStage(
-            WorldGenContext worldGenContext,
-            ChunkStatus status,
-            ChunkAccess chunk) {
+            WorldGenContext worldGenContext, ChunkStatus status, ChunkAccess chunk) {
         Session session = ACTIVE.get();
         if (!shouldCaptureStage(worldGenContext, status, chunk)) return;
         RegistryAccess registryAccess = worldGenContext.level().registryAccess();
-        RandomState randomState = GenerationContextRegistry.find(worldGenContext)
-                .map(context -> context.randomState())
-                .orElseGet(() -> worldGenContext.level().getChunkSource().randomState());
-        var generator = GenerationContextRegistry.find(worldGenContext)
-                .map(context -> (net.minecraft.world.level.chunk.ChunkGenerator) context.generator())
-                .orElse(worldGenContext.generator());
-        ChunkEvidence evidence = chunkEvidence(chunk, status, registryAccess, generator, randomState);
-        Checkpoint checkpoint = new Checkpoint(
-                session.mode,
-                session.dimension.identifier().toString(),
-                session.target,
-                -1,
-                session.stageProbe,
-                Phase.POST,
-                generatorConfig(generator),
-                List.of(),
-                List.of(evidence));
+        RandomState randomState =
+                GenerationContextRegistry.find(worldGenContext)
+                        .map(context -> context.randomState())
+                        .orElseGet(() -> worldGenContext.level().getChunkSource().randomState());
+        var generator =
+                GenerationContextRegistry.find(worldGenContext)
+                        .map(
+                                context ->
+                                        (net.minecraft.world.level.chunk.ChunkGenerator)
+                                                context.generator())
+                        .orElse(worldGenContext.generator());
+        ChunkEvidence evidence =
+                chunkEvidence(chunk, status, registryAccess, generator, randomState);
+        Checkpoint checkpoint =
+                new Checkpoint(
+                        session.mode,
+                        session.dimension.identifier().toString(),
+                        session.target,
+                        -1,
+                        session.stageProbe,
+                        Phase.POST,
+                        generatorConfig(generator),
+                        List.of(),
+                        List.of(evidence));
         checkpoint.write(session.root.resolve(stageFileName(status)));
         if (status.isOrAfter(ChunkStatus.BIOMES)) {
             FeatureStageSnapshot.capture(
-                    session.dimension.identifier().toString(),
-                    chunk,
-                    worldGenContext.level().registryAccess())
+                            session.dimension.identifier().toString(),
+                            chunk,
+                            worldGenContext.level().registryAccess())
                     .write(session.root.resolve(stageDetailFileName(status)));
         }
     }
@@ -270,11 +291,12 @@ public final class FeatureFrontierEvidence {
             StaticCache2D<GenerationChunkHolder> cache,
             ChunkAccess chunk) {
         Session session = ACTIVE.get();
-        if (session == null || session.stageProbe == null
+        if (session == null
+                || session.stageProbe == null
                 || !session.dimension.equals(worldGenContext.level().dimension())
                 || !session.stageProbe.equals(chunk.getPos())) return;
-        Checkpoint checkpoint = snapshot(
-                session, -2, chunk.getPos(), Phase.PRE, worldGenContext, cache);
+        Checkpoint checkpoint =
+                snapshot(session, -2, chunk.getPos(), Phase.PRE, worldGenContext, cache);
         checkpoint.write(session.root.resolve("surface-pre.bin.gz"));
     }
 
@@ -282,9 +304,13 @@ public final class FeatureFrontierEvidence {
             WorldGenRegion region,
             ChunkStep step,
             ChunkAccess center,
-            io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.IsolatedGenerationContext context) {
+            io.github.recrivenvi.randomnibble6plus24generator.worldgen.session
+                            .IsolatedGenerationContext
+                    context) {
         Session session = ACTIVE.get();
-        if (session == null || session.stageProbe == null || session.blockProbe == null
+        if (session == null
+                || session.stageProbe == null
+                || session.blockProbe == null
                 || step.targetStatus() != ChunkStatus.SURFACE
                 || !session.stageProbe.equals(center.getPos())) return;
         Registry<Biome> biomes = region.registryAccess().lookupOrThrow(Registries.BIOME);
@@ -294,16 +320,40 @@ public final class FeatureFrontierEvidence {
         int qy = QuartPos.fromBlock(pos.getY());
         int qz = QuartPos.fromBlock(pos.getZ());
         Holder<Biome> uncached = region.getUncachedNoiseBiome(qx, qy, qz);
-        Holder<Biome> expected = context == null
-                ? region.getLevel().getChunkSource().getGenerator().getBiomeSource().getNoiseBiome(
-                        qx, qy, qz, region.getLevel().getChunkSource().randomState().sampler())
-                : context.generator().getBiomeSource().getNoiseBiome(
-                        qx, qy, qz, context.randomState().sampler());
-        String value = "actual=" + biomeKey(actual, biomes) + System.lineSeparator()
-                + "uncached=" + biomeKey(uncached, biomes) + System.lineSeparator()
-                + "directExpected=" + biomeKey(expected, biomes) + System.lineSeparator()
-                + "blockPos=" + pos + System.lineSeparator()
-                + "quart=" + qx + "," + qy + "," + qz + System.lineSeparator();
+        Holder<Biome> expected =
+                context == null
+                        ? region.getLevel()
+                                .getChunkSource()
+                                .getGenerator()
+                                .getBiomeSource()
+                                .getNoiseBiome(
+                                        qx,
+                                        qy,
+                                        qz,
+                                        region.getLevel().getChunkSource().randomState().sampler())
+                        : context.generator()
+                                .getBiomeSource()
+                                .getNoiseBiome(qx, qy, qz, context.randomState().sampler());
+        String value =
+                "actual="
+                        + biomeKey(actual, biomes)
+                        + System.lineSeparator()
+                        + "uncached="
+                        + biomeKey(uncached, biomes)
+                        + System.lineSeparator()
+                        + "directExpected="
+                        + biomeKey(expected, biomes)
+                        + System.lineSeparator()
+                        + "blockPos="
+                        + pos
+                        + System.lineSeparator()
+                        + "quart="
+                        + qx
+                        + ","
+                        + qy
+                        + ","
+                        + qz
+                        + System.lineSeparator();
         StringBuilder valueBuilder = new StringBuilder(value);
         int parentX = (pos.getX() - 2) >> 2;
         int parentY = (pos.getY() - 2) >> 2;
@@ -312,13 +362,27 @@ public final class FeatureFrontierEvidence {
             int cornerX = (i & 4) == 0 ? parentX : parentX + 1;
             int cornerY = (i & 2) == 0 ? parentY : parentY + 1;
             int cornerZ = (i & 1) == 0 ? parentZ : parentZ + 1;
-            valueBuilder.append("corner").append(i).append('=')
-                    .append(cornerX).append(',').append(cornerY).append(',').append(cornerZ).append(':')
-                    .append(biomeKey(region.getUncachedNoiseBiome(cornerX, cornerY, cornerZ), biomes))
+            valueBuilder
+                    .append("corner")
+                    .append(i)
+                    .append('=')
+                    .append(cornerX)
+                    .append(',')
+                    .append(cornerY)
+                    .append(',')
+                    .append(cornerZ)
+                    .append(':')
+                    .append(
+                            biomeKey(
+                                    region.getUncachedNoiseBiome(cornerX, cornerY, cornerZ),
+                                    biomes))
                     .append(System.lineSeparator());
         }
         try {
-            Files.writeString(session.root.resolve("surface-region-context.txt"), valueBuilder, StandardCharsets.UTF_8);
+            Files.writeString(
+                    session.root.resolve("surface-region-context.txt"),
+                    valueBuilder,
+                    StandardCharsets.UTF_8);
         } catch (IOException exception) {
             throw new IllegalStateException("Unable to write Surface region context", exception);
         }
@@ -334,14 +398,13 @@ public final class FeatureFrontierEvidence {
     public static List<String> surfacePreDifferences(Path nativeRoot, Path isolatedRoot) {
         Path nativePath = nativeRoot.resolve("surface-pre.bin.gz");
         Path isolatedPath = isolatedRoot.resolve("surface-pre.bin.gz");
-        if (!Files.exists(nativePath) || !Files.exists(isolatedPath)) return List.of("missing-surface-pre");
+        if (!Files.exists(nativePath) || !Files.exists(isolatedPath))
+            return List.of("missing-surface-pre");
         return Checkpoint.read(nativePath).allDifferences(Checkpoint.read(isolatedPath));
     }
 
     public static boolean shouldCaptureStage(
-            WorldGenContext worldGenContext,
-            ChunkStatus status,
-            ChunkAccess chunk) {
+            WorldGenContext worldGenContext, ChunkStatus status, ChunkAccess chunk) {
         Session session = ACTIVE.get();
         return session != null
                 && session.stageProbe != null
@@ -357,56 +420,66 @@ public final class FeatureFrontierEvidence {
             ChunkStatus status,
             ChunkAccess chunk) {
         Session session = ACTIVE.get();
-        if (session == null || session.mode != mode || session.stageProbe == null
+        if (session == null
+                || session.mode != mode
+                || session.stageProbe == null
                 || !session.stageProbe.equals(chunk.getPos())) return;
         var generator = level.getChunkSource().getGenerator();
         RandomState randomState;
         if (generator instanceof NoiseBasedChunkGenerator noiseGenerator) {
-            randomState = RandomState.create(
-                    noiseGenerator.generatorSettings().value(),
-                    level.registryAccess().lookupOrThrow(Registries.NOISE),
-                    worldSeed);
+            randomState =
+                    RandomState.create(
+                            noiseGenerator.generatorSettings().value(),
+                            level.registryAccess().lookupOrThrow(Registries.NOISE),
+                            worldSeed);
         } else {
             throw new IllegalStateException("Stage probe requires NoiseBasedChunkGenerator");
         }
-        ChunkEvidence evidence = chunkEvidence(
-                chunk, status, level.registryAccess(), generator, randomState);
+        ChunkEvidence evidence =
+                chunkEvidence(chunk, status, level.registryAccess(), generator, randomState);
         new Checkpoint(
-                mode,
-                session.dimension.identifier().toString(),
-                session.target,
-                -1,
-                session.stageProbe,
-                Phase.POST,
-                generatorConfig(generator),
-                List.of(),
-                List.of(evidence))
+                        mode,
+                        session.dimension.identifier().toString(),
+                        session.target,
+                        -1,
+                        session.stageProbe,
+                        Phase.POST,
+                        generatorConfig(generator),
+                        List.of(),
+                        List.of(evidence))
                 .write(session.root.resolve(stageFileName(status)));
         if (status.isOrAfter(ChunkStatus.BIOMES)) {
             FeatureStageSnapshot.capture(
-                    session.dimension.identifier().toString(),
-                    chunk,
-                    level.registryAccess())
+                            session.dimension.identifier().toString(),
+                            chunk,
+                            level.registryAccess())
                     .write(session.root.resolve(stageDetailFileName(status)));
         }
     }
 
     public static Divergence firstStageDivergence(Path nativeRoot, Path isolatedRoot) {
-        for (ChunkStatus status : List.of(
-                ChunkStatus.EMPTY,
-                ChunkStatus.STRUCTURE_STARTS,
-                ChunkStatus.STRUCTURE_REFERENCES,
-                ChunkStatus.BIOMES,
-                ChunkStatus.NOISE,
-                ChunkStatus.SURFACE,
-                ChunkStatus.CARVERS)) {
+        for (ChunkStatus status :
+                List.of(
+                        ChunkStatus.EMPTY,
+                        ChunkStatus.STRUCTURE_STARTS,
+                        ChunkStatus.STRUCTURE_REFERENCES,
+                        ChunkStatus.BIOMES,
+                        ChunkStatus.NOISE,
+                        ChunkStatus.SURFACE,
+                        ChunkStatus.CARVERS)) {
             Path nativePath = nativeRoot.resolve(stageFileName(status));
             Path isolatedPath = isolatedRoot.resolve(stageFileName(status));
             if (!Files.exists(nativePath) || !Files.exists(isolatedPath)) continue;
-            Divergence divergence = Checkpoint.read(nativePath).firstDifference(Checkpoint.read(isolatedPath));
-            if (divergence != null) return new Divergence(
-                    -1, Phase.POST, divergence.chunkPos(), status + ":" + divergence.field(),
-                    divergence.nativeValue(), divergence.isolatedValue());
+            Divergence divergence =
+                    Checkpoint.read(nativePath).firstDifference(Checkpoint.read(isolatedPath));
+            if (divergence != null)
+                return new Divergence(
+                        -1,
+                        Phase.POST,
+                        divergence.chunkPos(),
+                        status + ":" + divergence.field(),
+                        divergence.nativeValue(),
+                        divergence.isolatedValue());
         }
         return null;
     }
@@ -420,28 +493,34 @@ public final class FeatureFrontierEvidence {
     }
 
     public static String stageDetailedDifference(
-            Path nativeRoot,
-            Path isolatedRoot,
-            ChunkStatus status) {
+            Path nativeRoot, Path isolatedRoot, ChunkStatus status) {
         Path nativePath = nativeRoot.resolve(stageDetailFileName(status));
         Path isolatedPath = isolatedRoot.resolve(stageDetailFileName(status));
         if (!Files.exists(nativePath) || !Files.exists(isolatedPath)) return "missing";
         FeatureStageSnapshot left = FeatureStageSnapshot.read(nativePath);
         FeatureStageSnapshot right = FeatureStageSnapshot.read(isolatedPath);
         FeatureStageSnapshot.Diff diff = left.diff(right);
-        return "first=" + diff.firstDifference()
-                + ",differingBlocks=" + diff.differingBlocks()
-                + ",categories=" + diff.blockCategories()
-                + ",metadata=" + left.deterministicMetadataDifference(right);
+        return "first="
+                + diff.firstDifference()
+                + ",differingBlocks="
+                + diff.differingBlocks()
+                + ",categories="
+                + diff.blockCategories()
+                + ",metadata="
+                + left.deterministicMetadataDifference(right);
     }
 
     public static String stageDetailedDifference(
-            Path nativeRoot,
-            Path isolatedRoot,
-            Divergence divergence) {
-        for (ChunkStatus status : List.of(
-                ChunkStatus.EMPTY, ChunkStatus.STRUCTURE_STARTS, ChunkStatus.STRUCTURE_REFERENCES,
-                ChunkStatus.BIOMES, ChunkStatus.NOISE, ChunkStatus.SURFACE, ChunkStatus.CARVERS)) {
+            Path nativeRoot, Path isolatedRoot, Divergence divergence) {
+        for (ChunkStatus status :
+                List.of(
+                        ChunkStatus.EMPTY,
+                        ChunkStatus.STRUCTURE_STARTS,
+                        ChunkStatus.STRUCTURE_REFERENCES,
+                        ChunkStatus.BIOMES,
+                        ChunkStatus.NOISE,
+                        ChunkStatus.SURFACE,
+                        ChunkStatus.CARVERS)) {
             if (divergence.field().startsWith(status.toString() + ":")) {
                 return stageDetailedDifference(nativeRoot, isolatedRoot, status);
             }
@@ -450,40 +529,55 @@ public final class FeatureFrontierEvidence {
     }
 
     private static Path checkpointPath(Path root, int writerIndex, Phase phase) {
-        return root.resolve(String.format(java.util.Locale.ROOT, "writer-%02d-%s.bin.gz",
-                writerIndex,
-                phase.name().toLowerCase(java.util.Locale.ROOT)));
+        return root.resolve(
+                String.format(
+                        java.util.Locale.ROOT,
+                        "writer-%02d-%s.bin.gz",
+                        writerIndex,
+                        phase.name().toLowerCase(java.util.Locale.ROOT)));
     }
 
     private static void writeFeatureWrites(Path path, List<FeatureWrite> writes) {
         try {
             Files.createDirectories(path.toAbsolutePath().normalize().getParent());
-            try (DataOutputStream output = new DataOutputStream(new BufferedOutputStream(
-                    new GZIPOutputStream(Files.newOutputStream(path))))) {
+            try (DataOutputStream output =
+                    new DataOutputStream(
+                            new BufferedOutputStream(
+                                    new GZIPOutputStream(Files.newOutputStream(path))))) {
                 output.writeInt(writes.size());
                 for (FeatureWrite write : writes) {
                     output.writeUTF(write.feature());
-                    output.writeInt(write.x()); output.writeInt(write.y()); output.writeInt(write.z());
+                    output.writeInt(write.x());
+                    output.writeInt(write.y());
+                    output.writeInt(write.z());
                     output.writeUTF(write.state());
                 }
             }
         } catch (IOException exception) {
-            throw new IllegalStateException("Unable to write FEATURES write trace " + path, exception);
+            throw new IllegalStateException(
+                    "Unable to write FEATURES write trace " + path, exception);
         }
     }
 
     private static List<FeatureWrite> readFeatureWrites(Path path) {
-        try (DataInputStream input = new DataInputStream(new BufferedInputStream(
-                new GZIPInputStream(Files.newInputStream(path))))) {
+        try (DataInputStream input =
+                new DataInputStream(
+                        new BufferedInputStream(new GZIPInputStream(Files.newInputStream(path))))) {
             int count = input.readInt();
             List<FeatureWrite> writes = new ArrayList<>(count);
             for (int index = 0; index < count; index++) {
-                writes.add(new FeatureWrite(
-                        input.readUTF(), input.readInt(), input.readInt(), input.readInt(), input.readUTF()));
+                writes.add(
+                        new FeatureWrite(
+                                input.readUTF(),
+                                input.readInt(),
+                                input.readInt(),
+                                input.readInt(),
+                                input.readUTF()));
             }
             return List.copyOf(writes);
         } catch (IOException exception) {
-            throw new IllegalStateException("Unable to read FEATURES write trace " + path, exception);
+            throw new IllegalStateException(
+                    "Unable to read FEATURES write trace " + path, exception);
         }
     }
 
@@ -495,12 +589,17 @@ public final class FeatureFrontierEvidence {
             WorldGenContext worldGenContext,
             StaticCache2D<GenerationChunkHolder> cache) {
         RegistryAccess registryAccess = worldGenContext.level().registryAccess();
-        RandomState randomState = GenerationContextRegistry.find(worldGenContext)
-                .map(context -> context.randomState())
-                .orElseGet(() -> worldGenContext.level().getChunkSource().randomState());
-        var generator = GenerationContextRegistry.find(worldGenContext)
-                .map(context -> (net.minecraft.world.level.chunk.ChunkGenerator) context.generator())
-                .orElse(worldGenContext.generator());
+        RandomState randomState =
+                GenerationContextRegistry.find(worldGenContext)
+                        .map(context -> context.randomState())
+                        .orElseGet(() -> worldGenContext.level().getChunkSource().randomState());
+        var generator =
+                GenerationContextRegistry.find(worldGenContext)
+                        .map(
+                                context ->
+                                        (net.minecraft.world.level.chunk.ChunkGenerator)
+                                                context.generator())
+                        .orElse(worldGenContext.generator());
         String generatorConfig = generatorConfig(generator);
 
         List<GenerationChunkHolder> holders = new ArrayList<>();
@@ -533,14 +632,24 @@ public final class FeatureFrontierEvidence {
         ChunkAccess chunk = latest == null ? null : holder.getChunkIfPresentUnchecked(latest);
         if (chunk == null) {
             return new ChunkEvidence(
-                    holder.getPos(), name(persisted), name(latest), "missing", "missing", "missing",
-                    "missing", "missing", "missing", 0, "none");
+                    holder.getPos(),
+                    name(persisted),
+                    name(latest),
+                    "missing",
+                    "missing",
+                    "missing",
+                    "missing",
+                    "missing",
+                    "missing",
+                    0,
+                    "none");
         }
 
         String blockHash = latest.isOrAfter(ChunkStatus.NOISE) ? blockHash(chunk) : "not-generated";
-        BiomeEvidence biomeEvidence = latest.isOrAfter(ChunkStatus.BIOMES)
-                ? biomeHash(chunk, registryAccess, generator, randomState)
-                : new BiomeEvidence("not-generated", 0, "none");
+        BiomeEvidence biomeEvidence =
+                latest.isOrAfter(ChunkStatus.BIOMES)
+                        ? biomeHash(chunk, registryAccess, generator, randomState)
+                        : new BiomeEvidence("not-generated", 0, "none");
         return new ChunkEvidence(
                 holder.getPos(),
                 name(persisted),
@@ -562,27 +671,43 @@ public final class FeatureFrontierEvidence {
             net.minecraft.world.level.chunk.ChunkGenerator generator,
             RandomState randomState) {
         String blockHash = status.isOrAfter(ChunkStatus.NOISE) ? blockHash(chunk) : "not-generated";
-        BiomeEvidence biomeEvidence = status.isOrAfter(ChunkStatus.BIOMES)
-                ? biomeHash(chunk, registryAccess, generator, randomState)
-                : new BiomeEvidence("not-generated", 0, "none");
+        BiomeEvidence biomeEvidence =
+                status.isOrAfter(ChunkStatus.BIOMES)
+                        ? biomeHash(chunk, registryAccess, generator, randomState)
+                        : new BiomeEvidence("not-generated", 0, "none");
         return new ChunkEvidence(
-                chunk.getPos(), status.toString(), status.toString(), blockHash, biomeEvidence.hash,
-                heightmapHash(chunk), structureStartsHash(chunk, registryAccess),
-                structureReferencesHash(chunk, registryAccess), carvingMaskHash(chunk),
-                biomeEvidence.mismatchCount, biomeEvidence.firstMismatch);
+                chunk.getPos(),
+                status.toString(),
+                status.toString(),
+                blockHash,
+                biomeEvidence.hash,
+                heightmapHash(chunk),
+                structureStartsHash(chunk, registryAccess),
+                structureReferencesHash(chunk, registryAccess),
+                carvingMaskHash(chunk),
+                biomeEvidence.mismatchCount,
+                biomeEvidence.firstMismatch);
     }
 
-    private static String generatorConfig(net.minecraft.world.level.chunk.ChunkGenerator generator) {
-        String settings = generator instanceof NoiseBasedChunkGenerator noiseGenerator
-                ? noiseGenerator.generatorSettings().unwrapKey()
-                        .map(key -> key.identifier().toString())
-                        .orElse("direct")
-                : "not-noise-based";
+    private static String generatorConfig(
+            net.minecraft.world.level.chunk.ChunkGenerator generator) {
+        String settings =
+                generator instanceof NoiseBasedChunkGenerator noiseGenerator
+                        ? noiseGenerator
+                                .generatorSettings()
+                                .unwrapKey()
+                                .map(key -> key.identifier().toString())
+                                .orElse("direct")
+                        : "not-noise-based";
         return generator.getClass().getName()
-                + "|" + generator.getBiomeSource().getClass().getName()
-                + "|" + settings
-                + "|minY=" + generator.getMinY()
-                + "|sea=" + generator.getSeaLevel();
+                + "|"
+                + generator.getBiomeSource().getClass().getName()
+                + "|"
+                + settings
+                + "|minY="
+                + generator.getMinY()
+                + "|sea="
+                + generator.getSeaLevel();
     }
 
     private static String blockHash(ChunkAccess chunk) {
@@ -591,10 +716,14 @@ public final class FeatureFrontierEvidence {
         for (int y = chunk.getMinY(); y < chunk.getMinY() + chunk.getHeight(); y++) {
             for (int z = 0; z < 16; z++) {
                 for (int x = 0; x < 16; x++) {
-                    update(digest, chunk.getBlockState(cursor.set(
-                            chunk.getPos().getMinBlockX() + x,
-                            y,
-                            chunk.getPos().getMinBlockZ() + z)).toString());
+                    update(
+                            digest,
+                            chunk.getBlockState(
+                                            cursor.set(
+                                                    chunk.getPos().getMinBlockX() + x,
+                                                    y,
+                                                    chunk.getPos().getMinBlockZ() + z))
+                                    .toString());
                 }
             }
         }
@@ -621,16 +750,26 @@ public final class FeatureFrontierEvidence {
                     int qy = minQuartY + y;
                     int qz = minQuartZ + z;
                     Holder<Biome> stored = chunk.getNoiseBiome(qx, qy, qz);
-                    Holder<Biome> expected = generator.getBiomeSource().getNoiseBiome(
-                            qx, qy, qz, randomState.sampler());
+                    Holder<Biome> expected =
+                            generator
+                                    .getBiomeSource()
+                                    .getNoiseBiome(qx, qy, qz, randomState.sampler());
                     String storedKey = biomeKey(stored, biomes);
                     String expectedKey = biomeKey(expected, biomes);
                     update(digest, storedKey);
                     if (!stored.equals(expected)) {
                         mismatchCount++;
                         if (firstMismatch.equals("none")) {
-                            firstMismatch = qx + "," + qy + "," + qz
-                                    + ":stored=" + storedKey + ",expected=" + expectedKey;
+                            firstMismatch =
+                                    qx
+                                            + ","
+                                            + qy
+                                            + ","
+                                            + qz
+                                            + ":stored="
+                                            + storedKey
+                                            + ",expected="
+                                            + expectedKey;
                         }
                     }
                 }
@@ -653,7 +792,8 @@ public final class FeatureFrontierEvidence {
                 }
                 GenerationChunkHolder holder = cache.get(x, z);
                 ChunkStatus latest = holder.getLatestStatus();
-                ChunkAccess chunk = latest == null ? null : holder.getChunkIfPresentUnchecked(latest);
+                ChunkAccess chunk =
+                        latest == null ? null : holder.getChunkIfPresentUnchecked(latest);
                 if (chunk == null) {
                     result.add("<unavailable:" + x + "," + z + ">");
                     continue;
@@ -679,10 +819,11 @@ public final class FeatureFrontierEvidence {
         for (Map.Entry<Heightmap.Types, Heightmap> entry : chunk.getHeightmaps()) {
             values.put(entry.getKey().getSerializationKey(), entry.getValue().getRawData().clone());
         }
-        values.forEach((key, data) -> {
-            update(digest, key);
-            for (long value : data) update(digest, value);
-        });
+        values.forEach(
+                (key, data) -> {
+                    update(digest, key);
+                    for (long value : data) update(digest, value);
+                });
         return hex(digest);
     }
 
@@ -692,28 +833,43 @@ public final class FeatureFrontierEvidence {
         Map<String, String> values = new TreeMap<>();
         for (Map.Entry<Structure, StructureStart> entry : chunk.getAllStarts().entrySet()) {
             StructureStart start = entry.getValue();
-            values.put(Objects.toString(structures.getKey(entry.getKey())),
-                    start.isValid() + "|" + start.getChunkPos() + "|" + start.getReferences()
-                            + "|" + start.getPieces().size()
-                            + "|" + (start.isValid() ? start.getBoundingBox() : "null"));
+            values.put(
+                    Objects.toString(structures.getKey(entry.getKey())),
+                    start.isValid()
+                            + "|"
+                            + start.getChunkPos()
+                            + "|"
+                            + start.getReferences()
+                            + "|"
+                            + start.getPieces().size()
+                            + "|"
+                            + (start.isValid() ? start.getBoundingBox() : "null"));
         }
-        values.forEach((key, value) -> { update(digest, key); update(digest, value); });
+        values.forEach(
+                (key, value) -> {
+                    update(digest, key);
+                    update(digest, value);
+                });
         return hex(digest);
     }
 
-    private static String structureReferencesHash(ChunkAccess chunk, RegistryAccess registryAccess) {
+    private static String structureReferencesHash(
+            ChunkAccess chunk, RegistryAccess registryAccess) {
         MessageDigest digest = digest();
         Registry<Structure> structures = registryAccess.lookupOrThrow(Registries.STRUCTURE);
         Map<String, long[]> values = new TreeMap<>();
-        chunk.getAllReferences().forEach((structure, references) -> {
-            long[] data = references.toLongArray();
-            Arrays.sort(data);
-            values.put(Objects.toString(structures.getKey(structure)), data);
-        });
-        values.forEach((key, data) -> {
-            update(digest, key);
-            for (long value : data) update(digest, value);
-        });
+        chunk.getAllReferences()
+                .forEach(
+                        (structure, references) -> {
+                            long[] data = references.toLongArray();
+                            Arrays.sort(data);
+                            values.put(Objects.toString(structures.getKey(structure)), data);
+                        });
+        values.forEach(
+                (key, data) -> {
+                    update(digest, key);
+                    for (long value : data) update(digest, value);
+                });
         return hex(digest);
     }
 
@@ -727,7 +883,8 @@ public final class FeatureFrontierEvidence {
     }
 
     private static String biomeKey(Holder<Biome> biome, Registry<Biome> registry) {
-        return biome.unwrapKey().map(key -> key.identifier().toString())
+        return biome.unwrapKey()
+                .map(key -> key.identifier().toString())
                 .orElseGet(() -> Objects.toString(registry.getKey(biome.value())));
     }
 
@@ -750,27 +907,28 @@ public final class FeatureFrontierEvidence {
     }
 
     private static void update(MessageDigest digest, int value) {
-        digest.update(new byte[] {
-                (byte) (value >>> 24), (byte) (value >>> 16), (byte) (value >>> 8), (byte) value
-        });
+        digest.update(
+                new byte[] {
+                    (byte) (value >>> 24), (byte) (value >>> 16), (byte) (value >>> 8), (byte) value
+                });
     }
 
     private static void update(MessageDigest digest, long value) {
-        digest.update(new byte[] {
-                (byte) (value >>> 56), (byte) (value >>> 48), (byte) (value >>> 40), (byte) (value >>> 32),
-                (byte) (value >>> 24), (byte) (value >>> 16), (byte) (value >>> 8), (byte) value
-        });
+        digest.update(
+                new byte[] {
+                    (byte) (value >>> 56), (byte) (value >>> 48), (byte) (value >>> 40),
+                            (byte) (value >>> 32),
+                    (byte) (value >>> 24), (byte) (value >>> 16), (byte) (value >>> 8), (byte) value
+                });
     }
 
     private static String hex(MessageDigest digest) {
         return HexFormat.of().formatHex(digest.digest());
     }
 
-    private record BiomeEvidence(String hash, int mismatchCount, String firstMismatch) {
-    }
+    private record BiomeEvidence(String hash, int mismatchCount, String firstMismatch) {}
 
-    private record FeatureWrite(String feature, int x, int y, int z, String state) {
-    }
+    private record FeatureWrite(String feature, int x, int y, int z, String state) {}
 
     private record ChunkEvidence(
             ChunkPos pos,
@@ -786,19 +944,33 @@ public final class FeatureFrontierEvidence {
             String firstBiomeMismatch) {
 
         private void write(DataOutputStream output) throws IOException {
-            output.writeInt(pos.x()); output.writeInt(pos.z());
-            output.writeUTF(persistedStatus); output.writeUTF(latestStatus);
-            output.writeUTF(blockHash); output.writeUTF(biomeHash); output.writeUTF(heightmapHash);
-            output.writeUTF(structureStartsHash); output.writeUTF(structureReferencesHash);
-            output.writeUTF(carvingMaskHash); output.writeInt(biomeMismatchCount);
+            output.writeInt(pos.x());
+            output.writeInt(pos.z());
+            output.writeUTF(persistedStatus);
+            output.writeUTF(latestStatus);
+            output.writeUTF(blockHash);
+            output.writeUTF(biomeHash);
+            output.writeUTF(heightmapHash);
+            output.writeUTF(structureStartsHash);
+            output.writeUTF(structureReferencesHash);
+            output.writeUTF(carvingMaskHash);
+            output.writeInt(biomeMismatchCount);
             output.writeUTF(firstBiomeMismatch);
         }
 
         private static ChunkEvidence read(DataInputStream input) throws IOException {
             return new ChunkEvidence(
                     new ChunkPos(input.readInt(), input.readInt()),
-                    input.readUTF(), input.readUTF(), input.readUTF(), input.readUTF(), input.readUTF(),
-                    input.readUTF(), input.readUTF(), input.readUTF(), input.readInt(), input.readUTF());
+                    input.readUTF(),
+                    input.readUTF(),
+                    input.readUTF(),
+                    input.readUTF(),
+                    input.readUTF(),
+                    input.readUTF(),
+                    input.readUTF(),
+                    input.readUTF(),
+                    input.readInt(),
+                    input.readUTF());
         }
     }
 
@@ -816,26 +988,37 @@ public final class FeatureFrontierEvidence {
         private void write(Path path) {
             try {
                 Files.createDirectories(path.getParent());
-                try (DataOutputStream output = new DataOutputStream(new BufferedOutputStream(
-                        new GZIPOutputStream(Files.newOutputStream(path))))) {
-                    output.writeInt(MAGIC); output.writeInt(FORMAT_VERSION);
-                    output.writeUTF(mode.name()); output.writeUTF(dimension);
-                    output.writeInt(target.x()); output.writeInt(target.z());
-                    output.writeInt(writerIndex); output.writeInt(writer.x()); output.writeInt(writer.z());
-                    output.writeUTF(phase.name()); output.writeUTF(generatorConfig);
+                try (DataOutputStream output =
+                        new DataOutputStream(
+                                new BufferedOutputStream(
+                                        new GZIPOutputStream(Files.newOutputStream(path))))) {
+                    output.writeInt(MAGIC);
+                    output.writeInt(FORMAT_VERSION);
+                    output.writeUTF(mode.name());
+                    output.writeUTF(dimension);
+                    output.writeInt(target.x());
+                    output.writeInt(target.z());
+                    output.writeInt(writerIndex);
+                    output.writeInt(writer.x());
+                    output.writeInt(writer.z());
+                    output.writeUTF(phase.name());
+                    output.writeUTF(generatorConfig);
                     output.writeInt(visibleBiomes.size());
                     for (String biome : visibleBiomes) output.writeUTF(biome);
                     output.writeInt(chunks.size());
                     for (ChunkEvidence chunk : chunks) chunk.write(output);
                 }
             } catch (IOException exception) {
-                throw new IllegalStateException("Unable to write FEATURES checkpoint " + path, exception);
+                throw new IllegalStateException(
+                        "Unable to write FEATURES checkpoint " + path, exception);
             }
         }
 
         private static Checkpoint read(Path path) {
-            try (DataInputStream input = new DataInputStream(new BufferedInputStream(
-                    new GZIPInputStream(Files.newInputStream(path))))) {
+            try (DataInputStream input =
+                    new DataInputStream(
+                            new BufferedInputStream(
+                                    new GZIPInputStream(Files.newInputStream(path))))) {
                 if (input.readInt() != MAGIC || input.readInt() != FORMAT_VERSION) {
                     throw new IllegalArgumentException("Unsupported FEATURES checkpoint " + path);
                 }
@@ -852,32 +1035,53 @@ public final class FeatureFrontierEvidence {
                 int chunkCount = input.readInt();
                 List<ChunkEvidence> chunks = new ArrayList<>(chunkCount);
                 for (int i = 0; i < chunkCount; i++) chunks.add(ChunkEvidence.read(input));
-                return new Checkpoint(mode, dimension, target, writerIndex, writer, phase,
-                        generatorConfig, List.copyOf(visibleBiomes), List.copyOf(chunks));
+                return new Checkpoint(
+                        mode,
+                        dimension,
+                        target,
+                        writerIndex,
+                        writer,
+                        phase,
+                        generatorConfig,
+                        List.copyOf(visibleBiomes),
+                        List.copyOf(chunks));
             } catch (IOException exception) {
-                throw new IllegalStateException("Unable to read FEATURES checkpoint " + path, exception);
+                throw new IllegalStateException(
+                        "Unable to read FEATURES checkpoint " + path, exception);
             }
         }
 
         private Divergence firstDifference(Checkpoint isolated) {
-            if (!dimension.equals(isolated.dimension)) return divergence(null, "dimension", dimension, isolated.dimension);
-            if (!target.equals(isolated.target)) return divergence(null, "target", target.toString(), isolated.target.toString());
-            if (writerIndex != isolated.writerIndex) return divergence(null, "writerIndex", "" + writerIndex, "" + isolated.writerIndex);
-            if (!writer.equals(isolated.writer)) return divergence(null, "writer", writer.toString(), isolated.writer.toString());
-            if (phase != isolated.phase) return divergence(null, "phase", phase.name(), isolated.phase.name());
+            if (!dimension.equals(isolated.dimension))
+                return divergence(null, "dimension", dimension, isolated.dimension);
+            if (!target.equals(isolated.target))
+                return divergence(null, "target", target.toString(), isolated.target.toString());
+            if (writerIndex != isolated.writerIndex)
+                return divergence(null, "writerIndex", "" + writerIndex, "" + isolated.writerIndex);
+            if (!writer.equals(isolated.writer))
+                return divergence(null, "writer", writer.toString(), isolated.writer.toString());
+            if (phase != isolated.phase)
+                return divergence(null, "phase", phase.name(), isolated.phase.name());
             if (!generatorConfig.equals(isolated.generatorConfig)) {
-                return divergence(null, "generatorConfig", generatorConfig, isolated.generatorConfig);
+                return divergence(
+                        null, "generatorConfig", generatorConfig, isolated.generatorConfig);
             }
             if (!visibleBiomes.equals(isolated.visibleBiomes)) {
-                return divergence(writer, "featureVisibleBiomes", visibleBiomes.toString(), isolated.visibleBiomes.toString());
+                return divergence(
+                        writer,
+                        "featureVisibleBiomes",
+                        visibleBiomes.toString(),
+                        isolated.visibleBiomes.toString());
             }
             if (chunks.size() != isolated.chunks.size()) {
-                return divergence(null, "cacheSize", "" + chunks.size(), "" + isolated.chunks.size());
+                return divergence(
+                        null, "cacheSize", "" + chunks.size(), "" + isolated.chunks.size());
             }
             for (int i = 0; i < chunks.size(); i++) {
                 ChunkEvidence left = chunks.get(i);
                 ChunkEvidence right = isolated.chunks.get(i);
-                if (!left.pos.equals(right.pos)) return divergence(null, "chunkPos", left.pos.toString(), right.pos.toString());
+                if (!left.pos.equals(right.pos))
+                    return divergence(null, "chunkPos", left.pos.toString(), right.pos.toString());
                 Divergence result = compareChunk(left, right);
                 if (result != null) return result;
             }
@@ -887,10 +1091,18 @@ public final class FeatureFrontierEvidence {
         private List<String> allDifferences(Checkpoint isolated) {
             List<String> differences = new ArrayList<>();
             if (!generatorConfig.equals(isolated.generatorConfig)) {
-                differences.add("generatorConfig native=" + generatorConfig + " isolated=" + isolated.generatorConfig);
+                differences.add(
+                        "generatorConfig native="
+                                + generatorConfig
+                                + " isolated="
+                                + isolated.generatorConfig);
             }
             if (!visibleBiomes.equals(isolated.visibleBiomes)) {
-                differences.add("featureVisibleBiomes native=" + visibleBiomes + " isolated=" + isolated.visibleBiomes);
+                differences.add(
+                        "featureVisibleBiomes native="
+                                + visibleBiomes
+                                + " isolated="
+                                + isolated.visibleBiomes);
             }
             Map<ChunkPos, ChunkEvidence> rightByPos = new TreeMap<>(Z_THEN_X);
             for (ChunkEvidence value : isolated.chunks) rightByPos.put(value.pos, value);
@@ -900,39 +1112,106 @@ public final class FeatureFrontierEvidence {
                     differences.add(left.pos + " missing in isolated");
                     continue;
                 }
-                add(differences, left.pos, "persistedStatus", left.persistedStatus, right.persistedStatus);
+                add(
+                        differences,
+                        left.pos,
+                        "persistedStatus",
+                        left.persistedStatus,
+                        right.persistedStatus);
                 add(differences, left.pos, "latestStatus", left.latestStatus, right.latestStatus);
                 add(differences, left.pos, "blockHash", left.blockHash, right.blockHash);
                 add(differences, left.pos, "biomeHash", left.biomeHash, right.biomeHash);
-                add(differences, left.pos, "heightmapHash", left.heightmapHash, right.heightmapHash);
-                add(differences, left.pos, "structureStartsHash", left.structureStartsHash, right.structureStartsHash);
-                add(differences, left.pos, "structureReferencesHash", left.structureReferencesHash, right.structureReferencesHash);
-                add(differences, left.pos, "carvingMaskHash", left.carvingMaskHash, right.carvingMaskHash);
-                add(differences, left.pos, "storedBiomeMismatchCount", "" + left.biomeMismatchCount, "" + right.biomeMismatchCount);
-                add(differences, left.pos, "firstStoredBiomeMismatch", left.firstBiomeMismatch, right.firstBiomeMismatch);
+                add(
+                        differences,
+                        left.pos,
+                        "heightmapHash",
+                        left.heightmapHash,
+                        right.heightmapHash);
+                add(
+                        differences,
+                        left.pos,
+                        "structureStartsHash",
+                        left.structureStartsHash,
+                        right.structureStartsHash);
+                add(
+                        differences,
+                        left.pos,
+                        "structureReferencesHash",
+                        left.structureReferencesHash,
+                        right.structureReferencesHash);
+                add(
+                        differences,
+                        left.pos,
+                        "carvingMaskHash",
+                        left.carvingMaskHash,
+                        right.carvingMaskHash);
+                add(
+                        differences,
+                        left.pos,
+                        "storedBiomeMismatchCount",
+                        "" + left.biomeMismatchCount,
+                        "" + right.biomeMismatchCount);
+                add(
+                        differences,
+                        left.pos,
+                        "firstStoredBiomeMismatch",
+                        left.firstBiomeMismatch,
+                        right.firstBiomeMismatch);
             }
             return List.copyOf(differences);
         }
 
-        private static void add(List<String> values, ChunkPos pos, String field, String left, String right) {
-            if (!left.equals(right)) values.add(pos + " " + field + " native=" + left + " isolated=" + right);
+        private static void add(
+                List<String> values, ChunkPos pos, String field, String left, String right) {
+            if (!left.equals(right))
+                values.add(pos + " " + field + " native=" + left + " isolated=" + right);
         }
 
         private Divergence compareChunk(ChunkEvidence left, ChunkEvidence right) {
-            if (!left.persistedStatus.equals(right.persistedStatus)) return divergence(left.pos, "persistedStatus", left.persistedStatus, right.persistedStatus);
-            if (!left.latestStatus.equals(right.latestStatus)) return divergence(left.pos, "latestStatus", left.latestStatus, right.latestStatus);
-            if (!left.blockHash.equals(right.blockHash)) return divergence(left.pos, "blockHash", left.blockHash, right.blockHash);
-            if (!left.biomeHash.equals(right.biomeHash)) return divergence(left.pos, "biomeHash", left.biomeHash, right.biomeHash);
-            if (!left.heightmapHash.equals(right.heightmapHash)) return divergence(left.pos, "heightmapHash", left.heightmapHash, right.heightmapHash);
-            if (!left.structureStartsHash.equals(right.structureStartsHash)) return divergence(left.pos, "structureStartsHash", left.structureStartsHash, right.structureStartsHash);
-            if (!left.structureReferencesHash.equals(right.structureReferencesHash)) return divergence(left.pos, "structureReferencesHash", left.structureReferencesHash, right.structureReferencesHash);
-            if (!left.carvingMaskHash.equals(right.carvingMaskHash)) return divergence(left.pos, "carvingMaskHash", left.carvingMaskHash, right.carvingMaskHash);
-            if (left.biomeMismatchCount != right.biomeMismatchCount) return divergence(left.pos, "storedBiomeMismatchCount", "" + left.biomeMismatchCount, "" + right.biomeMismatchCount);
-            if (!left.firstBiomeMismatch.equals(right.firstBiomeMismatch)) return divergence(left.pos, "firstStoredBiomeMismatch", left.firstBiomeMismatch, right.firstBiomeMismatch);
+            if (!left.persistedStatus.equals(right.persistedStatus))
+                return divergence(
+                        left.pos, "persistedStatus", left.persistedStatus, right.persistedStatus);
+            if (!left.latestStatus.equals(right.latestStatus))
+                return divergence(left.pos, "latestStatus", left.latestStatus, right.latestStatus);
+            if (!left.blockHash.equals(right.blockHash))
+                return divergence(left.pos, "blockHash", left.blockHash, right.blockHash);
+            if (!left.biomeHash.equals(right.biomeHash))
+                return divergence(left.pos, "biomeHash", left.biomeHash, right.biomeHash);
+            if (!left.heightmapHash.equals(right.heightmapHash))
+                return divergence(
+                        left.pos, "heightmapHash", left.heightmapHash, right.heightmapHash);
+            if (!left.structureStartsHash.equals(right.structureStartsHash))
+                return divergence(
+                        left.pos,
+                        "structureStartsHash",
+                        left.structureStartsHash,
+                        right.structureStartsHash);
+            if (!left.structureReferencesHash.equals(right.structureReferencesHash))
+                return divergence(
+                        left.pos,
+                        "structureReferencesHash",
+                        left.structureReferencesHash,
+                        right.structureReferencesHash);
+            if (!left.carvingMaskHash.equals(right.carvingMaskHash))
+                return divergence(
+                        left.pos, "carvingMaskHash", left.carvingMaskHash, right.carvingMaskHash);
+            if (left.biomeMismatchCount != right.biomeMismatchCount)
+                return divergence(
+                        left.pos,
+                        "storedBiomeMismatchCount",
+                        "" + left.biomeMismatchCount,
+                        "" + right.biomeMismatchCount);
+            if (!left.firstBiomeMismatch.equals(right.firstBiomeMismatch))
+                return divergence(
+                        left.pos,
+                        "firstStoredBiomeMismatch",
+                        left.firstBiomeMismatch,
+                        right.firstBiomeMismatch);
             return null;
         }
 
-        private Divergence divergence(ChunkPos pos, String field, String nativeValue, String isolatedValue) {
+        private Divergence divergence(
+                ChunkPos pos, String field, String nativeValue, String isolatedValue) {
             return new Divergence(writerIndex, phase, pos, field, nativeValue, isolatedValue);
         }
     }
@@ -948,7 +1227,12 @@ public final class FeatureFrontierEvidence {
         private final ChunkPos stageProbe;
         private final BlockPos blockProbe;
 
-        private Session(Mode mode, Path root, ResourceKey<Level> dimension, ChunkPos target, List<ChunkPos> writers) {
+        private Session(
+                Mode mode,
+                Path root,
+                ResourceKey<Level> dimension,
+                ChunkPos target,
+                List<ChunkPos> writers) {
             this(mode, root, dimension, target, writers, null);
         }
 
@@ -963,19 +1247,45 @@ public final class FeatureFrontierEvidence {
             this.root = root;
             this.dimension = dimension;
             this.target = target;
-            String probeX = System.getProperty("randomnibble6plus24generator.phase2c1r.stageProbeX");
-            String probeZ = System.getProperty("randomnibble6plus24generator.phase2c1r.stageProbeZ");
-            this.stageProbe = explicitStageProbe != null
-                    ? explicitStageProbe
-                    : probeX == null || probeZ == null
+            String probeX =
+                    System.getProperty(
+                            io.github.recrivenvi.randomnibble6plus24generator
+                                            .RandomNibble6Plus24Generator.MOD_ID
+                                    + ".phase2c1r.stageProbeX");
+            String probeZ =
+                    System.getProperty(
+                            io.github.recrivenvi.randomnibble6plus24generator
+                                            .RandomNibble6Plus24Generator.MOD_ID
+                                    + ".phase2c1r.stageProbeZ");
+            this.stageProbe =
+                    explicitStageProbe != null
+                            ? explicitStageProbe
+                            : probeX == null || probeZ == null
+                                    ? null
+                                    : new ChunkPos(
+                                            Integer.parseInt(probeX), Integer.parseInt(probeZ));
+            String blockX =
+                    System.getProperty(
+                            io.github.recrivenvi.randomnibble6plus24generator
+                                            .RandomNibble6Plus24Generator.MOD_ID
+                                    + ".phase2c1r.stageProbeBlockX");
+            String blockY =
+                    System.getProperty(
+                            io.github.recrivenvi.randomnibble6plus24generator
+                                            .RandomNibble6Plus24Generator.MOD_ID
+                                    + ".phase2c1r.stageProbeBlockY");
+            String blockZ =
+                    System.getProperty(
+                            io.github.recrivenvi.randomnibble6plus24generator
+                                            .RandomNibble6Plus24Generator.MOD_ID
+                                    + ".phase2c1r.stageProbeBlockZ");
+            this.blockProbe =
+                    blockX == null || blockY == null || blockZ == null
                             ? null
-                            : new ChunkPos(Integer.parseInt(probeX), Integer.parseInt(probeZ));
-            String blockX = System.getProperty("randomnibble6plus24generator.phase2c1r.stageProbeBlockX");
-            String blockY = System.getProperty("randomnibble6plus24generator.phase2c1r.stageProbeBlockY");
-            String blockZ = System.getProperty("randomnibble6plus24generator.phase2c1r.stageProbeBlockZ");
-            this.blockProbe = blockX == null || blockY == null || blockZ == null
-                    ? null
-                    : new BlockPos(Integer.parseInt(blockX), Integer.parseInt(blockY), Integer.parseInt(blockZ));
+                            : new BlockPos(
+                                    Integer.parseInt(blockX),
+                                    Integer.parseInt(blockY),
+                                    Integer.parseInt(blockZ));
             this.captured = new boolean[writers.size()][Phase.values().length];
             for (int i = 0; i < writers.size(); i++) {
                 ChunkPos writer = writers.get(i);
@@ -985,8 +1295,11 @@ public final class FeatureFrontierEvidence {
 
         private synchronized void record(int writer, Phase phase) {
             if (captured[writer][phase.ordinal()]) {
-                throw new IllegalStateException("Duplicate FEATURES evidence checkpoint writer="
-                        + writer + " phase=" + phase);
+                throw new IllegalStateException(
+                        "Duplicate FEATURES evidence checkpoint writer="
+                                + writer
+                                + " phase="
+                                + phase);
             }
             captured[writer][phase.ordinal()] = true;
         }
@@ -995,8 +1308,11 @@ public final class FeatureFrontierEvidence {
             for (int writer = 0; writer < captured.length; writer++) {
                 for (Phase phase : Phase.values()) {
                     if (!captured[writer][phase.ordinal()]) {
-                        throw new IllegalStateException("Missing FEATURES evidence checkpoint writer="
-                                + writer + " phase=" + phase);
+                        throw new IllegalStateException(
+                                "Missing FEATURES evidence checkpoint writer="
+                                        + writer
+                                        + " phase="
+                                        + phase);
                     }
                 }
             }

@@ -1,19 +1,25 @@
 package io.github.recrivenvi.randomnibble6plus24generator.worldgen.session;
 
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.generator.MosaicChunkGenerator;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile.MosaicWorldProfile;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.ConcentricRingScope;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.ConcentricRingStateAccess;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.StructureCandidateScope;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.StructureCandidateStateAccess;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-
-import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ChunkGenerationTask;
@@ -37,14 +43,6 @@ import net.minecraft.world.level.levelgen.structure.StructureCheck;
 import net.minecraft.world.level.levelgen.structure.StructureStart;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 import net.minecraft.world.level.lighting.LevelLightEngine;
-import net.minecraft.nbt.CompoundTag;
-
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.generator.MosaicChunkGenerator;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile.MosaicWorldProfile;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.ConcentricRingScope;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.ConcentricRingStateAccess;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.StructureCandidateScope;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.StructureCandidateStateAccess;
 
 public final class IsolatedGenerationContext implements AutoCloseable {
 
@@ -65,7 +63,8 @@ public final class IsolatedGenerationContext implements AutoCloseable {
     private final LevelLightEngine localLightEngine;
     private final long contextSetupNanos;
     private final long structureStateNanos;
-    private final Set<ChunkStatus> executedStages = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private final Set<ChunkStatus> executedStages =
+            Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final AtomicLong suppressedPhysicalPoiUpdates = new AtomicLong();
     private final AtomicLong carverStageInvocationCount = new AtomicLong();
     private final AtomicReference<Long> observedCarverSeed = new AtomicReference<>();
@@ -91,10 +90,7 @@ public final class IsolatedGenerationContext implements AutoCloseable {
     private boolean closed;
 
     private IsolatedGenerationContext(
-            IsolatedGenerationMode mode,
-            ServerLevel hostLevel,
-            long worldSeed,
-            ChunkPos target) {
+            IsolatedGenerationMode mode, ServerLevel hostLevel, long worldSeed, ChunkPos target) {
         long setupStarted = System.nanoTime();
         this.mode = mode;
         this.hostLevel = hostLevel;
@@ -105,84 +101,99 @@ public final class IsolatedGenerationContext implements AutoCloseable {
 
         MinecraftServer server = hostLevel.getServer();
         RegistryAccess registryAccess = hostLevel.registryAccess();
-        this.randomState = RandomState.create(
-                generator.generatorSettings().value(),
-                registryAccess.lookupOrThrow(Registries.NOISE),
-                worldSeed);
+        this.randomState =
+                RandomState.create(
+                        generator.generatorSettings().value(),
+                        registryAccess.lookupOrThrow(Registries.NOISE),
+                        worldSeed);
         long structureStateStarted = System.nanoTime();
-        this.structureState = generator.createState(
-                registryAccess.lookupOrThrow(Registries.STRUCTURE_SET),
-                randomState,
-                worldSeed);
+        this.structureState =
+                generator.createState(
+                        registryAccess.lookupOrThrow(Registries.STRUCTURE_SET),
+                        randomState,
+                        worldSeed);
         if (mode == IsolatedGenerationMode.ISOLATED_MOSAIC) {
-            ((ConcentricRingStateAccess) structureState).randomnibble6plus24generator$setRingScope(
-                    ConcentricRingScope.forV2Target(target, worldSeed,
-                            generator.getBiomeSource(), structureState.possibleStructureSets()));
-            ((StructureCandidateStateAccess) structureState).randomnibble6plus24generator$setCandidateScope(
-                    StructureCandidateScope.forV2Target(target, worldSeed, structureState.possibleStructureSets()));
+            ((ConcentricRingStateAccess) structureState)
+                    .randomnibble6plus24generator$setRingScope(
+                            ConcentricRingScope.forV2Target(
+                                    target,
+                                    worldSeed,
+                                    generator.getBiomeSource(),
+                                    structureState.possibleStructureSets()));
+            ((StructureCandidateStateAccess) structureState)
+                    .randomnibble6plus24generator$setCandidateScope(
+                            StructureCandidateScope.forV2Target(
+                                    target, worldSeed, structureState.possibleStructureSets()));
         }
         this.structureState.ensureStructuresGenerated();
         this.structureStateNanos = System.nanoTime() - structureStateStarted;
         this.chunkScanAccess = new EmptyVirtualChunkScanAccess();
-        this.structureCheck = new StructureCheck(
-                chunkScanAccess,
-                registryAccess,
-                server.getStructureManager(),
-                dimension,
-                generator,
-                randomState,
-                hostLevel,
-                generator.getBiomeSource(),
-                worldSeed,
-                server.getFixerUpper());
+        this.structureCheck =
+                new StructureCheck(
+                        chunkScanAccess,
+                        registryAccess,
+                        server.getStructureManager(),
+                        dimension,
+                        generator,
+                        randomState,
+                        hostLevel,
+                        generator.getBiomeSource(),
+                        worldSeed,
+                        server.getFixerUpper());
         WorldOptions physicalOptions = server.getWorldGenSettings().options();
-        this.structureManager = new StructureManager(
-                hostLevel,
-                new WorldOptions(worldSeed, physicalOptions.generateStructures(), false),
-                structureCheck);
-        this.biomeManager = new BiomeManager(
-                (quartX, quartY, quartZ) -> generator.getBiomeSource().getNoiseBiome(
-                        quartX,
-                        quartY,
-                        quartZ,
-                        randomState.sampler()),
-                BiomeManager.obfuscateSeed(worldSeed));
-        this.worldGenContext = new WorldGenContext(
-                hostLevel,
-                generator,
-                server.getStructureManager(),
-                hostLevel.getChunkSource().getLightEngine(),
-                server,
-                ignored -> {
-                });
+        this.structureManager =
+                new StructureManager(
+                        hostLevel,
+                        new WorldOptions(worldSeed, physicalOptions.generateStructures(), false),
+                        structureCheck);
+        this.biomeManager =
+                new BiomeManager(
+                        (quartX, quartY, quartZ) ->
+                                generator
+                                        .getBiomeSource()
+                                        .getNoiseBiome(
+                                                quartX, quartY, quartZ, randomState.sampler()),
+                        BiomeManager.obfuscateSeed(worldSeed));
+        this.worldGenContext =
+                new WorldGenContext(
+                        hostLevel,
+                        generator,
+                        server.getStructureManager(),
+                        hostLevel.getChunkSource().getLightEngine(),
+                        server,
+                        ignored -> {});
         this.chunkMap = new VirtualGeneratingChunkMap(this);
-        this.localLightEngine = new LevelLightEngine(new LightChunkGetter() {
-            @Override
-            public net.minecraft.world.level.chunk.LightChunk getChunkForLighting(int x, int z) {
-                return chunkMap.chunkForLighting(x, z);
-            }
+        this.localLightEngine =
+                new LevelLightEngine(
+                        new LightChunkGetter() {
+                            @Override
+                            public net.minecraft.world.level.chunk.LightChunk getChunkForLighting(
+                                    int x, int z) {
+                                return chunkMap.chunkForLighting(x, z);
+                            }
 
-            @Override
-            public net.minecraft.world.level.BlockGetter getLevel() {
-                // The engine uses this as the dimension height accessor. No physical chunk lookup is delegated.
-                return hostLevel;
-            }
-        }, true, hostLevel.dimensionType().hasSkyLight());
+                            @Override
+                            public net.minecraft.world.level.BlockGetter getLevel() {
+                                // The engine uses this as the dimension height accessor. No
+                                // physical chunk lookup is delegated.
+                                return hostLevel;
+                            }
+                        },
+                        true,
+                        hostLevel.dimensionType().hasSkyLight());
         GenerationContextRegistry.bind(worldGenContext, this);
         this.contextSetupNanos = System.nanoTime() - setupStarted;
     }
 
     public static IsolatedGenerationContext create(
-            IsolatedGenerationMode mode,
-            ServerLevel hostLevel,
-            long worldSeed,
-            ChunkPos target) {
+            IsolatedGenerationMode mode, ServerLevel hostLevel, long worldSeed, ChunkPos target) {
         return new IsolatedGenerationContext(mode, hostLevel, worldSeed, target);
     }
 
     public SurfaceGenerationRun generate() {
         GenerationResult result = generateTo(ChunkStatus.SURFACE);
-        return new SurfaceGenerationRun(result.targetChunk(), result.metrics(), result.executedStages());
+        return new SurfaceGenerationRun(
+                result.targetChunk(), result.metrics(), result.executedStages());
     }
 
     public CarverGenerationRun generateCarvers() {
@@ -205,8 +216,8 @@ public final class IsolatedGenerationContext implements AutoCloseable {
     }
 
     /**
-     * Completes the finite V1 writer frontier in its frozen absolute Z/X order.
-     * A plain single-center generate-to-FEATURES operation is intentionally not exposed.
+     * Completes the finite V1 writer frontier in its frozen absolute Z/X order. A plain
+     * single-center generate-to-FEATURES operation is intentionally not exposed.
      */
     public FeatureStableGenerationRun generateFeaturesStable() {
         ensureOpen();
@@ -220,11 +231,15 @@ public final class IsolatedGenerationContext implements AutoCloseable {
         long physicalSeedBefore = hostLevel.getSeed();
         int loadedChunksBefore = hostLevel.getChunkSource().getLoadedChunksCount();
         for (ChunkPos writer : plan.writers()) {
-            ChunkGenerationTask task = chunkMap.scheduleGenerationTask(ChunkStatus.FEATURES, writer);
+            ChunkGenerationTask task =
+                    chunkMap.scheduleGenerationTask(ChunkStatus.FEATURES, writer);
             CompletableFutureDriver.runToCompletion(task);
-            ChunkAccess writerChunk = task.getCenter().getChunkIfPresentUnchecked(ChunkStatus.FEATURES);
-            if (writerChunk == null || !writerChunk.getPersistedStatus().isOrAfter(ChunkStatus.FEATURES)) {
-                throw new IllegalStateException("FEATURES writer did not reach FEATURES: " + writer);
+            ChunkAccess writerChunk =
+                    task.getCenter().getChunkIfPresentUnchecked(ChunkStatus.FEATURES);
+            if (writerChunk == null
+                    || !writerChunk.getPersistedStatus().isOrAfter(ChunkStatus.FEATURES)) {
+                throw new IllegalStateException(
+                        "FEATURES writer did not reach FEATURES: " + writer);
             }
         }
 
@@ -233,38 +248,47 @@ public final class IsolatedGenerationContext implements AutoCloseable {
             throw new IllegalStateException("Stable target did not stop at FEATURES: " + target);
         }
         Set<ChunkPos> actualFeatureChunks = chunkMap.chunksAtOrBeyond(ChunkStatus.FEATURES);
-        Set<ChunkPos> expectedFeatureChunks = plan.writers().stream()
-                .collect(java.util.stream.Collectors.toUnmodifiableSet());
+        Set<ChunkPos> expectedFeatureChunks =
+                plan.writers().stream().collect(java.util.stream.Collectors.toUnmodifiableSet());
         if (!actualFeatureChunks.equals(expectedFeatureChunks)) {
             throw new IllegalStateException(
                     "FeatureOrderingAlgorithmVersion 1 frontier violation; expected="
-                            + expectedFeatureChunks + ", actual=" + actualFeatureChunks);
+                            + expectedFeatureChunks
+                            + ", actual="
+                            + actualFeatureChunks);
         }
         if (!completedFeatureWriters.equals(plan.writers())) {
             throw new IllegalStateException(
-                    "FEATURES execution order violation; requested=" + plan.writers()
-                            + ", completed=" + completedFeatureWriters);
+                    "FEATURES execution order violation; requested="
+                            + plan.writers()
+                            + ", completed="
+                            + completedFeatureWriters);
         }
         Long observedSeed = observedFeatureSeed.get();
         if (observedSeed == null || observedSeed != worldSeed) {
             throw new PhysicalWorldAccessException(
-                    "FEATURES did not observe local world seed " + worldSeed + "; observed=" + observedSeed);
+                    "FEATURES did not observe local world seed "
+                            + worldSeed
+                            + "; observed="
+                            + observedSeed);
         }
         if (hostLevel.getSeed() != physicalSeedBefore) {
-            throw new PhysicalWorldAccessException("physical ServerLevel seed mutation during FEATURES");
+            throw new PhysicalWorldAccessException(
+                    "physical ServerLevel seed mutation during FEATURES");
         }
 
         int loadedChunksAfter = hostLevel.getChunkSource().getLoadedChunksCount();
         long elapsed = System.nanoTime() - started;
-        IsolatedGenerationMetrics metrics = new IsolatedGenerationMetrics(
-                contextSetupNanos,
-                structureStateNanos,
-                elapsed,
-                chunkMap.virtualChunkCount(),
-                chunkScanAccess.scanCount(),
-                suppressedPhysicalPoiUpdates.get(),
-                loadedChunksBefore,
-                loadedChunksAfter);
+        IsolatedGenerationMetrics metrics =
+                new IsolatedGenerationMetrics(
+                        contextSetupNanos,
+                        structureStateNanos,
+                        elapsed,
+                        chunkMap.virtualChunkCount(),
+                        chunkScanAccess.scanCount(),
+                        suppressedPhysicalPoiUpdates.get(),
+                        loadedChunksBefore,
+                        loadedChunksAfter);
         return new FeatureStableGenerationRun(
                 targetChunk,
                 metrics,
@@ -290,18 +314,22 @@ public final class IsolatedGenerationContext implements AutoCloseable {
     }
 
     /**
-     * Captures same-local-universe starts from the ordered writer frontier whose
-     * pieces intersect the target's 16x16 footprint. The returned NBT is
-     * detached before the session closes so the runtime overlay never needs to
-     * rerun FEATURES or inspect a physical neighbor.
+     * Captures same-local-universe starts from the ordered writer frontier whose pieces intersect
+     * the target's 16x16 footprint. The returned NBT is detached before the session closes so the
+     * runtime overlay never needs to rerun FEATURES or inspect a physical neighbor.
      */
     public List<CompoundTag> captureExternalStructureStarts(
             StructurePieceSerializationContext structureContext) {
         ensureOpen();
         FeatureOrderingPlan plan = FeatureOrderingPlan.targetLocalZxRowMajorV1(target);
-        BoundingBox targetBox = new BoundingBox(
-                target.getMinBlockX(), hostLevel.getMinY(), target.getMinBlockZ(),
-                target.getMaxBlockX(), hostLevel.getMaxY() - 1, target.getMaxBlockZ());
+        BoundingBox targetBox =
+                new BoundingBox(
+                        target.getMinBlockX(),
+                        hostLevel.getMinY(),
+                        target.getMinBlockZ(),
+                        target.getMaxBlockX(),
+                        hostLevel.getMaxY() - 1,
+                        target.getMaxBlockZ());
         List<CompoundTag> result = new java.util.ArrayList<>();
         for (ChunkPos writer : plan.writers()) {
             if (writer.equals(target)) continue;
@@ -309,8 +337,9 @@ public final class IsolatedGenerationContext implements AutoCloseable {
             if (chunk == null) continue;
             for (StructureStart start : chunk.getAllStarts().values()) {
                 if (start == null || !start.isValid()) continue;
-                boolean intersects = start.getPieces().stream()
-                        .anyMatch(piece -> piece.getBoundingBox().intersects(targetBox));
+                boolean intersects =
+                        start.getPieces().stream()
+                                .anyMatch(piece -> piece.getBoundingBox().intersects(targetBox));
                 if (intersects) result.add(start.createTag(structureContext, writer));
             }
         }
@@ -318,32 +347,44 @@ public final class IsolatedGenerationContext implements AutoCloseable {
     }
 
     /**
-     * Builds only the BIOMES-level virtual inputs needed by the physical SPAWN
-     * bridge.  No terrain, carvers, features, or Artifact work is performed.
+     * Builds only the BIOMES-level virtual inputs needed by the physical SPAWN bridge. No terrain,
+     * carvers, features, or Artifact work is performed.
      */
     public Map<ChunkPos, ChunkAccess> generateBiomesForSpawn(Set<ChunkPos> positions) {
         ensureOpen();
         Map<ChunkPos, ChunkAccess> result = new java.util.LinkedHashMap<>();
-        positions.stream().sorted(java.util.Comparator.comparingInt(ChunkPos::z)
-                .thenComparingInt(ChunkPos::x)).forEach(pos -> {
-            ChunkGenerationTask task = chunkMap.scheduleGenerationTask(ChunkStatus.BIOMES, pos);
-            CompletableFutureDriver.runToCompletion(task);
-            ChunkAccess chunk = chunkMap.chunkAt(pos, ChunkStatus.BIOMES);
-            if (chunk == null || chunk.getPersistedStatus() != ChunkStatus.BIOMES) {
-                throw new IllegalStateException("SPAWN BIOMES dependency did not reach BIOMES: " + pos);
-            }
-            result.put(pos, chunk);
-        });
+        positions.stream()
+                .sorted(
+                        java.util.Comparator.comparingInt(ChunkPos::z)
+                                .thenComparingInt(ChunkPos::x))
+                .forEach(
+                        pos -> {
+                            ChunkGenerationTask task =
+                                    chunkMap.scheduleGenerationTask(ChunkStatus.BIOMES, pos);
+                            CompletableFutureDriver.runToCompletion(task);
+                            ChunkAccess chunk = chunkMap.chunkAt(pos, ChunkStatus.BIOMES);
+                            if (chunk == null || chunk.getPersistedStatus() != ChunkStatus.BIOMES) {
+                                throw new IllegalStateException(
+                                        "SPAWN BIOMES dependency did not reach BIOMES: " + pos);
+                            }
+                            result.put(pos, chunk);
+                        });
         return Map.copyOf(result);
     }
 
     /** Copies only the already-generated stored palettes before this session closes. */
     public SpawnBiomeSnapshot captureSpawnBiomes(MosaicWorldProfile profile) {
         ensureOpen();
-        if (!chunkMap.chunksAtOrBeyond(ChunkStatus.FEATURES).containsAll(SpawnBiomeSnapshot.neighbors(target))) {
-            throw new IllegalStateException("SPAWN input capture requires the completed V2 FEATURES frontier");
+        if (!chunkMap.chunksAtOrBeyond(ChunkStatus.FEATURES)
+                .containsAll(SpawnBiomeSnapshot.neighbors(target))) {
+            throw new IllegalStateException(
+                    "SPAWN input capture requires the completed V2 FEATURES frontier");
         }
-        return SpawnBiomeSnapshot.capture(dimension, target, worldSeed, profile,
+        return SpawnBiomeSnapshot.capture(
+                dimension,
+                target,
+                worldSeed,
+                profile,
                 pos -> chunkMap.chunkAt(pos, ChunkStatus.BIOMES));
     }
 
@@ -450,7 +491,10 @@ public final class IsolatedGenerationContext implements AutoCloseable {
     public void recordCarverStageSeed(long seed) {
         if (seed != worldSeed) {
             throw new PhysicalWorldAccessException(
-                    "CARVERS received world seed " + seed + " instead of local world seed " + worldSeed);
+                    "CARVERS received world seed "
+                            + seed
+                            + " instead of local world seed "
+                            + worldSeed);
         }
         observedCarverSeed.compareAndSet(null, seed);
         if (observedCarverSeed.get() != seed) {
@@ -473,12 +517,14 @@ public final class IsolatedGenerationContext implements AutoCloseable {
     public void beginFeatureWriter(ChunkPos writer) {
         long packed = ChunkPos.pack(writer.x(), writer.z());
         if (!expectedFeatureWriters.contains(packed)) {
-            throw new IllegalStateException("Unexpected FEATURES writer outside V1 frontier: " + writer);
+            throw new IllegalStateException(
+                    "Unexpected FEATURES writer outside V1 frontier: " + writer);
         }
         int active = activeFeatureWriters.incrementAndGet();
         maxConcurrentFeatureWriters.accumulateAndGet(active, Math::max);
         if (active != 1) {
-            throw new IllegalStateException("Concurrent FEATURES writers inside one isolated session: " + active);
+            throw new IllegalStateException(
+                    "Concurrent FEATURES writers inside one isolated session: " + active);
         }
     }
 
@@ -486,14 +532,18 @@ public final class IsolatedGenerationContext implements AutoCloseable {
         completedFeatureWriters.add(writer);
         int active = activeFeatureWriters.decrementAndGet();
         if (active != 0) {
-            throw new IllegalStateException("FEATURES writer accounting imbalance after " + writer + ": " + active);
+            throw new IllegalStateException(
+                    "FEATURES writer accounting imbalance after " + writer + ": " + active);
         }
     }
 
     public void recordFeatureWorldSeed(long seed) {
         if (seed != worldSeed) {
             throw new PhysicalWorldAccessException(
-                    "FEATURES received world seed " + seed + " instead of local world seed " + worldSeed);
+                    "FEATURES received world seed "
+                            + seed
+                            + " instead of local world seed "
+                            + worldSeed);
         }
         observedFeatureSeed.compareAndSet(null, seed);
         if (observedFeatureSeed.get() != seed) {
@@ -523,18 +573,20 @@ public final class IsolatedGenerationContext implements AutoCloseable {
 
     public void recordFeatureSeed(long decorationSeed, int featureIndex, int step) {
         featureSeedInvocationCount.incrementAndGet();
-        featureSeedSequenceHash.updateAndGet(current -> {
-            long mixed = current ^ decorationSeed;
-            mixed *= 0x100000001b3L;
-            mixed ^= Integer.toUnsignedLong(featureIndex);
-            mixed *= 0x100000001b3L;
-            mixed ^= Integer.toUnsignedLong(step);
-            return mixed * 0x100000001b3L;
-        });
+        featureSeedSequenceHash.updateAndGet(
+                current -> {
+                    long mixed = current ^ decorationSeed;
+                    mixed *= 0x100000001b3L;
+                    mixed ^= Integer.toUnsignedLong(featureIndex);
+                    mixed *= 0x100000001b3L;
+                    mixed ^= Integer.toUnsignedLong(step);
+                    return mixed * 0x100000001b3L;
+                });
     }
 
     public synchronized void recordFeatureWrite(String feature, BlockPos pos, BlockState state) {
-        featureWrites.computeIfAbsent(feature, ignored -> new FeatureWriteAccumulator())
+        featureWrites
+                .computeIfAbsent(feature, ignored -> new FeatureWriteAccumulator())
                 .record(pos, state);
     }
 
@@ -552,9 +604,13 @@ public final class IsolatedGenerationContext implements AutoCloseable {
 
     private synchronized Map<String, String> featureWriteSummary() {
         Map<String, String> summary = new TreeMap<>();
-        featureWrites.forEach((feature, accumulator) -> summary.put(
-                feature,
-                accumulator.count + "@" + Long.toUnsignedString(accumulator.hash, 16)));
+        featureWrites.forEach(
+                (feature, accumulator) ->
+                        summary.put(
+                                feature,
+                                accumulator.count
+                                        + "@"
+                                        + Long.toUnsignedString(accumulator.hash, 16)));
         return summary;
     }
 
@@ -575,13 +631,11 @@ public final class IsolatedGenerationContext implements AutoCloseable {
     private static NoiseBasedChunkGenerator copyNoiseGenerator(ChunkGenerator generator) {
         if (generator instanceof NoiseBasedChunkGenerator noiseGenerator) {
             return new NoiseBasedChunkGenerator(
-                    noiseGenerator.getBiomeSource(),
-                    noiseGenerator.generatorSettings());
+                    noiseGenerator.getBiomeSource(), noiseGenerator.generatorSettings());
         }
         if (generator instanceof MosaicChunkGenerator mosaicGenerator) {
             return new NoiseBasedChunkGenerator(
-                    mosaicGenerator.getBiomeSource(),
-                    mosaicGenerator.generatorSettings());
+                    mosaicGenerator.getBiomeSource(), mosaicGenerator.generatorSettings());
         }
         throw new IllegalArgumentException(
                 "Isolated generation through FEATURES requires a noise-based generator configuration, found "
@@ -591,12 +645,10 @@ public final class IsolatedGenerationContext implements AutoCloseable {
     private record GenerationResult(
             ChunkAccess targetChunk,
             IsolatedGenerationMetrics metrics,
-            Set<ChunkStatus> executedStages) {
-    }
+            Set<ChunkStatus> executedStages) {}
 
     private static final class CompletableFutureDriver {
-        private CompletableFutureDriver() {
-        }
+        private CompletableFutureDriver() {}
 
         private static void runToCompletion(ChunkGenerationTask task) {
             while (true) {

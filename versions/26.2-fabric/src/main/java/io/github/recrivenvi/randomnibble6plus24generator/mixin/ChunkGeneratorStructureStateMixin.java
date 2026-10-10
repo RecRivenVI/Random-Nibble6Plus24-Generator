@@ -1,13 +1,15 @@
 package io.github.recrivenvi.randomnibble6plus24generator.mixin;
 
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executor;
-import java.util.function.Supplier;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.ConcentricRingScope;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.ConcentricRingStateAccess;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
+import java.util.function.Supplier;
 import net.minecraft.core.Holder;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.ChunkGeneratorStructureState;
@@ -18,8 +20,6 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.ConcentricRingScope;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.ConcentricRingStateAccess;
 
 @Mixin(ChunkGeneratorStructureState.class)
 abstract class ChunkGeneratorStructureStateMixin implements ConcentricRingStateAccess {
@@ -29,7 +29,8 @@ abstract class ChunkGeneratorStructureStateMixin implements ConcentricRingStateA
     @Override
     public void randomnibble6plus24generator$setRingScope(ConcentricRingScope scope) {
         if (hasGeneratedPositions || randomnibble6plus24generator$ringScope != null) {
-            throw new IllegalStateException("Concentric scope must be installed once, before native preparation");
+            throw new IllegalStateException(
+                    "Concentric scope must be installed once, before native preparation");
         }
         randomnibble6plus24generator$ringScope = scope;
     }
@@ -39,24 +40,35 @@ abstract class ChunkGeneratorStructureStateMixin implements ConcentricRingStateA
         return randomnibble6plus24generator$ringScope;
     }
 
-    @WrapOperation(method = "generateRingPositions", at = @At(value = "INVOKE", target =
-            "Ljava/util/concurrent/CompletableFuture;supplyAsync(Ljava/util/function/Supplier;Ljava/util/concurrent/Executor;)Ljava/util/concurrent/CompletableFuture;"))
+    @WrapOperation(
+            method = "generateRingPositions",
+            at =
+                    @At(
+                            value = "INVOKE",
+                            target =
+                                    "Ljava/util/concurrent/CompletableFuture;supplyAsync(Ljava/util/function/Supplier;Ljava/util/concurrent/Executor;)Ljava/util/concurrent/CompletableFuture;"))
     private CompletableFuture<ChunkPos> randomnibble6plus24generator$searchRelevantSlots(
-            Supplier<ChunkPos> search, Executor executor, Operation<CompletableFuture<ChunkPos>> original,
-            @Local(name = "initialX") int initialX, @Local(name = "initialZ") int initialZ) {
+            Supplier<ChunkPos> search,
+            Executor executor,
+            Operation<CompletableFuture<ChunkPos>> original,
+            @Local(name = "initialX") int initialX,
+            @Local(name = "initialZ") int initialZ) {
         ConcentricRingScope scope = randomnibble6plus24generator$ringScope;
-        return scope == null ? original.call(search, executor)
+        return scope == null
+                ? original.call(search, executor)
                 : scope.search(initialX, initialZ, search, executor);
     }
 
     @WrapMethod(method = "generateRingPositions")
     private CompletableFuture<List<ChunkPos>> randomnibble6plus24generator$finiteRingView(
-            Holder<StructureSet> set, ConcentricRingsStructurePlacement placement,
+            Holder<StructureSet> set,
+            ConcentricRingsStructurePlacement placement,
             Operation<CompletableFuture<List<ChunkPos>>> original) {
         ConcentricRingScope scope = randomnibble6plus24generator$ringScope;
         if (scope == null) return original.call(set, placement);
         scope.beginRing();
         long start = System.nanoTime();
-        return original.call(set, placement).thenApply(list -> scope.finish(list, System.nanoTime() - start));
+        return original.call(set, placement)
+                .thenApply(list -> scope.finish(list, System.nanoTime() - start));
     }
 }

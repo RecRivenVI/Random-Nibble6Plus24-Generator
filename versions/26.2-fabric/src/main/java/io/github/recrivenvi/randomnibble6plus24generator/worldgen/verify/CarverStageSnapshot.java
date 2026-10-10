@@ -7,7 +7,6 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HexFormat;
-
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ProtoChunk;
@@ -20,9 +19,7 @@ public final class CarverStageSnapshot {
     private final String hash;
 
     private CarverStageSnapshot(
-            SurfaceStageSnapshot base,
-            boolean carvingMaskPresent,
-            long[] carvingMask) {
+            SurfaceStageSnapshot base, boolean carvingMaskPresent, long[] carvingMask) {
         this.base = base;
         this.carvingMaskPresent = carvingMaskPresent;
         this.carvingMask = carvingMask;
@@ -32,7 +29,8 @@ public final class CarverStageSnapshot {
     public static CarverStageSnapshot capture(ChunkAccess chunk, RegistryAccess registryAccess) {
         if (!(chunk instanceof ProtoChunk protoChunk)) {
             throw new IllegalArgumentException(
-                    "Stage-exact CARVERS capture requires ProtoChunk, found " + chunk.getClass().getName());
+                    "Stage-exact CARVERS capture requires ProtoChunk, found "
+                            + chunk.getClass().getName());
         }
         var mask = protoChunk.getCarvingMask();
         return new CarverStageSnapshot(

@@ -1,5 +1,13 @@
 package io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify;
 
+import io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile.MosaicWorldProfile;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.seed.MosaicSeedResolver;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.CarverGenerationRun;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.CarverTrace;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.GenerationContextRegistry;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.IsolatedGenerationMetrics;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.IsolatedGenerationSession;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -11,7 +19,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
@@ -23,19 +30,12 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 
-import io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile.MosaicWorldProfile;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.seed.MosaicSeedResolver;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.CarverGenerationRun;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.CarverTrace;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.GenerationContextRegistry;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.IsolatedGenerationSession;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.IsolatedGenerationMetrics;
-
 /** Explicit CARVERS development harness; never runs unless its JVM property is set. */
 public final class Phase2BVerification {
 
-    public static final String VERIFY_PROPERTY = "randomnibble6plus24generator.phase2b.verify";
+    public static final String VERIFY_PROPERTY =
+            io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator.MOD_ID
+                    + ".phase2b.verify";
     public static final String SURFACE_GOLDEN =
             "cf8a46342321d8ec0baa089631debd3c38572b3dd8968fbbb66c76dd2e7d5b3f";
     public static final String CARVER_GOLDEN =
@@ -43,17 +43,17 @@ public final class Phase2BVerification {
 
     private static final Fixture SMOKE_FIXTURE =
             new Fixture(123456789L, Level.OVERWORLD, ChunkPos.ZERO);
-    private static final Set<ChunkStatus> EXPECTED_CARVER_STAGES = Set.of(
-            ChunkStatus.EMPTY,
-            ChunkStatus.STRUCTURE_STARTS,
-            ChunkStatus.STRUCTURE_REFERENCES,
-            ChunkStatus.BIOMES,
-            ChunkStatus.NOISE,
-            ChunkStatus.SURFACE,
-            ChunkStatus.CARVERS);
+    private static final Set<ChunkStatus> EXPECTED_CARVER_STAGES =
+            Set.of(
+                    ChunkStatus.EMPTY,
+                    ChunkStatus.STRUCTURE_STARTS,
+                    ChunkStatus.STRUCTURE_REFERENCES,
+                    ChunkStatus.BIOMES,
+                    ChunkStatus.NOISE,
+                    ChunkStatus.SURFACE,
+                    ChunkStatus.CARVERS);
 
-    private Phase2BVerification() {
-    }
+    private Phase2BVerification() {}
 
     public static void runIfRequested(MinecraftServer server) {
         String mode = System.getProperty(VERIFY_PROPERTY, "");
@@ -80,14 +80,18 @@ public final class Phase2BVerification {
     private static void runSmoke(MinecraftServer server) {
         ServerLevel level = requireLevel(server, Level.OVERWORLD);
         MosaicWorldProfile profile = MosaicWorldProfile.current();
-        long localSeed = new MosaicSeedResolver(profile).resolveLocalWorldSeed(
-                SMOKE_FIXTURE.masterSeed(),
-                SMOKE_FIXTURE.dimension(),
-                SMOKE_FIXTURE.target());
+        long localSeed =
+                new MosaicSeedResolver(profile)
+                        .resolveLocalWorldSeed(
+                                SMOKE_FIXTURE.masterSeed(),
+                                SMOKE_FIXTURE.dimension(),
+                                SMOKE_FIXTURE.target());
 
-        var surfaceRun = new IsolatedGenerationSession(profile)
-                .generateSurface(level, SMOKE_FIXTURE.masterSeed(), SMOKE_FIXTURE.target());
-        SurfaceStageSnapshot surface = SurfaceStageSnapshot.capture(surfaceRun.targetChunk(), level.registryAccess());
+        var surfaceRun =
+                new IsolatedGenerationSession(profile)
+                        .generateSurface(level, SMOKE_FIXTURE.masterSeed(), SMOKE_FIXTURE.target());
+        SurfaceStageSnapshot surface =
+                SurfaceStageSnapshot.capture(surfaceRun.targetChunk(), level.registryAccess());
         assertHash(SURFACE_GOLDEN, surface.hash(), "SURFACE golden before CARVERS");
 
         FixtureResult first = runFixture(server, SMOKE_FIXTURE, true);
@@ -116,17 +120,11 @@ public final class Phase2BVerification {
         VerificationStats stats = new VerificationStats();
         Map<Fixture, String> hashes = new HashMap<>();
         long[] originSeeds = {
-            0L,
-            1L,
-            -1L,
-            123456789L,
-            -987654321L,
-            Long.MIN_VALUE,
-            Long.MAX_VALUE,
-            0x123456789ABCDEFL
+            0L, 1L, -1L, 123456789L, -987654321L, Long.MIN_VALUE, Long.MAX_VALUE, 0x123456789ABCDEFL
         };
         for (long seed : originSeeds) {
-            verifyAndRecord(server, new Fixture(seed, Level.OVERWORLD, ChunkPos.ZERO), hashes, stats);
+            verifyAndRecord(
+                    server, new Fixture(seed, Level.OVERWORLD, ChunkPos.ZERO), hashes, stats);
         }
 
         ChunkPos[] overworldPositions = {
@@ -156,17 +154,21 @@ public final class Phase2BVerification {
         }
 
         if (stats.fixtureCount != 72 || hashes.size() != 72) {
-            throw new IllegalStateException("Expected exactly 72 CARVERS fixtures, found "
-                    + stats.fixtureCount + "/" + hashes.size());
+            throw new IllegalStateException(
+                    "Expected exactly 72 CARVERS fixtures, found "
+                            + stats.fixtureCount
+                            + "/"
+                            + hashes.size());
         }
         assertHash(CARVER_GOLDEN, hashes.get(SMOKE_FIXTURE), "72-fixture CARVERS golden");
 
-        List<Fixture> orderFixtures = List.of(
-                SMOKE_FIXTURE,
-                new Fixture(1L, Level.OVERWORLD, new ChunkPos(1, 0)),
-                new Fixture(-1L, Level.OVERWORLD, new ChunkPos(-1, 1)),
-                new Fixture(Long.MIN_VALUE, Level.NETHER, new ChunkPos(1, -1)),
-                new Fixture(Long.MAX_VALUE, Level.END, new ChunkPos(-125, 37)));
+        List<Fixture> orderFixtures =
+                List.of(
+                        SMOKE_FIXTURE,
+                        new Fixture(1L, Level.OVERWORLD, new ChunkPos(1, 0)),
+                        new Fixture(-1L, Level.OVERWORLD, new ChunkPos(-1, 1)),
+                        new Fixture(Long.MIN_VALUE, Level.NETHER, new ChunkPos(1, -1)),
+                        new Fixture(Long.MAX_VALUE, Level.END, new ChunkPos(-125, 37)));
         runOrderIndependence(server, orderFixtures, hashes);
         runConcurrentIsolation(server, orderFixtures, hashes);
         runExceptionCleanupAndWorkerReuse(server, orderFixtures.getFirst(), hashes);
@@ -200,16 +202,13 @@ public final class Phase2BVerification {
         stats.accept(fixture, result);
     }
 
-    private static FixtureResult runFixture(
-            MinecraftServer server,
-            Fixture fixture,
-            boolean log) {
+    private static FixtureResult runFixture(MinecraftServer server, Fixture fixture, boolean log) {
         ServerLevel level = requireLevel(server, fixture.dimension());
         MosaicWorldProfile profile = MosaicWorldProfile.current();
-        long localSeed = new MosaicSeedResolver(profile).resolveLocalWorldSeed(
-                fixture.masterSeed(),
-                fixture.dimension(),
-                fixture.target());
+        long localSeed =
+                new MosaicSeedResolver(profile)
+                        .resolveLocalWorldSeed(
+                                fixture.masterSeed(), fixture.dimension(), fixture.target());
         if (fixture.dimension() == Level.OVERWORLD
                 && fixture.target().equals(ChunkPos.ZERO)
                 && localSeed != fixture.masterSeed()) {
@@ -218,36 +217,47 @@ public final class Phase2BVerification {
         if (fixture.dimension() == Level.OVERWORLD
                 && !fixture.target().equals(ChunkPos.ZERO)
                 && localSeed == fixture.masterSeed()) {
-            throw new IllegalStateException("Non-origin fixture did not exercise a derived seed: " + fixture);
+            throw new IllegalStateException(
+                    "Non-origin fixture did not exercise a derived seed: " + fixture);
         }
 
-        CarverGenerationRun isolatedRun = new IsolatedGenerationSession(profile)
-                .generateCarvers(level, fixture.masterSeed(), fixture.target());
-        CarverGenerationRun controlRun = new VanillaCarverControl()
-                .generateCarvers(level, localSeed, fixture.target());
+        CarverGenerationRun isolatedRun =
+                new IsolatedGenerationSession(profile)
+                        .generateCarvers(level, fixture.masterSeed(), fixture.target());
+        CarverGenerationRun controlRun =
+                new VanillaCarverControl().generateCarvers(level, localSeed, fixture.target());
         assertBoundary(isolatedRun);
         assertBoundary(controlRun);
         assertTrace(isolatedRun.carverTrace(), localSeed, fixture, "isolated");
         assertTrace(controlRun.carverTrace(), localSeed, fixture, "virtual-control");
         if (!isolatedRun.carverTrace().equals(controlRun.carverTrace())) {
             throw new SurfaceParityMismatchException(
-                    "CARVERS trace mismatch for " + fixture + "; isolated="
-                            + isolatedRun.carverTrace() + ", control=" + controlRun.carverTrace());
+                    "CARVERS trace mismatch for "
+                            + fixture
+                            + "; isolated="
+                            + isolatedRun.carverTrace()
+                            + ", control="
+                            + controlRun.carverTrace());
         }
 
-        CarverStageSnapshot isolated = CarverStageSnapshot.capture(
-                isolatedRun.targetChunk(), level.registryAccess());
-        CarverStageSnapshot control = CarverStageSnapshot.capture(
-                controlRun.targetChunk(), level.registryAccess());
+        CarverStageSnapshot isolated =
+                CarverStageSnapshot.capture(isolatedRun.targetChunk(), level.registryAccess());
+        CarverStageSnapshot control =
+                CarverStageSnapshot.capture(controlRun.targetChunk(), level.registryAccess());
         try {
             isolated.assertEquivalentTo(control);
         } catch (SurfaceParityMismatchException mismatch) {
             throw new SurfaceParityMismatchException(
-                    "stage=CARVERS, dimension=" + fixture.dimension().identifier()
-                            + ", masterSeed=" + fixture.masterSeed()
-                            + ", localWorldSeed=" + localSeed
-                            + ", chunkPos=" + fixture.target()
-                            + ", firstDivergence=" + mismatch.getMessage());
+                    "stage=CARVERS, dimension="
+                            + fixture.dimension().identifier()
+                            + ", masterSeed="
+                            + fixture.masterSeed()
+                            + ", localWorldSeed="
+                            + localSeed
+                            + ", chunkPos="
+                            + fixture.target()
+                            + ", firstDivergence="
+                            + mismatch.getMessage());
         }
 
         if (log) {
@@ -271,10 +281,13 @@ public final class Phase2BVerification {
     private static IsolatedResult runIsolated(MinecraftServer server, Fixture fixture) {
         ServerLevel level = requireLevel(server, fixture.dimension());
         MosaicWorldProfile profile = MosaicWorldProfile.current();
-        long localSeed = new MosaicSeedResolver(profile).resolveLocalWorldSeed(
-                fixture.masterSeed(), fixture.dimension(), fixture.target());
-        CarverGenerationRun run = new IsolatedGenerationSession(profile)
-                .generateCarvers(level, fixture.masterSeed(), fixture.target());
+        long localSeed =
+                new MosaicSeedResolver(profile)
+                        .resolveLocalWorldSeed(
+                                fixture.masterSeed(), fixture.dimension(), fixture.target());
+        CarverGenerationRun run =
+                new IsolatedGenerationSession(profile)
+                        .generateCarvers(level, fixture.masterSeed(), fixture.target());
         assertBoundary(run);
         assertTrace(run.carverTrace(), localSeed, fixture, "isolated-replay");
         return new IsolatedResult(
@@ -284,9 +297,7 @@ public final class Phase2BVerification {
     }
 
     private static void runOrderIndependence(
-            MinecraftServer server,
-            List<Fixture> fixtures,
-            Map<Fixture, String> expectedHashes) {
+            MinecraftServer server, List<Fixture> fixtures, Map<Fixture, String> expectedHashes) {
         assertSequence(server, fixtures, expectedHashes, "forward");
         List<Fixture> reverse = new ArrayList<>(fixtures);
         Collections.reverse(reverse);
@@ -295,7 +306,8 @@ public final class Phase2BVerification {
         Collections.shuffle(shuffled, new Random(0x26_2B_CA4EL));
         assertSequence(server, shuffled, expectedHashes, "shuffle");
         assertNoContextLeak("CARVERS order replays");
-        RandomNibble6Plus24Generator.LOGGER.info("Phase 2B forward/reverse/shuffle order independence PASS");
+        RandomNibble6Plus24Generator.LOGGER.info(
+                "Phase 2B forward/reverse/shuffle order independence PASS");
     }
 
     private static void assertSequence(
@@ -312,20 +324,24 @@ public final class Phase2BVerification {
     }
 
     private static void runConcurrentIsolation(
-            MinecraftServer server,
-            List<Fixture> fixtures,
-            Map<Fixture, String> expectedHashes) {
+            MinecraftServer server, List<Fixture> fixtures, Map<Fixture, String> expectedHashes) {
         ExecutorService workers = Executors.newFixedThreadPool(fixtures.size());
         try {
             List<Future<ConcurrentResult>> futures = new ArrayList<>();
             for (Fixture fixture : fixtures) {
-                futures.add(workers.submit(() -> new ConcurrentResult(
-                        fixture,
-                        runIsolated(server, fixture).snapshot().hash())));
+                futures.add(
+                        workers.submit(
+                                () ->
+                                        new ConcurrentResult(
+                                                fixture,
+                                                runIsolated(server, fixture).snapshot().hash())));
             }
             for (Future<ConcurrentResult> future : futures) {
                 ConcurrentResult result = get(future);
-                assertHash(expectedHashes.get(result.fixture()), result.hash(), "parallel " + result.fixture());
+                assertHash(
+                        expectedHashes.get(result.fixture()),
+                        result.hash(),
+                        "parallel " + result.fixture());
             }
         } finally {
             workers.shutdownNow();
@@ -336,38 +352,44 @@ public final class Phase2BVerification {
     }
 
     private static void runExceptionCleanupAndWorkerReuse(
-            MinecraftServer server,
-            Fixture validFixture,
-            Map<Fixture, String> expectedHashes) {
+            MinecraftServer server, Fixture validFixture, Map<Fixture, String> expectedHashes) {
         ExecutorService worker = Executors.newSingleThreadExecutor();
         try {
-            Future<Boolean> failure = worker.submit(() -> {
-                try {
-                    runIsolated(server, new Fixture(
-                            17L,
-                            Level.OVERWORLD,
-                            new ChunkPos(Integer.MAX_VALUE, Integer.MAX_VALUE)));
-                    return false;
-                } catch (RuntimeException expected) {
-                    return true;
-                }
-            });
+            Future<Boolean> failure =
+                    worker.submit(
+                            () -> {
+                                try {
+                                    runIsolated(
+                                            server,
+                                            new Fixture(
+                                                    17L,
+                                                    Level.OVERWORLD,
+                                                    new ChunkPos(
+                                                            Integer.MAX_VALUE, Integer.MAX_VALUE)));
+                                    return false;
+                                } catch (RuntimeException expected) {
+                                    return true;
+                                }
+                            });
             if (!get(failure)) {
                 throw new IllegalStateException("Injected CARVERS session did not fail");
             }
             assertNoContextLeak("CARVERS exception path");
-            Future<String> reuse = worker.submit(() -> runIsolated(server, validFixture).snapshot().hash());
+            Future<String> reuse =
+                    worker.submit(() -> runIsolated(server, validFixture).snapshot().hash());
             assertHash(expectedHashes.get(validFixture), get(reuse), "CARVERS worker reuse");
         } finally {
             worker.shutdownNow();
         }
         assertNoContextLeak("CARVERS worker reuse completion");
-        RandomNibble6Plus24Generator.LOGGER.info("Phase 2B exception cleanup and worker reuse PASS");
+        RandomNibble6Plus24Generator.LOGGER.info(
+                "Phase 2B exception cleanup and worker reuse PASS");
     }
 
     private static void runPhysicalNeighborIsolation(MinecraftServer server) {
         ServerLevel level = requireLevel(server, Level.OVERWORLD);
-        Fixture fixture = new Fixture(0x510E527FADE682D1L, Level.OVERWORLD, new ChunkPos(50_100, -50_100));
+        Fixture fixture =
+                new Fixture(0x510E527FADE682D1L, Level.OVERWORLD, new ChunkPos(50_100, -50_100));
         IsolatedResult absent = runIsolated(server, fixture);
 
         List<ChunkPos> physicalPositions = square(fixture.target(), 1);
@@ -377,17 +399,20 @@ public final class Phase2BVerification {
             level.getChunk(pos.x(), pos.z(), ChunkStatus.FULL, true);
         }
         IsolatedResult generated = runIsolated(server, fixture);
-        assertHash(absent.snapshot().hash(), generated.snapshot().hash(),
+        assertHash(
+                absent.snapshot().hash(),
+                generated.snapshot().hash(),
                 "CARVERS physical neighbors absent versus generated");
 
         List<BlockPos> markers = new ArrayList<>();
         for (int index = 0; index < physicalPositions.size(); index++) {
             ChunkPos pos = physicalPositions.get(index);
             for (int offsetY = 0; offsetY < 8; offsetY++) {
-                BlockPos marker = new BlockPos(
-                        pos.getMinBlockX() + 8,
-                        level.getMinY() + 48 + index + offsetY,
-                        pos.getMinBlockZ() + 8);
+                BlockPos marker =
+                        new BlockPos(
+                                pos.getMinBlockX() + 8,
+                                level.getMinY() + 48 + index + offsetY,
+                                pos.getMinBlockZ() + 8);
                 markers.add(marker);
                 level.setBlock(
                         marker,
@@ -400,7 +425,9 @@ public final class Phase2BVerification {
         PhysicalWorldState before = PhysicalWorldState.capture(level, physicalPositions, markers);
         IsolatedResult modified = runIsolated(server, fixture);
         PhysicalWorldState after = PhysicalWorldState.capture(level, physicalPositions, markers);
-        assertHash(absent.snapshot().hash(), modified.snapshot().hash(),
+        assertHash(
+                absent.snapshot().hash(),
+                modified.snapshot().hash(),
                 "CARVERS physical neighbors absent versus cave-modified");
         before.assertUnchangedBy(after);
         RandomNibble6Plus24Generator.LOGGER.info(
@@ -415,29 +442,35 @@ public final class Phase2BVerification {
 
     private static void assertBoundary(CarverGenerationRun run) {
         if (!run.executedStages().equals(EXPECTED_CARVER_STAGES)) {
-            throw new IllegalStateException("Unexpected CARVERS stage set: " + run.executedStages());
+            throw new IllegalStateException(
+                    "Unexpected CARVERS stage set: " + run.executedStages());
         }
         if (run.targetChunk().getPersistedStatus() != ChunkStatus.CARVERS) {
-            throw new IllegalStateException("Target crossed or missed CARVERS: "
-                    + run.targetChunk().getPersistedStatus());
+            throw new IllegalStateException(
+                    "Target crossed or missed CARVERS: " + run.targetChunk().getPersistedStatus());
         }
-        if (run.metrics().physicalLoadedChunksBefore() != run.metrics().physicalLoadedChunksAfter()) {
+        if (run.metrics().physicalLoadedChunksBefore()
+                != run.metrics().physicalLoadedChunksAfter()) {
             throw new PhysicalSideEffectAssertionError(
                     "Physical loaded chunk count changed during CARVERS: " + run.metrics());
         }
     }
 
     private static void assertTrace(
-            CarverTrace trace,
-            long localSeed,
-            Fixture fixture,
-            String path) {
+            CarverTrace trace, long localSeed, Fixture fixture, String path) {
         if (trace.observedWorldSeed() != localSeed) {
-            throw new IllegalStateException(path + " CARVERS seed mismatch for " + fixture
-                    + "; expected=" + localSeed + ", actual=" + trace.observedWorldSeed());
+            throw new IllegalStateException(
+                    path
+                            + " CARVERS seed mismatch for "
+                            + fixture
+                            + "; expected="
+                            + localSeed
+                            + ", actual="
+                            + trace.observedWorldSeed());
         }
         if (trace.carverStageInvocationCount() < 1 || trace.sourceChunkCount() != 17 * 17) {
-            throw new IllegalStateException(path + " CARVERS trace incomplete for " + fixture + ": " + trace);
+            throw new IllegalStateException(
+                    path + " CARVERS trace incomplete for " + fixture + ": " + trace);
         }
     }
 
@@ -461,8 +494,11 @@ public final class Phase2BVerification {
 
     private static void assertNoContextLeak(String phase) {
         if (GenerationContextRegistry.bindingCount() != 0) {
-            throw new IllegalStateException("Generation context bridge leaked after " + phase + ": "
-                    + GenerationContextRegistry.bindingCount());
+            throw new IllegalStateException(
+                    "Generation context bridge leaked after "
+                            + phase
+                            + ": "
+                            + GenerationContextRegistry.bindingCount());
         }
     }
 
@@ -496,23 +532,15 @@ public final class Phase2BVerification {
         return runtime.totalMemory() - runtime.freeMemory();
     }
 
-    private record Fixture(long masterSeed, ResourceKey<Level> dimension, ChunkPos target) {
-    }
+    private record Fixture(long masterSeed, ResourceKey<Level> dimension, ChunkPos target) {}
 
     private record FixtureResult(
-            String hash,
-            IsolatedGenerationMetrics metrics,
-            CarverTrace trace) {
-    }
+            String hash, IsolatedGenerationMetrics metrics, CarverTrace trace) {}
 
     private record IsolatedResult(
-            CarverStageSnapshot snapshot,
-            CarverGenerationRun run,
-            long localSeed) {
-    }
+            CarverStageSnapshot snapshot, CarverGenerationRun run, long localSeed) {}
 
-    private record ConcurrentResult(Fixture fixture, String hash) {
-    }
+    private record ConcurrentResult(Fixture fixture, String hash) {}
 
     private record PhysicalWorldState(
             List<SurfaceStageSnapshot> chunkSnapshots,
@@ -523,9 +551,7 @@ public final class Phase2BVerification {
             int loadedChunks) {
 
         private static PhysicalWorldState capture(
-                ServerLevel level,
-                List<ChunkPos> positions,
-                List<BlockPos> markers) {
+                ServerLevel level, List<ChunkPos> positions, List<BlockPos> markers) {
             List<SurfaceStageSnapshot> snapshots = new ArrayList<>();
             List<Boolean> unsaved = new ArrayList<>();
             for (ChunkPos pos : positions) {
@@ -533,12 +559,16 @@ public final class Phase2BVerification {
                 snapshots.add(SurfaceStageSnapshot.capture(chunk, level.registryAccess()));
                 unsaved.add(chunk.isUnsaved());
             }
-            List<String> poi = markers.stream()
-                    .map(marker -> level.getPoiManager().getType(marker)
-                            .flatMap(holder -> holder.unwrapKey())
-                            .map(key -> key.identifier().toString())
-                            .orElse("<none>"))
-                    .toList();
+            List<String> poi =
+                    markers.stream()
+                            .map(
+                                    marker ->
+                                            level.getPoiManager()
+                                                    .getType(marker)
+                                                    .flatMap(holder -> holder.unwrapKey())
+                                                    .map(key -> key.identifier().toString())
+                                                    .orElse("<none>"))
+                            .toList();
             return new PhysicalWorldState(
                     List.copyOf(snapshots),
                     List.copyOf(unsaved),
@@ -557,7 +587,10 @@ public final class Phase2BVerification {
                     actual.chunkSnapshots.get(index).assertEquivalentTo(chunkSnapshots.get(index));
                 } catch (SurfaceParityMismatchException mismatch) {
                     throw new PhysicalSideEffectAssertionError(
-                            "Physical chunk changed at index " + index + ": " + mismatch.getMessage());
+                            "Physical chunk changed at index "
+                                    + index
+                                    + ": "
+                                    + mismatch.getMessage());
                 }
             }
             if (!unsavedFlags.equals(actual.unsavedFlags)
@@ -566,7 +599,10 @@ public final class Phase2BVerification {
                     || fluidTicks != actual.fluidTicks
                     || loadedChunks != actual.loadedChunks) {
                 throw new PhysicalSideEffectAssertionError(
-                        "Physical metadata changed during isolated CARVERS; before=" + this + ", after=" + actual);
+                        "Physical metadata changed during isolated CARVERS; before="
+                                + this
+                                + ", after="
+                                + actual);
             }
         }
     }
@@ -587,9 +623,11 @@ public final class Phase2BVerification {
             structureStateNanos += result.metrics().structureStateNanos();
             minVirtualChunks = Math.min(minVirtualChunks, result.metrics().virtualChunkCount());
             maxVirtualChunks = Math.max(maxVirtualChunks, result.metrics().virtualChunkCount());
-            dimensionStats.computeIfAbsent(
-                    fixture.dimension().identifier().toString(),
-                    ignored -> new DimensionStats()).accept(result.trace());
+            dimensionStats
+                    .computeIfAbsent(
+                            fixture.dimension().identifier().toString(),
+                            ignored -> new DimensionStats())
+                    .accept(result.trace());
         }
 
         private void assertCarvingCoverage() {
@@ -597,10 +635,12 @@ public final class Phase2BVerification {
             DimensionStats nether = dimensionStats.get(Level.NETHER.identifier().toString());
             DimensionStats end = dimensionStats.get(Level.END.identifier().toString());
             if (overworld == null || overworld.changedFixtures < 3) {
-                throw new IllegalStateException("Insufficient real Overworld carving coverage: " + overworld);
+                throw new IllegalStateException(
+                        "Insufficient real Overworld carving coverage: " + overworld);
             }
             if (nether == null || nether.changedFixtures < 2) {
-                throw new IllegalStateException("Insufficient real Nether carving coverage: " + nether);
+                throw new IllegalStateException(
+                        "Insufficient real Nether carving coverage: " + nether);
             }
             if (end == null) {
                 throw new IllegalStateException("Missing End CARVERS coverage");
@@ -627,11 +667,16 @@ public final class Phase2BVerification {
 
         @Override
         public String toString() {
-            return "{fixtures=" + fixtures
-                    + ", changedFixtures=" + changedFixtures
-                    + ", changedBlocks=" + changedBlocks
-                    + ", maxConfiguredCarvers=" + maxConfiguredCarvers
-                    + ", maxMaskBits=" + maxMaskBits
+            return "{fixtures="
+                    + fixtures
+                    + ", changedFixtures="
+                    + changedFixtures
+                    + ", changedBlocks="
+                    + changedBlocks
+                    + ", maxConfiguredCarvers="
+                    + maxConfiguredCarvers
+                    + ", maxMaskBits="
+                    + maxMaskBits
                     + '}';
         }
     }

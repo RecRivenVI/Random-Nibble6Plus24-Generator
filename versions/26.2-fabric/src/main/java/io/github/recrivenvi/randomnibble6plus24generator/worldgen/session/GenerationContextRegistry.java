@@ -3,7 +3,6 @@ package io.github.recrivenvi.randomnibble6plus24generator.worldgen.session;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Optional;
-
 import net.minecraft.server.level.GenerationChunkHolder;
 import net.minecraft.server.level.WorldGenRegion;
 import net.minecraft.util.StaticCache2D;
@@ -14,20 +13,20 @@ public final class GenerationContextRegistry {
 
     private static final Map<Object, IsolatedGenerationContext> CONTEXTS = new IdentityHashMap<>();
 
-    private GenerationContextRegistry() {
-    }
+    private GenerationContextRegistry() {}
 
-    public static synchronized void bind(WorldGenContext worldGenContext, IsolatedGenerationContext context) {
+    public static synchronized void bind(
+            WorldGenContext worldGenContext, IsolatedGenerationContext context) {
         bindIdentity(worldGenContext, context);
     }
 
     public static synchronized void bind(
-            StaticCache2D<GenerationChunkHolder> cache,
-            IsolatedGenerationContext context) {
+            StaticCache2D<GenerationChunkHolder> cache, IsolatedGenerationContext context) {
         bindIdentity(cache, context);
     }
 
-    public static synchronized Optional<IsolatedGenerationContext> find(WorldGenContext worldGenContext) {
+    public static synchronized Optional<IsolatedGenerationContext> find(
+            WorldGenContext worldGenContext) {
         return Optional.ofNullable(CONTEXTS.get(worldGenContext));
     }
 

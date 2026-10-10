@@ -1,7 +1,6 @@
 package io.github.recrivenvi.randomnibble6plus24generator.worldgen.session;
 
 import java.util.concurrent.CompletableFuture;
-
 import net.minecraft.server.level.GenerationChunkHolder;
 import net.minecraft.world.level.ChunkPos;
 

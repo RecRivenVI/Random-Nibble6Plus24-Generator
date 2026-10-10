@@ -1,5 +1,10 @@
 package io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicPhysicalMaterializer;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.GenerationContextRegistry;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -7,10 +12,6 @@ import java.nio.file.Path;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicReference;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ChunkResult;
 import net.minecraft.server.level.ServerLevel;
@@ -19,33 +20,37 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 
-import io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicPhysicalMaterializer;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.GenerationContextRegistry;
-
-/** Verifies every pre-publish fault leaves no physical or in-flight state, followed by a deterministic retry. */
+/**
+ * Verifies every pre-publish fault leaves no physical or in-flight state, followed by a
+ * deterministic retry.
+ */
 public final class Phase3AFaultVerification {
 
-    private static final String PREFIX = "randomnibble6plus24generator.phase3a.fault.";
+    private static final String PREFIX =
+            io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator.MOD_ID
+                    + ".phase3a.fault.";
 
-    private Phase3AFaultVerification() {
-    }
+    private Phase3AFaultVerification() {}
 
     public static void runIfRequested(MinecraftServer server) {
         if (System.getProperty(PREFIX + "verify", "").isBlank()) return;
         ServerLevel level = server.overworld();
-        ChunkPos target = new ChunkPos(
-                Integer.parseInt(System.getProperty(PREFIX + "chunkX", "125")),
-                Integer.parseInt(System.getProperty(PREFIX + "chunkZ", "-37")));
+        ChunkPos target =
+                new ChunkPos(
+                        Integer.parseInt(System.getProperty(PREFIX + "chunkX", "125")),
+                        Integer.parseInt(System.getProperty(PREFIX + "chunkZ", "-37")));
         int loadedBefore = level.getChunkSource().getLoadedChunksCount();
         JsonArray faults = new JsonArray();
-        for (MosaicPhysicalMaterializer.FaultPoint point : MosaicPhysicalMaterializer.FaultPoint.values()) {
+        for (MosaicPhysicalMaterializer.FaultPoint point :
+                MosaicPhysicalMaterializer.FaultPoint.values()) {
             if (point == MosaicPhysicalMaterializer.FaultPoint.NONE) continue;
             MosaicPhysicalMaterializer.resetVerificationState();
             MosaicPhysicalMaterializer.setVerificationFault(point);
-            CompletableFuture<?> future = point == MosaicPhysicalMaterializer.FaultPoint.BEFORE_PHYSICAL_PUBLISH
-                    ? MosaicPhysicalMaterializer.exerciseBeforePublishFailureForVerification(level, target)
-                    : MosaicPhysicalMaterializer.requestPrepared(level, target);
+            CompletableFuture<?> future =
+                    point == MosaicPhysicalMaterializer.FaultPoint.BEFORE_PHYSICAL_PUBLISH
+                            ? MosaicPhysicalMaterializer
+                                    .exerciseBeforePublishFailureForVerification(level, target)
+                            : MosaicPhysicalMaterializer.requestPrepared(level, target);
             server.managedBlock(future::isDone);
             try {
                 future.join();
@@ -53,7 +58,8 @@ public final class Phase3AFaultVerification {
             } catch (CompletionException exception) {
                 Throwable cause = rootCause(exception);
                 if (!(cause instanceof MosaicPhysicalMaterializer.InjectedMaterializationFailure)) {
-                    throw new IllegalStateException("Unexpected Phase 3A fault result at " + point, exception);
+                    throw new IllegalStateException(
+                            "Unexpected Phase 3A fault result at " + point, exception);
                 }
             }
             MosaicPhysicalMaterializer.Metrics metrics = MosaicPhysicalMaterializer.metrics();
@@ -62,27 +68,37 @@ public final class Phase3AFaultVerification {
                     || metrics.publishCount() != 0
                     || GenerationContextRegistry.bindingCount() != 0
                     || level.getChunkSource().getLoadedChunksCount() != loadedBefore
-                    || level.getChunkSource().chunkMap.getUpdatingChunkIfPresent(
-                            ChunkPos.pack(target.x(), target.z())) != null) {
-                throw new IllegalStateException("Fault leaked physical/in-flight state at " + point + ": " + metrics);
+                    || level.getChunkSource()
+                                    .chunkMap
+                                    .getUpdatingChunkIfPresent(
+                                            ChunkPos.pack(target.x(), target.z()))
+                            != null) {
+                throw new IllegalStateException(
+                        "Fault leaked physical/in-flight state at " + point + ": " + metrics);
             }
             faults.add(point.name());
         }
 
         MosaicPhysicalMaterializer.resetVerificationState();
-        AtomicReference<MosaicPhysicalMaterializer.Publication> publication = new AtomicReference<>();
-        MosaicPhysicalMaterializer.setVerificationObserver(value -> publication.compareAndSet(null, value));
-        CompletableFuture<ChunkResult<ChunkAccess>> retry = level.getChunkSource().getChunkFuture(
-                target.x(), target.z(), ChunkStatus.FEATURES, true);
+        AtomicReference<MosaicPhysicalMaterializer.Publication> publication =
+                new AtomicReference<>();
+        MosaicPhysicalMaterializer.setVerificationObserver(
+                value -> publication.compareAndSet(null, value));
+        CompletableFuture<ChunkResult<ChunkAccess>> retry =
+                level.getChunkSource()
+                        .getChunkFuture(target.x(), target.z(), ChunkStatus.FEATURES, true);
         server.managedBlock(retry::isDone);
         ChunkAccess physical = retry.join().orElse(null);
-        if (physical == null || publication.get() == null
+        if (physical == null
+                || publication.get() == null
                 || physical.getPersistedStatus() != ChunkStatus.FEATURES
                 || physical.isLightCorrect()) {
-            throw new IllegalStateException("Phase 3A retry did not publish a complete FEATURES ProtoChunk");
+            throw new IllegalStateException(
+                    "Phase 3A retry did not publish a complete FEATURES ProtoChunk");
         }
-        FeatureStableSnapshot snapshot = FeatureStableSnapshot.capture(
-                Level.OVERWORLD.identifier().toString(), physical, level.registryAccess());
+        FeatureStableSnapshot snapshot =
+                FeatureStableSnapshot.capture(
+                        Level.OVERWORLD.identifier().toString(), physical, level.registryAccess());
         String expected = System.getProperty(PREFIX + "expectedHash", "");
         if (!expected.isBlank() && !expected.equals(snapshot.hash())) {
             throw new IllegalStateException("Fault retry canonical hash mismatch");

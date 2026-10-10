@@ -1,9 +1,0 @@
-{
-  "schemaVersion": 1,
-  "id": "mosaic_lightweight_probe",
-  "version": "0.0.0",
-  "name": "Opt-in lightweight architecture research",
-  "environment": "server",
-  "mixins": ["mosaic-lightweight-probe.mixins.json"],
-  "depends": {"randomnibble6plus24generator": "*"}
-}

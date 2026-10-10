@@ -1,24 +1,26 @@
 {
-  "schemaVersion": 1,
-  "id": "${mod_id}",
-  "version": "${version}",
-  "name": "${mod_name}",
-  "authors": [
-    "${mod_author}"
-  ],
-  "environment": "${mod_environment}",
-  "entrypoints": {
-    "main": [
-      "io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator"
-    ]
-  },
-  "mixins": [
-    "randomnibble6plus24generator.mixins.json"
-  ],
-  "depends": {
-    "fabricloader": ">=${loader_version}",
-    "fabric-registry-sync-v0": "*",
-    "minecraft": "~${minecraft_version}",
-    "java": ">=${java_version}"
-  }
+    "schemaVersion": 1,
+    "id": "${mod_id}",
+    "version": "${mod_version}",
+    "name": "${mod_name}",
+    "authors": [
+        "${mod_authors}"
+    ],
+    "description": "${mod_description}",
+    "license": "${mod_license}",
+    "environment": "${fabric_environment}",
+    "entrypoints": {
+        "main": [
+            "${mod_group}.RandomNibble6Plus24Generator"
+        ]
+    },
+    "mixins": [
+        "randomnibble6plus24generator.mixins.json"
+    ],
+    "depends": {
+        "fabricloader": ">=${loader_minimum}",
+        "fabric-registry-sync-v0": "*",
+        "minecraft": "~${minecraft_version}",
+        "java": ">=${java_version}"
+    }
 }

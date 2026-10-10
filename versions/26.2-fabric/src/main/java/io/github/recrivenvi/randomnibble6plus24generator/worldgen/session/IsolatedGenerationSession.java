@@ -1,10 +1,9 @@
 package io.github.recrivenvi.randomnibble6plus24generator.worldgen.session;
 
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.world.level.ChunkPos;
-
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile.MosaicWorldProfile;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.seed.MosaicSeedResolver;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.ChunkPos;
 
 public final class IsolatedGenerationSession {
 
@@ -17,53 +16,44 @@ public final class IsolatedGenerationSession {
     }
 
     public SurfaceGenerationRun generateSurface(
-            ServerLevel hostLevel,
-            long masterSeed,
-            ChunkPos target) {
-        long localWorldSeed = seedResolver.resolveLocalWorldSeed(
-                masterSeed,
-                hostLevel.dimension(),
-                target);
-        try (IsolatedGenerationContext context = IsolatedGenerationContext.create(
-                IsolatedGenerationMode.ISOLATED_MOSAIC,
-                hostLevel,
-                localWorldSeed,
-                target)) {
+            ServerLevel hostLevel, long masterSeed, ChunkPos target) {
+        long localWorldSeed =
+                seedResolver.resolveLocalWorldSeed(masterSeed, hostLevel.dimension(), target);
+        try (IsolatedGenerationContext context =
+                IsolatedGenerationContext.create(
+                        IsolatedGenerationMode.ISOLATED_MOSAIC,
+                        hostLevel,
+                        localWorldSeed,
+                        target)) {
             return context.generate();
         }
     }
 
     public CarverGenerationRun generateCarvers(
-            ServerLevel hostLevel,
-            long masterSeed,
-            ChunkPos target) {
-        long localWorldSeed = seedResolver.resolveLocalWorldSeed(
-                masterSeed,
-                hostLevel.dimension(),
-                target);
-        try (IsolatedGenerationContext context = IsolatedGenerationContext.create(
-                IsolatedGenerationMode.ISOLATED_MOSAIC,
-                hostLevel,
-                localWorldSeed,
-                target)) {
+            ServerLevel hostLevel, long masterSeed, ChunkPos target) {
+        long localWorldSeed =
+                seedResolver.resolveLocalWorldSeed(masterSeed, hostLevel.dimension(), target);
+        try (IsolatedGenerationContext context =
+                IsolatedGenerationContext.create(
+                        IsolatedGenerationMode.ISOLATED_MOSAIC,
+                        hostLevel,
+                        localWorldSeed,
+                        target)) {
             return context.generateCarvers();
         }
     }
 
     public FeatureStableGenerationRun generateFeaturesStable(
-            ServerLevel hostLevel,
-            long masterSeed,
-            ChunkPos target) {
+            ServerLevel hostLevel, long masterSeed, ChunkPos target) {
         profile.requireSupported();
-        long localWorldSeed = seedResolver.resolveLocalWorldSeed(
-                masterSeed,
-                hostLevel.dimension(),
-                target);
-        try (IsolatedGenerationContext context = IsolatedGenerationContext.create(
-                IsolatedGenerationMode.ISOLATED_MOSAIC,
-                hostLevel,
-                localWorldSeed,
-                target)) {
+        long localWorldSeed =
+                seedResolver.resolveLocalWorldSeed(masterSeed, hostLevel.dimension(), target);
+        try (IsolatedGenerationContext context =
+                IsolatedGenerationContext.create(
+                        IsolatedGenerationMode.ISOLATED_MOSAIC,
+                        hostLevel,
+                        localWorldSeed,
+                        target)) {
             return context.generateFeaturesStable();
         }
     }

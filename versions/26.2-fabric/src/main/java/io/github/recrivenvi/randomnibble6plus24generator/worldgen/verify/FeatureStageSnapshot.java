@@ -22,7 +22,6 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.QuartPos;
@@ -54,8 +53,7 @@ public final class FeatureStageSnapshot {
             boolean equivalent,
             int differingBlocks,
             String firstDifference,
-            Map<String, Integer> blockCategories) {
-    }
+            Map<String, Integer> blockCategories) {}
 
     private final String dimension;
     private final ChunkPos chunkPos;
@@ -117,16 +115,12 @@ public final class FeatureStageSnapshot {
     }
 
     public static FeatureStageSnapshot capture(
-            String dimension,
-            ChunkAccess chunk,
-            RegistryAccess registryAccess) {
+            String dimension, ChunkAccess chunk, RegistryAccess registryAccess) {
         return capture(dimension, chunk, registryAccess, false);
     }
 
     static FeatureStageSnapshot captureWithCanonicalEntityUuids(
-            String dimension,
-            ChunkAccess chunk,
-            RegistryAccess registryAccess) {
+            String dimension, ChunkAccess chunk, RegistryAccess registryAccess) {
         return capture(dimension, chunk, registryAccess, true);
     }
 
@@ -137,7 +131,8 @@ public final class FeatureStageSnapshot {
             boolean normalizeEntityUuids) {
         if (!(chunk instanceof ProtoChunk protoChunk)) {
             throw new IllegalArgumentException(
-                    "Stage-exact FEATURES snapshot requires ProtoChunk, found " + chunk.getClass().getName());
+                    "Stage-exact FEATURES snapshot requires ProtoChunk, found "
+                            + chunk.getClass().getName());
         }
         ChunkPos chunkPos = chunk.getPos();
         int minY = chunk.getMinY();
@@ -146,7 +141,8 @@ public final class FeatureStageSnapshot {
         String[] biomes = captureBiomes(chunk);
         Map<String, long[]> heightmaps = new TreeMap<>();
         for (Map.Entry<Heightmap.Types, Heightmap> entry : chunk.getHeightmaps()) {
-            heightmaps.put(entry.getKey().getSerializationKey(), entry.getValue().getRawData().clone());
+            heightmaps.put(
+                    entry.getKey().getSerializationKey(), entry.getValue().getRawData().clone());
         }
 
         Registry<Structure> structures = registryAccess.lookupOrThrow(Registries.STRUCTURE);
@@ -155,11 +151,16 @@ public final class FeatureStageSnapshot {
             StructureStart start = entry.getValue();
             starts.put(
                     Objects.toString(structures.getKey(entry.getKey())),
-                    "valid=" + start.isValid()
-                            + ",start=" + start.getChunkPos()
-                            + ",references=" + start.getReferences()
-                            + ",pieces=" + start.getPieces().size()
-                            + ",box=" + (start.isValid() ? start.getBoundingBox() : "null"));
+                    "valid="
+                            + start.isValid()
+                            + ",start="
+                            + start.getChunkPos()
+                            + ",references="
+                            + start.getReferences()
+                            + ",pieces="
+                            + start.getPieces().size()
+                            + ",box="
+                            + (start.isValid() ? start.getBoundingBox() : "null"));
         }
         Map<String, long[]> references = new TreeMap<>();
         for (var entry : chunk.getAllReferences().entrySet()) {
@@ -171,12 +172,14 @@ public final class FeatureStageSnapshot {
         CarvingMask mask = protoChunk.getCarvingMask();
         Map<String, String> blockEntities = captureBlockEntities(protoChunk, registryAccess);
         ChunkAccess.PackedTicks packedTicks = protoChunk.getTicksForSerialization(0L);
-        List<String> blockTicks = packedTicks.blocks().stream()
-                .map(FeatureStageSnapshot::normalizeBlockTick)
-                .toList();
-        List<String> fluidTicks = packedTicks.fluids().stream()
-                .map(FeatureStageSnapshot::normalizeFluidTick)
-                .toList();
+        List<String> blockTicks =
+                packedTicks.blocks().stream()
+                        .map(FeatureStageSnapshot::normalizeBlockTick)
+                        .toList();
+        List<String> fluidTicks =
+                packedTicks.fluids().stream()
+                        .map(FeatureStageSnapshot::normalizeFluidTick)
+                        .toList();
         Map<Integer, short[]> postProcessing = new TreeMap<>();
         var packedPostProcessing = protoChunk.getPostProcessing();
         for (int section = 0; section < packedPostProcessing.length; section++) {
@@ -184,9 +187,10 @@ public final class FeatureStageSnapshot {
                 postProcessing.put(section, packedPostProcessing[section].toShortArray());
             }
         }
-        List<String> entities = protoChunk.getEntities().stream()
-                .map(tag -> canonicalTag(tag, normalizeEntityUuids, true))
-                .toList();
+        List<String> entities =
+                protoChunk.getEntities().stream()
+                        .map(tag -> canonicalTag(tag, normalizeEntityUuids, true))
+                        .toList();
 
         return new FeatureStageSnapshot(
                 dimension,
@@ -211,8 +215,10 @@ public final class FeatureStageSnapshot {
     public void write(Path path) {
         try {
             Files.createDirectories(path.toAbsolutePath().normalize().getParent());
-            try (DataOutputStream output = new DataOutputStream(new BufferedOutputStream(
-                    new GZIPOutputStream(Files.newOutputStream(path))))) {
+            try (DataOutputStream output =
+                    new DataOutputStream(
+                            new BufferedOutputStream(
+                                    new GZIPOutputStream(Files.newOutputStream(path))))) {
                 output.writeInt(FORMAT_VERSION);
                 output.writeUTF(dimension);
                 output.writeInt(chunkPos.x());
@@ -239,11 +245,13 @@ public final class FeatureStageSnapshot {
     }
 
     public static FeatureStageSnapshot read(Path path) {
-        try (DataInputStream input = new DataInputStream(new BufferedInputStream(
-                new GZIPInputStream(Files.newInputStream(path))))) {
+        try (DataInputStream input =
+                new DataInputStream(
+                        new BufferedInputStream(new GZIPInputStream(Files.newInputStream(path))))) {
             int version = input.readInt();
             if (version != FORMAT_VERSION) {
-                throw new IllegalArgumentException("Unsupported FEATURES snapshot format " + version);
+                throw new IllegalArgumentException(
+                        "Unsupported FEATURES snapshot format " + version);
             }
             return new FeatureStageSnapshot(
                     input.readUTF(),
@@ -274,8 +282,11 @@ public final class FeatureStageSnapshot {
         String firstDifference = metaDifference;
         Map<String, Integer> categories = new TreeMap<>();
         if (blocks.length != other.blocks.length) {
-            return new Diff(false, Math.max(blocks.length, other.blocks.length),
-                    "Block array length " + blocks.length + " != " + other.blocks.length, Map.of());
+            return new Diff(
+                    false,
+                    Math.max(blocks.length, other.blocks.length),
+                    "Block array length " + blocks.length + " != " + other.blocks.length,
+                    Map.of());
         }
         for (int index = 0; index < blocks.length; index++) {
             if (!blocks[index].equals(other.blocks[index])) {
@@ -286,16 +297,25 @@ public final class FeatureStageSnapshot {
                     int layerIndex = index % 256;
                     int z = layerIndex / 16;
                     int x = layerIndex % 16;
-                    firstDifference = "BlockState at "
-                            + (chunkPos.getMinBlockX() + x) + "," + y + "," + (chunkPos.getMinBlockZ() + z)
-                            + ": " + blocks[index] + " != " + other.blocks[index];
+                    firstDifference =
+                            "BlockState at "
+                                    + (chunkPos.getMinBlockX() + x)
+                                    + ","
+                                    + y
+                                    + ","
+                                    + (chunkPos.getMinBlockZ() + z)
+                                    + ": "
+                                    + blocks[index]
+                                    + " != "
+                                    + other.blocks[index];
                 }
             }
         }
         if (firstDifference == null) {
             firstDifference = firstNonBlockDifference(other);
         }
-        return new Diff(firstDifference == null, differingBlocks, firstDifference, Map.copyOf(categories));
+        return new Diff(
+                firstDifference == null, differingBlocks, firstDifference, Map.copyOf(categories));
     }
 
     public String hash() {
@@ -351,21 +371,27 @@ public final class FeatureStageSnapshot {
     }
 
     private String firstMetaDifference(FeatureStageSnapshot other) {
-        if (!dimension.equals(other.dimension)) return "Dimension " + dimension + " != " + other.dimension;
-        if (!chunkPos.equals(other.chunkPos)) return "ChunkPos " + chunkPos + " != " + other.chunkPos;
+        if (!dimension.equals(other.dimension))
+            return "Dimension " + dimension + " != " + other.dimension;
+        if (!chunkPos.equals(other.chunkPos))
+            return "ChunkPos " + chunkPos + " != " + other.chunkPos;
         if (minY != other.minY || height != other.height) return "Height range differs";
         if (!status.equals(other.status)) return "Status " + status + " != " + other.status;
         return null;
     }
 
     private String firstNonBlockDifference(FeatureStageSnapshot other) {
-        if (!Arrays.equals(biomes, other.biomes)) return firstArrayDifference("Biome", biomes, other.biomes);
+        if (!Arrays.equals(biomes, other.biomes))
+            return firstArrayDifference("Biome", biomes, other.biomes);
         String mapDifference = firstLongMapDifference("Heightmap", heightmaps, other.heightmaps);
         if (mapDifference != null) return mapDifference;
         if (!structureStarts.equals(other.structureStarts)) return "Structure starts differ";
-        mapDifference = firstLongMapDifference("Structure references", structureReferences, other.structureReferences);
+        mapDifference =
+                firstLongMapDifference(
+                        "Structure references", structureReferences, other.structureReferences);
         if (mapDifference != null) return mapDifference;
-        if (carvingMaskPresent != other.carvingMaskPresent || !Arrays.equals(carvingMask, other.carvingMask)) {
+        if (carvingMaskPresent != other.carvingMaskPresent
+                || !Arrays.equals(carvingMask, other.carvingMask)) {
             return "CarvingMask differs";
         }
         if (!blockEntities.equals(other.blockEntities)) return "BlockEntities differ";
@@ -378,7 +404,9 @@ public final class FeatureStageSnapshot {
     }
 
     public String deterministicMetadataDifference(FeatureStageSnapshot other) {
-        return firstMetaDifference(other) != null ? firstMetaDifference(other) : firstNonBlockDifference(other);
+        return firstMetaDifference(other) != null
+                ? firstMetaDifference(other)
+                : firstNonBlockDifference(other);
     }
 
     private String calculateHash() {
@@ -428,10 +456,12 @@ public final class FeatureStageSnapshot {
         for (int y = chunk.getMinY(); y < chunk.getMinY() + chunk.getHeight(); y++) {
             for (int z = 0; z < 16; z++) {
                 for (int x = 0; x < 16; x++) {
-                    BlockState state = chunk.getBlockState(cursor.set(
-                            chunk.getPos().getMinBlockX() + x,
-                            y,
-                            chunk.getPos().getMinBlockZ() + z));
+                    BlockState state =
+                            chunk.getBlockState(
+                                    cursor.set(
+                                            chunk.getPos().getMinBlockX() + x,
+                                            y,
+                                            chunk.getPos().getMinBlockZ() + z));
                     values[index++] = state.toString();
                 }
             }
@@ -449,10 +479,12 @@ public final class FeatureStageSnapshot {
         for (int y = 0; y < quartHeight; y++) {
             for (int z = 0; z < 4; z++) {
                 for (int x = 0; x < 4; x++) {
-                    Holder<Biome> biome = chunk.getNoiseBiome(minQuartX + x, minQuartY + y, minQuartZ + z);
-                    values[index++] = biome.unwrapKey()
-                            .map(key -> key.identifier().toString())
-                            .orElseGet(() -> biome.value().toString());
+                    Holder<Biome> biome =
+                            chunk.getNoiseBiome(minQuartX + x, minQuartY + y, minQuartZ + z);
+                    values[index++] =
+                            biome.unwrapKey()
+                                    .map(key -> key.identifier().toString())
+                                    .orElseGet(() -> biome.value().toString());
                 }
             }
         }
@@ -460,21 +492,24 @@ public final class FeatureStageSnapshot {
     }
 
     private static Map<String, String> captureBlockEntities(
-            ProtoChunk chunk,
-            RegistryAccess registryAccess) {
-        Set<BlockPos> positions = new TreeSet<>((left, right) -> {
-            int compareY = Integer.compare(left.getY(), right.getY());
-            if (compareY != 0) return compareY;
-            int compareZ = Integer.compare(left.getZ(), right.getZ());
-            if (compareZ != 0) return compareZ;
-            return Integer.compare(left.getX(), right.getX());
-        });
+            ProtoChunk chunk, RegistryAccess registryAccess) {
+        Set<BlockPos> positions =
+                new TreeSet<>(
+                        (left, right) -> {
+                            int compareY = Integer.compare(left.getY(), right.getY());
+                            if (compareY != 0) return compareY;
+                            int compareZ = Integer.compare(left.getZ(), right.getZ());
+                            if (compareZ != 0) return compareZ;
+                            return Integer.compare(left.getX(), right.getX());
+                        });
         positions.addAll(chunk.getBlockEntities().keySet());
         positions.addAll(chunk.getBlockEntityNbts().keySet());
         Map<String, String> result = new TreeMap<>();
         for (BlockPos pos : positions) {
             CompoundTag tag = chunk.getBlockEntityNbtForSaving(pos, registryAccess);
-            result.put(pos.getX() + "," + pos.getY() + "," + pos.getZ(), tag == null ? "null" : canonicalTag(tag));
+            result.put(
+                    pos.getX() + "," + pos.getY() + "," + pos.getZ(),
+                    tag == null ? "null" : canonicalTag(tag));
         }
         return result;
     }
@@ -514,12 +549,14 @@ public final class FeatureStageSnapshot {
         return key.equals("UUID") || key.equals("UUIDMost") || key.equals("UUIDLeast");
     }
 
-    private static String normalizeBlockTick(SavedTick<net.minecraft.world.level.block.Block> tick) {
+    private static String normalizeBlockTick(
+            SavedTick<net.minecraft.world.level.block.Block> tick) {
         Identifier id = BuiltInRegistries.BLOCK.getKey(tick.type());
         return Objects.toString(id) + "@" + tick.pos() + ":" + tick.delay() + ":" + tick.priority();
     }
 
-    private static String normalizeFluidTick(SavedTick<net.minecraft.world.level.material.Fluid> tick) {
+    private static String normalizeFluidTick(
+            SavedTick<net.minecraft.world.level.material.Fluid> tick) {
         Identifier id = BuiltInRegistries.FLUID.getKey(tick.type());
         return Objects.toString(id) + "@" + tick.pos() + ":" + tick.delay() + ":" + tick.priority();
     }
@@ -529,13 +566,22 @@ public final class FeatureStageSnapshot {
         if (value.contains("_log") || value.contains("_wood")) return "logs";
         if (value.contains("leaves")) return "leaves";
         if (value.contains("ore")) return "ores";
-        if (value.contains("grass") || value.contains("flower") || value.contains("bush")
-                || value.contains("vine") || value.contains("mushroom") || value.contains("sapling")) {
+        if (value.contains("grass")
+                || value.contains("flower")
+                || value.contains("bush")
+                || value.contains("vine")
+                || value.contains("mushroom")
+                || value.contains("sapling")) {
             return "vegetation";
         }
-        if (value.contains("stone") || value.contains("deepslate") || value.contains("dirt")
-                || value.contains("gravel") || value.contains("sand")) return "stone_variants";
-        if (value.contains("chest") || value.contains("spawner") || value.contains("brick")
+        if (value.contains("stone")
+                || value.contains("deepslate")
+                || value.contains("dirt")
+                || value.contains("gravel")
+                || value.contains("sand")) return "stone_variants";
+        if (value.contains("chest")
+                || value.contains("spawner")
+                || value.contains("brick")
                 || value.contains("planks")) return "structure_blocks";
         return "other";
     }
@@ -548,18 +594,22 @@ public final class FeatureStageSnapshot {
         return null;
     }
 
-    private static String firstLongMapDifference(String label, Map<String, long[]> left, Map<String, long[]> right) {
+    private static String firstLongMapDifference(
+            String label, Map<String, long[]> left, Map<String, long[]> right) {
         if (!left.keySet().equals(right.keySet())) return label + " keys differ";
         for (String key : left.keySet()) {
-            if (!Arrays.equals(left.get(key), right.get(key))) return label + " " + key + " differs";
+            if (!Arrays.equals(left.get(key), right.get(key)))
+                return label + " " + key + " differs";
         }
         return null;
     }
 
-    private static String firstShortMapDifference(Map<Integer, short[]> left, Map<Integer, short[]> right) {
+    private static String firstShortMapDifference(
+            Map<Integer, short[]> left, Map<Integer, short[]> right) {
         if (!left.keySet().equals(right.keySet())) return "Post-processing section keys differ";
         for (Integer key : left.keySet()) {
-            if (!Arrays.equals(left.get(key), right.get(key))) return "Post-processing section " + key + " differs";
+            if (!Arrays.equals(left.get(key), right.get(key)))
+                return "Post-processing section " + key + " differs";
         }
         return null;
     }
@@ -591,7 +641,8 @@ public final class FeatureStageSnapshot {
         return values;
     }
 
-    private static void writeStringList(DataOutputStream output, List<String> values) throws IOException {
+    private static void writeStringList(DataOutputStream output, List<String> values)
+            throws IOException {
         output.writeInt(values.size());
         for (String value : values) output.writeUTF(value);
     }
@@ -603,7 +654,8 @@ public final class FeatureStageSnapshot {
         return List.copyOf(values);
     }
 
-    private static void writeStringMap(DataOutputStream output, Map<String, String> values) throws IOException {
+    private static void writeStringMap(DataOutputStream output, Map<String, String> values)
+            throws IOException {
         output.writeInt(values.size());
         for (var entry : new TreeMap<>(values).entrySet()) {
             output.writeUTF(entry.getKey());
@@ -618,7 +670,8 @@ public final class FeatureStageSnapshot {
         return immutableStringMap(values);
     }
 
-    private static void writeLongMap(DataOutputStream output, Map<String, long[]> values) throws IOException {
+    private static void writeLongMap(DataOutputStream output, Map<String, long[]> values)
+            throws IOException {
         output.writeInt(values.size());
         for (var entry : new TreeMap<>(values).entrySet()) {
             output.writeUTF(entry.getKey());
@@ -633,7 +686,8 @@ public final class FeatureStageSnapshot {
         return immutableLongMap(values);
     }
 
-    private static void writeShortMap(DataOutputStream output, Map<Integer, short[]> values) throws IOException {
+    private static void writeShortMap(DataOutputStream output, Map<Integer, short[]> values)
+            throws IOException {
         output.writeInt(values.size());
         for (var entry : new TreeMap<>(values).entrySet()) {
             output.writeInt(entry.getKey());
@@ -648,7 +702,8 @@ public final class FeatureStageSnapshot {
         for (int index = 0; index < size; index++) {
             int key = input.readInt();
             short[] packed = new short[input.readInt()];
-            for (int valueIndex = 0; valueIndex < packed.length; valueIndex++) packed[valueIndex] = input.readShort();
+            for (int valueIndex = 0; valueIndex < packed.length; valueIndex++)
+                packed[valueIndex] = input.readShort();
             values.put(key, packed);
         }
         return immutableShortMap(values);

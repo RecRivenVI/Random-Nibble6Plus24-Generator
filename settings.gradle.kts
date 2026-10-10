@@ -1,20 +1,26 @@
 pluginManagement {
-    includeBuild("gradle/configuration") { name = "raven-configuration" }
-    val facts = java.util.Properties().apply {
-        file("versions/26.2-fabric/target.properties").inputStream().use { load(it) }
-    }
-    plugins {
-        id("net.fabricmc.fabric-loom") version facts.getProperty("loom_version")
-    }
+    includeBuild("components/configuration")
+    includeBuild("components/conventions")
+    includeBuild("components/compliance")
     repositories {
-        maven("https://maven.fabricmc.net/")
         gradlePluginPortal()
-        mavenCentral()
+        maven("https://maven.neoforged.net/releases")
+        maven("https://maven.fabricmc.net/")
     }
 }
 
-rootProject.name = "Random-Nibble6Plus24-Generator"
+plugins {
+    id("io.github.recrivenvi.configuration")
+    id("io.github.recrivenvi.conventions")
+    id("io.github.recrivenvi.compliance")
+}
 
-include(":version:26.2-fabric")
-project(":version").projectDir = file("versions")
-project(":version:26.2-fabric").projectDir = file("versions/26.2-fabric")
+rootProject.name = "RandomNibble6Plus24Generator"
+
+targets {
+    register("26.2-fabric")
+}
+
+components {
+    tool("worldgen_validation")
+}

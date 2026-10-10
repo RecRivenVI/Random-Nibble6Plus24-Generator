@@ -1,5 +1,8 @@
 package io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify;
 
+import io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.identity.MosaicWorldIdentity;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.GenerationContextRegistry;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -7,17 +10,15 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 import java.util.Set;
-import java.util.TreeSet;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicReference;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
@@ -33,28 +34,25 @@ import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.level.chunk.status.ChunkStep;
 import net.minecraft.world.level.chunk.status.WorldGenContext;
 
-import io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.identity.MosaicWorldIdentity;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.GenerationContextRegistry;
-
 /** Native Mojang FEATURES request-order audit. Never participates in isolated generation. */
 public final class NativeVanillaFeatureOrderProbe {
 
-    private static final String PREFIX = "randomnibble6plus24generator.phase2c0.features.";
-    private static final List<String> ORDERS = List.of(
-            "center_first",
-            "center_last",
-            "row_major",
-            "reverse",
-            "shuffle_1",
-            "shuffle_2");
-    private static final Comparator<ChunkPos> ROW_MAJOR = Comparator
-            .comparingInt(ChunkPos::z)
-            .thenComparingInt(ChunkPos::x);
+    private static final String PREFIX =
+            io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator.MOD_ID
+                    + ".phase2c0.features.";
+    private static final List<String> ORDERS =
+            List.of(
+                    "center_first",
+                    "center_last",
+                    "row_major",
+                    "reverse",
+                    "shuffle_1",
+                    "shuffle_2");
+    private static final Comparator<ChunkPos> ROW_MAJOR =
+            Comparator.comparingInt(ChunkPos::z).thenComparingInt(ChunkPos::x);
     private static final AtomicReference<Request> ACTIVE = new AtomicReference<>();
 
-    private NativeVanillaFeatureOrderProbe() {
-    }
+    private NativeVanillaFeatureOrderProbe() {}
 
     public static void armIfRequested(MinecraftServer server) {
         String order = System.getProperty(PREFIX + "order");
@@ -68,26 +66,28 @@ public final class NativeVanillaFeatureOrderProbe {
         long physicalSeed = server.getWorldGenSettings().options().seed();
         if (seed != physicalSeed) {
             throw new IllegalStateException(
-                    "FEATURES order probe seed mismatch; requested=" + seed + ", WorldOptions.seed=" + physicalSeed);
+                    "FEATURES order probe seed mismatch; requested="
+                            + seed
+                            + ", WorldOptions.seed="
+                            + physicalSeed);
         }
-        ResourceKey<Level> dimension = ResourceKey.create(
-                Registries.DIMENSION,
-                Identifier.parse(requireProperty("dimension")));
-        Request request = new Request(
-                seed,
-                dimension,
-                order,
-                Path.of(requireProperty("outputRoot")).toAbsolutePath().normalize(),
-                Boolean.parseBoolean(System.getProperty(PREFIX + "compare", "false")));
+        ResourceKey<Level> dimension =
+                ResourceKey.create(
+                        Registries.DIMENSION, Identifier.parse(requireProperty("dimension")));
+        Request request =
+                new Request(
+                        seed,
+                        dimension,
+                        order,
+                        Path.of(requireProperty("outputRoot")).toAbsolutePath().normalize(),
+                        Boolean.parseBoolean(System.getProperty(PREFIX + "compare", "false")));
         if (!ACTIVE.compareAndSet(null, request)) {
             throw new IllegalStateException("FEATURES order probe already active");
         }
     }
 
     public static boolean shouldObserve(
-            WorldGenContext context,
-            ChunkStatus status,
-            ChunkAccess chunk) {
+            WorldGenContext context, ChunkStatus status, ChunkAccess chunk) {
         Request request = ACTIVE.get();
         return request != null
                 && status == ChunkStatus.FEATURES
@@ -96,10 +96,7 @@ public final class NativeVanillaFeatureOrderProbe {
                 && request.expects(chunk.getPos());
     }
 
-    public static void observe(
-            WorldGenContext context,
-            ChunkStatus status,
-            ChunkAccess chunk) {
+    public static void observe(WorldGenContext context, ChunkStatus status, ChunkAccess chunk) {
         Request request = ACTIVE.get();
         if (request != null && shouldObserve(context, status, chunk)) {
             request.recordCompletion(chunk.getPos());
@@ -115,18 +112,20 @@ public final class NativeVanillaFeatureOrderProbe {
         long memoryBefore = usedMemory();
         try {
             if (MosaicWorldIdentity.isMosaicWorld(server)) {
-                throw new IllegalStateException("FEATURES order probe requires an ordinary Vanilla world");
+                throw new IllegalStateException(
+                        "FEATURES order probe requires an ordinary Vanilla world");
             }
             ServerLevel level = server.getLevel(request.dimension);
             if (level == null) {
-                throw new IllegalStateException("Missing FEATURES probe dimension "
-                        + request.dimension.identifier());
+                throw new IllegalStateException(
+                        "Missing FEATURES probe dimension " + request.dimension.identifier());
             }
             ChunkStep featureStep = ChunkPyramid.GENERATION_PYRAMID.getStepTo(ChunkStatus.FEATURES);
             int writerRadius = featureStep.blockStateWriteRadius();
             int accumulatedRadius = featureStep.accumulatedDependencies().getRadius();
             if (writerRadius < 0) {
-                throw new IllegalStateException("Invalid FEATURES block-state write radius " + writerRadius);
+                throw new IllegalStateException(
+                        "Invalid FEATURES block-state write radius " + writerRadius);
             }
 
             List<ChunkPos> targets = matrixTargets(level, request.dimension);
@@ -185,11 +184,7 @@ public final class NativeVanillaFeatureOrderProbe {
     }
 
     private static ProbeResult runTarget(
-            ServerLevel level,
-            Request request,
-            ChunkPos target,
-            int writerRadius,
-            String group) {
+            ServerLevel level, Request request, ChunkPos target, int writerRadius, String group) {
         List<ChunkPos> writers = orderedWriters(target, writerRadius, request.order);
         request.beginWriters(writers);
         for (ChunkPos writer : writers) {
@@ -199,24 +194,23 @@ public final class NativeVanillaFeatureOrderProbe {
             }
         }
         request.verifyWriterOrder();
-        ChunkAccess targetChunk = level.getChunk(target.x(), target.z(), ChunkStatus.FEATURES, false);
+        ChunkAccess targetChunk =
+                level.getChunk(target.x(), target.z(), ChunkStatus.FEATURES, false);
         if (targetChunk == null || targetChunk.getPersistedStatus() != ChunkStatus.FEATURES) {
             throw new IllegalStateException("Stable target unavailable at FEATURES: " + target);
         }
         long snapshotStarted = System.nanoTime();
-        FeatureStageSnapshot snapshot = FeatureStageSnapshot.capture(
-                request.dimension.identifier().toString(),
-                targetChunk,
-                level.registryAccess());
+        FeatureStageSnapshot snapshot =
+                FeatureStageSnapshot.capture(
+                        request.dimension.identifier().toString(),
+                        targetChunk,
+                        level.registryAccess());
         snapshot.write(snapshotPath(request, group, target));
         return new ProbeResult(writers.size(), System.nanoTime() - snapshotStarted);
     }
 
     private static ProbeResult runCluster(
-            ServerLevel level,
-            Request request,
-            List<ChunkPos> targets,
-            int writerRadius) {
+            ServerLevel level, Request request, List<ChunkPos> targets, int writerRadius) {
         Set<ChunkPos> writerSet = new TreeSet<>(ROW_MAJOR);
         for (ChunkPos target : targets) {
             writerSet.addAll(square(target, writerRadius));
@@ -226,7 +220,8 @@ public final class NativeVanillaFeatureOrderProbe {
         for (ChunkPos writer : writers) {
             ChunkAccess chunk = level.getChunk(writer.x(), writer.z(), ChunkStatus.FEATURES, true);
             if (chunk == null || chunk.getPersistedStatus() != ChunkStatus.FEATURES) {
-                throw new IllegalStateException("Cluster writer did not stop at FEATURES: " + writer);
+                throw new IllegalStateException(
+                        "Cluster writer did not stop at FEATURES: " + writer);
             }
         }
         request.verifyWriterOrder();
@@ -234,9 +229,10 @@ public final class NativeVanillaFeatureOrderProbe {
         for (ChunkPos target : targets) {
             ChunkAccess chunk = level.getChunk(target.x(), target.z(), ChunkStatus.FEATURES, false);
             FeatureStageSnapshot.capture(
-                    request.dimension.identifier().toString(),
-                    chunk,
-                    level.registryAccess()).write(snapshotPath(request, "cluster", target));
+                            request.dimension.identifier().toString(),
+                            chunk,
+                            level.registryAccess())
+                    .write(snapshotPath(request, "cluster", target));
         }
         return new ProbeResult(writers.size(), System.nanoTime() - snapshotStarted);
     }
@@ -244,7 +240,10 @@ public final class NativeVanillaFeatureOrderProbe {
     private static List<ChunkPos> matrixTargets(ServerLevel level, ResourceKey<Level> dimension) {
         int required = dimension.equals(Level.OVERWORLD) ? 16 : 8;
         LinkedHashSet<ChunkPos> targets = new LinkedHashSet<>();
-        int base = dimension.equals(Level.OVERWORLD) ? 2_048 : dimension.equals(Level.NETHER) ? 3_072 : 4_096;
+        int base =
+                dimension.equals(Level.OVERWORLD)
+                        ? 2_048
+                        : dimension.equals(Level.NETHER) ? 3_072 : 4_096;
         if (dimension.equals(Level.OVERWORLD)) {
             BlockPos search = new BlockPos(base << 4, 64, base << 4);
             addStructureTarget(level, targets, StructureTags.VILLAGE, search);
@@ -341,27 +340,41 @@ public final class NativeVanillaFeatureOrderProbe {
         Map<String, Integer> categories = new TreeMap<>();
         String representative = null;
         for (ChunkPos target : targets) {
-            FeatureStageSnapshot baseline = FeatureStageSnapshot.read(
-                    request.outputRoot.resolve(dimensionPath).resolve("row_major")
-                            .resolve("matrix").resolve(target.x() + "_" + target.z() + ".bin.gz"));
+            FeatureStageSnapshot baseline =
+                    FeatureStageSnapshot.read(
+                            request.outputRoot
+                                    .resolve(dimensionPath)
+                                    .resolve("row_major")
+                                    .resolve("matrix")
+                                    .resolve(target.x() + "_" + target.z() + ".bin.gz"));
             boolean targetSensitive = false;
             for (String order : ORDERS) {
                 if (order.equals("row_major")) continue;
-                FeatureStageSnapshot candidate = FeatureStageSnapshot.read(
-                        request.outputRoot.resolve(dimensionPath).resolve(order)
-                                .resolve("matrix").resolve(target.x() + "_" + target.z() + ".bin.gz"));
+                FeatureStageSnapshot candidate =
+                        FeatureStageSnapshot.read(
+                                request.outputRoot
+                                        .resolve(dimensionPath)
+                                        .resolve(order)
+                                        .resolve("matrix")
+                                        .resolve(target.x() + "_" + target.z() + ".bin.gz"));
                 FeatureStageSnapshot.Diff diff = baseline.diff(candidate);
                 if (!diff.equivalent()) {
                     targetSensitive = true;
                     differingBlocks += diff.differingBlocks();
-                    diff.blockCategories().forEach(
-                            (key, value) -> categories.merge(key, value, Integer::sum));
+                    diff.blockCategories()
+                            .forEach((key, value) -> categories.merge(key, value, Integer::sum));
                     if (representative == null) {
-                        representative = "target=" + target
-                                + ", row_major vs " + order
-                                + ", first=" + diff.firstDifference()
-                                + ", blocks=" + diff.differingBlocks()
-                                + ", categories=" + diff.blockCategories();
+                        representative =
+                                "target="
+                                        + target
+                                        + ", row_major vs "
+                                        + order
+                                        + ", first="
+                                        + diff.firstDifference()
+                                        + ", blocks="
+                                        + diff.differingBlocks()
+                                        + ", categories="
+                                        + diff.blockCategories();
                     }
                 }
             }
@@ -372,42 +385,77 @@ public final class NativeVanillaFeatureOrderProbe {
         long clusterDifferingBlocks = 0;
         if (request.dimension.equals(Level.OVERWORLD)) {
             for (ChunkPos target : clusterTargets()) {
-                FeatureStageSnapshot baseline = FeatureStageSnapshot.read(
-                        request.outputRoot.resolve(dimensionPath).resolve("row_major")
-                                .resolve("cluster").resolve(target.x() + "_" + target.z() + ".bin.gz"));
+                FeatureStageSnapshot baseline =
+                        FeatureStageSnapshot.read(
+                                request.outputRoot
+                                        .resolve(dimensionPath)
+                                        .resolve("row_major")
+                                        .resolve("cluster")
+                                        .resolve(target.x() + "_" + target.z() + ".bin.gz"));
                 boolean sensitive = false;
                 for (String order : List.of("reverse", "shuffle_1")) {
-                    FeatureStageSnapshot candidate = FeatureStageSnapshot.read(
-                            request.outputRoot.resolve(dimensionPath).resolve(order)
-                                    .resolve("cluster").resolve(target.x() + "_" + target.z() + ".bin.gz"));
+                    FeatureStageSnapshot candidate =
+                            FeatureStageSnapshot.read(
+                                    request.outputRoot
+                                            .resolve(dimensionPath)
+                                            .resolve(order)
+                                            .resolve("cluster")
+                                            .resolve(target.x() + "_" + target.z() + ".bin.gz"));
                     FeatureStageSnapshot.Diff diff = baseline.diff(candidate);
                     if (!diff.equivalent()) {
                         sensitive = true;
                         clusterDifferingBlocks += diff.differingBlocks();
                         if (representative == null) {
-                            representative = "cluster target=" + target
-                                    + ", row_major vs " + order
-                                    + ", first=" + diff.firstDifference()
-                                    + ", blocks=" + diff.differingBlocks();
+                            representative =
+                                    "cluster target="
+                                            + target
+                                            + ", row_major vs "
+                                            + order
+                                            + ", first="
+                                            + diff.firstDifference()
+                                            + ", blocks="
+                                            + diff.differingBlocks();
                         }
                     }
                 }
                 if (sensitive) sensitiveClusterChunks++;
             }
         }
-        String outcome = sensitiveTargets > 0 || sensitiveClusterChunks > 0
-                ? "ORDER_SENSITIVE"
-                : "NO_SENSITIVITY_REPRODUCED";
-        String summary = "outcome=" + outcome + System.lineSeparator()
-                + "dimension=" + request.dimension.identifier() + System.lineSeparator()
-                + "matrixTargets=" + targets.size() + System.lineSeparator()
-                + "sensitiveTargets=" + sensitiveTargets + System.lineSeparator()
-                + "differingBlocks=" + differingBlocks + System.lineSeparator()
-                + "blockCategories=" + categories + System.lineSeparator()
-                + "clusterTargets=" + (request.dimension.equals(Level.OVERWORLD) ? 25 : 0) + System.lineSeparator()
-                + "sensitiveClusterChunks=" + sensitiveClusterChunks + System.lineSeparator()
-                + "clusterDifferingBlocks=" + clusterDifferingBlocks + System.lineSeparator()
-                + "representative=" + Objects.toString(representative, "none") + System.lineSeparator();
+        String outcome =
+                sensitiveTargets > 0 || sensitiveClusterChunks > 0
+                        ? "ORDER_SENSITIVE"
+                        : "NO_SENSITIVITY_REPRODUCED";
+        String summary =
+                "outcome="
+                        + outcome
+                        + System.lineSeparator()
+                        + "dimension="
+                        + request.dimension.identifier()
+                        + System.lineSeparator()
+                        + "matrixTargets="
+                        + targets.size()
+                        + System.lineSeparator()
+                        + "sensitiveTargets="
+                        + sensitiveTargets
+                        + System.lineSeparator()
+                        + "differingBlocks="
+                        + differingBlocks
+                        + System.lineSeparator()
+                        + "blockCategories="
+                        + categories
+                        + System.lineSeparator()
+                        + "clusterTargets="
+                        + (request.dimension.equals(Level.OVERWORLD) ? 25 : 0)
+                        + System.lineSeparator()
+                        + "sensitiveClusterChunks="
+                        + sensitiveClusterChunks
+                        + System.lineSeparator()
+                        + "clusterDifferingBlocks="
+                        + clusterDifferingBlocks
+                        + System.lineSeparator()
+                        + "representative="
+                        + Objects.toString(representative, "none")
+                        + System.lineSeparator();
         writeText(request.outputRoot.resolve(dimensionPath).resolve("summary.txt"), summary);
         RandomNibble6Plus24Generator.LOGGER.info(
                 "Native FEATURES order comparison {} dimension={} sensitiveTargets={} differingBlocks={} "
@@ -430,18 +478,43 @@ public final class NativeVanillaFeatureOrderProbe {
             long elapsed,
             long snapshotNanos,
             long heapDelta) {
-        String text = "seed=" + request.seed + System.lineSeparator()
-                + "dimension=" + request.dimension.identifier() + System.lineSeparator()
-                + "order=" + request.order + System.lineSeparator()
-                + "writerRadius=" + writerRadius + System.lineSeparator()
-                + "writerNeighborhood=" + ((writerRadius * 2 + 1) * (writerRadius * 2 + 1)) + System.lineSeparator()
-                + "accumulatedRadius=" + accumulatedRadius + System.lineSeparator()
-                + "targets=" + targets + System.lineSeparator()
-                + "clusterTargets=" + clusterTargets + System.lineSeparator()
-                + "writerTasks=" + writerTasks + System.lineSeparator()
-                + "runtimeMs=" + elapsed / 1_000_000L + System.lineSeparator()
-                + "snapshotMs=" + snapshotNanos / 1_000_000L + System.lineSeparator()
-                + "heapDeltaMiB=" + heapDelta / (1024L * 1024L) + System.lineSeparator();
+        String text =
+                "seed="
+                        + request.seed
+                        + System.lineSeparator()
+                        + "dimension="
+                        + request.dimension.identifier()
+                        + System.lineSeparator()
+                        + "order="
+                        + request.order
+                        + System.lineSeparator()
+                        + "writerRadius="
+                        + writerRadius
+                        + System.lineSeparator()
+                        + "writerNeighborhood="
+                        + ((writerRadius * 2 + 1) * (writerRadius * 2 + 1))
+                        + System.lineSeparator()
+                        + "accumulatedRadius="
+                        + accumulatedRadius
+                        + System.lineSeparator()
+                        + "targets="
+                        + targets
+                        + System.lineSeparator()
+                        + "clusterTargets="
+                        + clusterTargets
+                        + System.lineSeparator()
+                        + "writerTasks="
+                        + writerTasks
+                        + System.lineSeparator()
+                        + "runtimeMs="
+                        + elapsed / 1_000_000L
+                        + System.lineSeparator()
+                        + "snapshotMs="
+                        + snapshotNanos / 1_000_000L
+                        + System.lineSeparator()
+                        + "heapDeltaMiB="
+                        + heapDelta / (1024L * 1024L)
+                        + System.lineSeparator();
         writeText(orderDirectory(request).resolve("run.txt"), text);
     }
 
@@ -450,14 +523,16 @@ public final class NativeVanillaFeatureOrderProbe {
             Files.createDirectories(path.toAbsolutePath().normalize().getParent());
             Files.writeString(path, text, StandardCharsets.UTF_8);
         } catch (IOException exception) {
-            throw new IllegalStateException("Unable to write FEATURES probe result " + path, exception);
+            throw new IllegalStateException(
+                    "Unable to write FEATURES probe result " + path, exception);
         }
     }
 
     private static String requireProperty(String suffix) {
         String value = System.getProperty(PREFIX + suffix);
         if (value == null || value.isBlank()) {
-            throw new IllegalArgumentException("Missing FEATURES probe property " + PREFIX + suffix);
+            throw new IllegalArgumentException(
+                    "Missing FEATURES probe property " + PREFIX + suffix);
         }
         return value;
     }
@@ -467,8 +542,7 @@ public final class NativeVanillaFeatureOrderProbe {
         return runtime.totalMemory() - runtime.freeMemory();
     }
 
-    private record ProbeResult(int writerTasks, long snapshotNanos) {
-    }
+    private record ProbeResult(int writerTasks, long snapshotNanos) {}
 
     private static final class Request {
         private final long seed;
@@ -480,7 +554,12 @@ public final class NativeVanillaFeatureOrderProbe {
         private List<ChunkPos> requestedOrder = List.of();
         private final List<ChunkPos> completionOrder = new ArrayList<>();
 
-        private Request(long seed, ResourceKey<Level> dimension, String order, Path outputRoot, boolean compare) {
+        private Request(
+                long seed,
+                ResourceKey<Level> dimension,
+                String order,
+                Path outputRoot,
+                boolean compare) {
             this.seed = seed;
             this.dimension = dimension;
             this.order = order;
@@ -490,9 +569,10 @@ public final class NativeVanillaFeatureOrderProbe {
 
         private synchronized void beginWriters(List<ChunkPos> writers) {
             requestedOrder = List.copyOf(writers);
-            expectedWriters = writers.stream()
-                    .map(pos -> ChunkPos.pack(pos.x(), pos.z()))
-                    .collect(java.util.stream.Collectors.toUnmodifiableSet());
+            expectedWriters =
+                    writers.stream()
+                            .map(pos -> ChunkPos.pack(pos.x(), pos.z()))
+                            .collect(java.util.stream.Collectors.toUnmodifiableSet());
             completionOrder.clear();
         }
 
@@ -508,7 +588,9 @@ public final class NativeVanillaFeatureOrderProbe {
             if (!completionOrder.equals(requestedOrder)) {
                 throw new IllegalStateException(
                         "Vanilla FEATURES completion order differed from serial request order; requested="
-                                + requestedOrder + ", completed=" + completionOrder);
+                                + requestedOrder
+                                + ", completed="
+                                + completionOrder);
             }
             expectedWriters = Set.of();
             requestedOrder = List.of();

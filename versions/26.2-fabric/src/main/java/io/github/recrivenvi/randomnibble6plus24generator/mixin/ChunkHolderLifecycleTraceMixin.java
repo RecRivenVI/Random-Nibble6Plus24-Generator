@@ -1,17 +1,14 @@
 package io.github.recrivenvi.randomnibble6plus24generator.mixin;
 
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3C2RSpawnTrace;
 import java.util.concurrent.Executor;
-
 import net.minecraft.server.level.ChunkHolder;
 import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.FullChunkStatus;
-
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3C2RSpawnTrace;
 
 /** Test-only visibility into Vanilla FullChunkStatus promotion and ticket changes. */
 @Mixin(ChunkHolder.class)

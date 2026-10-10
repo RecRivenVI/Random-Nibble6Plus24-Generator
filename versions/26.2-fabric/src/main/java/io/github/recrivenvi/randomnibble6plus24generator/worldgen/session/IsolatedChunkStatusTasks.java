@@ -1,33 +1,30 @@
 package io.github.recrivenvi.randomnibble6plus24generator.worldgen.session;
 
-import java.util.concurrent.CompletableFuture;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.FeatureFrontierEvidence;
 import java.util.BitSet;
 import java.util.EnumSet;
-
+import java.util.concurrent.CompletableFuture;
 import net.minecraft.SharedConstants;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.QuartPos;
 import net.minecraft.server.level.GenerationChunkHolder;
 import net.minecraft.server.level.WorldGenRegion;
 import net.minecraft.util.StaticCache2D;
-import net.minecraft.world.level.StructureManager;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.StructureManager;
+import net.minecraft.world.level.biome.BiomeGenerationSettings;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ProtoChunk;
-import net.minecraft.world.level.block.state.BlockState;
-import net.minecraft.world.level.biome.BiomeGenerationSettings;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.level.chunk.status.ChunkStep;
-import net.minecraft.world.level.levelgen.blending.Blender;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.levelgen.blending.Blender;
 import net.minecraft.world.level.levelgen.structure.placement.ConcentricRingsStructurePlacement;
-
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.FeatureFrontierEvidence;
 
 public final class IsolatedChunkStatusTasks {
 
-    private IsolatedChunkStatusTasks() {
-    }
+    private IsolatedChunkStatusTasks() {}
 
     public static CompletableFuture<ChunkAccess> generateStructureStarts(
             IsolatedGenerationContext context,
@@ -42,7 +39,8 @@ public final class IsolatedChunkStatusTasks {
             // common pool with workers waiting on the monitor while the monitor owner
             // waits for one of the same-pool ring futures (a real production deadlock).
             for (var structureSet : context.structureState().possibleStructureSets()) {
-                if (structureSet.value().placement() instanceof ConcentricRingsStructurePlacement rings) {
+                if (structureSet.value().placement()
+                        instanceof ConcentricRingsStructurePlacement rings) {
                     context.structureState().getRingPositionsFor(rings);
                 }
             }
@@ -50,13 +48,14 @@ public final class IsolatedChunkStatusTasks {
             // isolated universes may run concurrently, but they share the server's Vanilla
             // StructureTemplateManager; serialize only this cache-populating entry point.
             synchronized (context.hostLevel().getServer().getStructureManager()) {
-                context.generator().createStructures(
-                        context.hostLevel().registryAccess(),
-                        context.structureState(),
-                        context.structureManager(),
-                        chunk,
-                        context.worldGenContext().structureManager(),
-                        context.dimension());
+                context.generator()
+                        .createStructures(
+                                context.hostLevel().registryAccess(),
+                                context.structureState(),
+                                context.structureManager(),
+                                chunk,
+                                context.worldGenContext().structureManager(),
+                                context.dimension());
             }
         }
         context.structureCheck().onStructureLoad(chunk.getPos(), chunk.getAllStarts());
@@ -70,10 +69,9 @@ public final class IsolatedChunkStatusTasks {
             ChunkAccess chunk) {
         context.recordStage(ChunkStatus.STRUCTURE_REFERENCES);
         WorldGenRegion region = region(context, step, cache, chunk);
-        context.generator().createReferences(
-                region,
-                context.structureManager().forWorldGenRegion(region),
-                chunk);
+        context.generator()
+                .createReferences(
+                        region, context.structureManager().forWorldGenRegion(region), chunk);
         return CompletableFuture.completedFuture(chunk);
     }
 
@@ -85,11 +83,8 @@ public final class IsolatedChunkStatusTasks {
         context.recordStage(ChunkStatus.BIOMES);
         WorldGenRegion region = region(context, step, cache, chunk);
         StructureManager structureManager = context.structureManager().forWorldGenRegion(region);
-        return context.generator().createBiomes(
-                context.randomState(),
-                Blender.of(region),
-                structureManager,
-                chunk);
+        return context.generator()
+                .createBiomes(context.randomState(), Blender.of(region), structureManager, chunk);
     }
 
     public static CompletableFuture<ChunkAccess> generateNoise(
@@ -99,11 +94,12 @@ public final class IsolatedChunkStatusTasks {
             ChunkAccess chunk) {
         context.recordStage(ChunkStatus.NOISE);
         WorldGenRegion region = region(context, step, cache, chunk);
-        return context.generator().fillFromNoise(
-                Blender.of(region),
-                context.randomState(),
-                context.structureManager().forWorldGenRegion(region),
-                chunk);
+        return context.generator()
+                .fillFromNoise(
+                        Blender.of(region),
+                        context.randomState(),
+                        context.structureManager().forWorldGenRegion(region),
+                        chunk);
     }
 
     public static CompletableFuture<ChunkAccess> generateSurface(
@@ -113,11 +109,12 @@ public final class IsolatedChunkStatusTasks {
             ChunkAccess chunk) {
         context.recordStage(ChunkStatus.SURFACE);
         WorldGenRegion region = region(context, step, cache, chunk);
-        context.generator().buildSurface(
-                region,
-                context.structureManager().forWorldGenRegion(region),
-                context.randomState(),
-                chunk);
+        context.generator()
+                .buildSurface(
+                        region,
+                        context.structureManager().forWorldGenRegion(region),
+                        context.randomState(),
+                        chunk);
         return CompletableFuture.completedFuture(chunk);
     }
 
@@ -136,13 +133,14 @@ public final class IsolatedChunkStatusTasks {
         boolean target = chunk.getPos().equals(context.target());
         BlockState[] before = target ? captureBlocks(chunk) : null;
         int configuredCarvers = target ? countConfiguredCarvers(context, region, chunk) : 0;
-        context.generator().applyCarvers(
-                region,
-                context.worldSeed(),
-                context.randomState(),
-                context.biomeManager(),
-                context.structureManager().forWorldGenRegion(region),
-                chunk);
+        context.generator()
+                .applyCarvers(
+                        region,
+                        context.worldSeed(),
+                        context.randomState(),
+                        context.biomeManager(),
+                        context.structureManager().forWorldGenRegion(region),
+                        chunk);
         if (target) {
             ProtoChunk protoChunk = (ProtoChunk) chunk;
             context.recordTargetCarverTrace(
@@ -178,10 +176,11 @@ public final class IsolatedChunkStatusTasks {
             WorldGenRegion region = region(context, step, cache, chunk);
             context.recordFeatureWorldSeed(region.getSeed());
             if (!SharedConstants.DEBUG_DISABLE_FEATURES) {
-                context.generator().applyBiomeDecoration(
-                        region,
-                        chunk,
-                        context.structureManager().forWorldGenRegion(region));
+                context.generator()
+                        .applyBiomeDecoration(
+                                region,
+                                chunk,
+                                context.structureManager().forWorldGenRegion(region));
             }
             Blender.generateBorderTicks(region, chunk);
             FeatureFrontierEvidence.capture(
@@ -208,22 +207,30 @@ public final class IsolatedChunkStatusTasks {
     }
 
     private static int countConfiguredCarvers(
-            IsolatedGenerationContext context,
-            WorldGenRegion region,
-            ChunkAccess target) {
+            IsolatedGenerationContext context, WorldGenRegion region, ChunkAccess target) {
         int count = 0;
         ChunkPos targetPos = target.getPos();
         for (int offsetX = -8; offsetX <= 8; offsetX++) {
             for (int offsetZ = -8; offsetZ <= 8; offsetZ++) {
                 ChunkPos sourcePos = new ChunkPos(targetPos.x() + offsetX, targetPos.z() + offsetZ);
                 ChunkAccess source = region.getChunk(sourcePos.x(), sourcePos.z());
-                BiomeGenerationSettings settings = source.carverBiome(() ->
-                        context.generator().getBiomeGenerationSettings(
-                                context.generator().getBiomeSource().getNoiseBiome(
-                                        QuartPos.fromBlock(sourcePos.getMinBlockX()),
-                                        0,
-                                        QuartPos.fromBlock(sourcePos.getMinBlockZ()),
-                                        context.randomState().sampler())));
+                BiomeGenerationSettings settings =
+                        source.carverBiome(
+                                () ->
+                                        context.generator()
+                                                .getBiomeGenerationSettings(
+                                                        context.generator()
+                                                                .getBiomeSource()
+                                                                .getNoiseBiome(
+                                                                        QuartPos.fromBlock(
+                                                                                sourcePos
+                                                                                        .getMinBlockX()),
+                                                                        0,
+                                                                        QuartPos.fromBlock(
+                                                                                sourcePos
+                                                                                        .getMinBlockZ()),
+                                                                        context.randomState()
+                                                                                .sampler())));
                 for (var ignored : settings.getCarvers()) {
                     count++;
                 }
@@ -239,10 +246,12 @@ public final class IsolatedChunkStatusTasks {
         for (int y = chunk.getMinY(); y < chunk.getMinY() + chunk.getHeight(); y++) {
             for (int z = 0; z < 16; z++) {
                 for (int x = 0; x < 16; x++) {
-                    states[index++] = chunk.getBlockState(cursor.set(
-                            chunk.getPos().getMinBlockX() + x,
-                            y,
-                            chunk.getPos().getMinBlockZ() + z));
+                    states[index++] =
+                            chunk.getBlockState(
+                                    cursor.set(
+                                            chunk.getPos().getMinBlockX() + x,
+                                            y,
+                                            chunk.getPos().getMinBlockZ() + z));
                 }
             }
         }
@@ -256,10 +265,12 @@ public final class IsolatedChunkStatusTasks {
         for (int y = chunk.getMinY(); y < chunk.getMinY() + chunk.getHeight(); y++) {
             for (int z = 0; z < 16; z++) {
                 for (int x = 0; x < 16; x++) {
-                    BlockState after = chunk.getBlockState(cursor.set(
-                            chunk.getPos().getMinBlockX() + x,
-                            y,
-                            chunk.getPos().getMinBlockZ() + z));
+                    BlockState after =
+                            chunk.getBlockState(
+                                    cursor.set(
+                                            chunk.getPos().getMinBlockX() + x,
+                                            y,
+                                            chunk.getPos().getMinBlockZ() + z));
                     if (!before[index].equals(after)) {
                         changed++;
                     }

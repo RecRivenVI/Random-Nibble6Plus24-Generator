@@ -1,0 +1,16 @@
+Random Nibble6Plus24 Generator 保留所有权利（All Rights Reserved），不授予使用或再分发许可，本项目未提供单独的许可文件。
+
+以下第三方文件适用各自的许可，不授予本项目其他代码新的使用或再分发许可。
+
+Raven's Mod Template
+文件：AGENTS.md、CLAUDE.md、.rumdl.toml、.editorconfig、.gitattributes、.github/workflows/specification.yml、.github/workflows/check.yml、components/configuration/、components/conventions/、components/compliance/、gradle/libs.versions.toml、gradle/gradle-daemon-jvm.properties、通用构建文档及派生的构建入口。
+来源：1.2.1，https://github.com/RecRivenVI/Ravens-Mod-Template
+版权声明：Copyright (c) 2026 RavenYin
+许可：MIT，许可原文见 licenses/ravens_mod_template-mit.txt，随发行包保留。
+SPDX-License-Identifier: MIT
+
+Gradle Wrapper
+文件：由 Gradle 生成的 gradlew、gradlew.bat 与 gradle/wrapper/ 中的 Wrapper JAR 和配置。
+来源：Gradle 9.8.1
+许可：Apache License, Version 2.0，https://www.apache.org/licenses/LICENSE-2.0
+SPDX-License-Identifier: Apache-2.0

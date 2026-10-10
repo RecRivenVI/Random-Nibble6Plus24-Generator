@@ -3,7 +3,6 @@ package io.github.recrivenvi.randomnibble6plus24generator.worldgen.materializati
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
-
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.status.ChunkDependencies;
 import net.minecraft.world.level.chunk.status.ChunkPyramid;
@@ -11,9 +10,9 @@ import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.level.chunk.status.ChunkStep;
 
 /**
- * Immutable physical dependency plan derived from the active Vanilla generation pyramid.
- * Only positions whose required physical status is FEATURES or later need an isolated
- * canonical Artifact; outer scheduler prerequisites remain physical pass-through holders.
+ * Immutable physical dependency plan derived from the active Vanilla generation pyramid. Only
+ * positions whose required physical status is FEATURES or later need an isolated canonical
+ * Artifact; outer scheduler prerequisites remain physical pass-through holders.
  */
 public record MosaicPhysicalGenerationPlan(
         ChunkPos requestedPos,
@@ -23,18 +22,21 @@ public record MosaicPhysicalGenerationPlan(
         Map<ChunkPos, ChunkStatus> physicalStatusRequirements) {
 
     public MosaicPhysicalGenerationPlan {
-        materializationObligations = Collections.unmodifiableMap(
-                new LinkedHashMap<>(materializationObligations));
-        physicalStatusRequirements = Collections.unmodifiableMap(
-                new LinkedHashMap<>(physicalStatusRequirements));
+        materializationObligations =
+                Collections.unmodifiableMap(new LinkedHashMap<>(materializationObligations));
+        physicalStatusRequirements =
+                Collections.unmodifiableMap(new LinkedHashMap<>(physicalStatusRequirements));
     }
 
-    public static MosaicPhysicalGenerationPlan derive(ChunkPos requestedPos, ChunkStatus requestedStatus) {
+    public static MosaicPhysicalGenerationPlan derive(
+            ChunkPos requestedPos, ChunkStatus requestedStatus) {
         if (requestedStatus == ChunkStatus.EMPTY) {
-            return new MosaicPhysicalGenerationPlan(requestedPos, requestedStatus, 0, Map.of(), Map.of());
+            return new MosaicPhysicalGenerationPlan(
+                    requestedPos, requestedStatus, 0, Map.of(), Map.of());
         }
         if (requestedStatus.isAfter(ChunkStatus.FULL)) {
-            throw new IllegalArgumentException("Phase 3C1 cannot plan physical status " + requestedStatus);
+            throw new IllegalArgumentException(
+                    "Phase 3C1 cannot plan physical status " + requestedStatus);
         }
 
         ChunkStep step = ChunkPyramid.GENERATION_PYRAMID.getStepTo(requestedStatus);

@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicLong;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.SectionPos;
@@ -29,20 +28,30 @@ public final class MosaicPhysicalPoiReconciler {
     private static final AtomicLong TOTAL_NANOS = new AtomicLong();
     private static volatile FaultPoint verificationFault = FaultPoint.NONE;
 
-    private MosaicPhysicalPoiReconciler() {
-    }
+    private MosaicPhysicalPoiReconciler() {}
 
-    /** Match Vanilla chunk loading: prefetch may be asynchronous, storage unpack/mutation may not. */
-    public static CompletableFuture<Reconciliation> reconcileAsync(WorldGenContext context, ChunkAccess chunk) {
+    /**
+     * Match Vanilla chunk loading: prefetch may be asynchronous, storage unpack/mutation may not.
+     */
+    public static CompletableFuture<Reconciliation> reconcileAsync(
+            WorldGenContext context, ChunkAccess chunk) {
         ServerLevel level = context.level();
-        var lifecycle = ((MosaicGenerationLifecycleOwner) level).randomnibble6plus24generator$generationLifecycle();
+        var lifecycle =
+                ((MosaicGenerationLifecycleOwner) level)
+                        .randomnibble6plus24generator$generationLifecycle();
         lifecycle.checkPreparing();
-        return level.getPoiManager().prefetch(chunk.getPos()).thenApplyAsync(ignored -> {
-            lifecycle.checkPreparing();
-            return reconcile(level, chunk);
-        // Use the chunk-source event loop, not MinecraftServer's general task queue:
-        // synchronous getChunk waits pump this queue (as does native scheduleChunkLoad).
-        }, context.mainThreadExecutor());
+        return level.getPoiManager()
+                .prefetch(chunk.getPos())
+                .thenApplyAsync(
+                        ignored -> {
+                            lifecycle.checkPreparing();
+                            return reconcile(level, chunk);
+                            // Use the chunk-source event loop, not MinecraftServer's general task
+                            // queue:
+                            // synchronous getChunk waits pump this queue (as does native
+                            // scheduleChunkLoad).
+                        },
+                        context.mainThreadExecutor());
     }
 
     public static Reconciliation reconcile(ServerLevel level, ChunkAccess chunk) {
@@ -51,9 +60,13 @@ public final class MosaicPhysicalPoiReconciler {
             throw new IllegalArgumentException("POI reconciliation is Mosaic-only");
         }
         if (chunk.getPersistedStatus().isBefore(ChunkStatus.FEATURES)) {
-            throw new IllegalStateException("POI reconciliation requires physical FEATURES data at "
-                    + chunk.getPos() + " ("
-                    + MosaicPhysicalMaterializer.describePhysicalState(level, chunk.getPos()) + ")");
+            throw new IllegalStateException(
+                    "POI reconciliation requires physical FEATURES data at "
+                            + chunk.getPos()
+                            + " ("
+                            + MosaicPhysicalMaterializer.describePhysicalState(
+                                    level, chunk.getPos())
+                            + ")");
         }
         failIf(FaultPoint.BEFORE_RECONCILIATION);
         long started = System.nanoTime();
@@ -61,7 +74,8 @@ public final class MosaicPhysicalPoiReconciler {
         LevelChunkSection[] sections = chunk.getSections();
         for (int index = 0; index < sections.length; index++) {
             int sectionY = chunk.getSectionYFromSectionIndex(index);
-            manager.checkConsistencyWithBlocks(SectionPos.of(chunk.getPos(), sectionY), sections[index]);
+            manager.checkConsistencyWithBlocks(
+                    SectionPos.of(chunk.getPos(), sectionY), sections[index]);
         }
         long elapsed = System.nanoTime() - started;
         INVOCATIONS.incrementAndGet();
@@ -77,10 +91,15 @@ public final class MosaicPhysicalPoiReconciler {
         BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
         for (int y = chunk.getMinY(); y < chunk.getMinY() + chunk.getHeight(); y++) {
             for (int z = chunk.getPos().getMinBlockZ(); z <= chunk.getPos().getMaxBlockZ(); z++) {
-                for (int x = chunk.getPos().getMinBlockX(); x <= chunk.getPos().getMaxBlockX(); x++) {
+                for (int x = chunk.getPos().getMinBlockX();
+                        x <= chunk.getPos().getMaxBlockX();
+                        x++) {
                     BlockPos pos = cursor.set(x, y, z).immutable();
-                    PoiTypes.forState(chunk.getBlockState(pos)).ifPresent(type -> result.add(
-                            entry(pos, type, type.value().maxTickets())));
+                    PoiTypes.forState(chunk.getBlockState(pos))
+                            .ifPresent(
+                                    type ->
+                                            result.add(
+                                                    entry(pos, type, type.value().maxTickets())));
                 }
             }
         }
@@ -90,11 +109,12 @@ public final class MosaicPhysicalPoiReconciler {
 
     public static List<PoiEntry> actualEntries(ServerLevel level, ChunkAccess chunk) {
         requireServerThread(level);
-        List<PoiEntry> result = level.getPoiManager()
-                .getInChunk(ignored -> true, chunk.getPos(), PoiManager.Occupancy.ANY)
-                .map(MosaicPhysicalPoiReconciler::entry)
-                .sorted(PoiEntry.ORDER)
-                .toList();
+        List<PoiEntry> result =
+                level.getPoiManager()
+                        .getInChunk(ignored -> true, chunk.getPos(), PoiManager.Occupancy.ANY)
+                        .map(MosaicPhysicalPoiReconciler::entry)
+                        .sorted(PoiEntry.ORDER)
+                        .toList();
         return List.copyOf(result);
     }
 
@@ -119,8 +139,9 @@ public final class MosaicPhysicalPoiReconciler {
 
     private static void requireServerThread(ServerLevel level) {
         if (!level.getServer().isSameThread()) {
-            throw new IllegalStateException("Physical POI storage belongs to the server thread, not "
-                    + Thread.currentThread().getName());
+            throw new IllegalStateException(
+                    "Physical POI storage belongs to the server thread, not "
+                            + Thread.currentThread().getName());
         }
     }
 
@@ -129,9 +150,10 @@ public final class MosaicPhysicalPoiReconciler {
     }
 
     private static PoiEntry entry(BlockPos pos, Holder<PoiType> type, int freeTickets) {
-        String id = type.unwrapKey()
-                .map(key -> key.identifier().toString())
-                .orElseGet(() -> type.value().toString());
+        String id =
+                type.unwrapKey()
+                        .map(key -> key.identifier().toString())
+                        .orElseGet(() -> type.value().toString());
         return new PoiEntry(pos.immutable(), id, freeTickets, type.value().maxTickets());
     }
 
@@ -143,18 +165,17 @@ public final class MosaicPhysicalPoiReconciler {
     }
 
     public record PoiEntry(BlockPos pos, String type, int freeTickets, int maxTickets) {
-        private static final Comparator<PoiEntry> ORDER = Comparator
-                .comparingInt((PoiEntry value) -> value.pos().getY())
-                .thenComparingInt(value -> value.pos().getZ())
-                .thenComparingInt(value -> value.pos().getX())
-                .thenComparing(PoiEntry::type);
+        private static final Comparator<PoiEntry> ORDER =
+                Comparator.comparingInt((PoiEntry value) -> value.pos().getY())
+                        .thenComparingInt(value -> value.pos().getZ())
+                        .thenComparingInt(value -> value.pos().getX())
+                        .thenComparing(PoiEntry::type);
     }
 
-    public record Reconciliation(net.minecraft.world.level.ChunkPos pos, int sections, int poiCount, long nanos) {
-    }
+    public record Reconciliation(
+            net.minecraft.world.level.ChunkPos pos, int sections, int poiCount, long nanos) {}
 
-    public record Metrics(long invocationCount, long sectionCount, long totalNanos) {
-    }
+    public record Metrics(long invocationCount, long sectionCount, long totalNanos) {}
 
     public enum FaultPoint {
         NONE,

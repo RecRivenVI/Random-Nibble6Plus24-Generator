@@ -1,0 +1,13 @@
+tool = "worldgen_validation"
+targets = ["26.2-fabric"]
+
+[instances.server]
+memory-max = "3G"
+memory-min = "256M"
+jvm-args = ["-XX:ActiveProcessorCount=4"]
+
+[instances.client]
+player-name = "Player270"
+memory-max = "3G"
+memory-min = "256M"
+jvm-args = ["-XX:ActiveProcessorCount=4"]

@@ -1,5 +1,11 @@
 package io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify;
 
+import io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile.MosaicWorldProfile;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.seed.MosaicSeedResolver;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.FeatureStableGenerationRun;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.GenerationContextRegistry;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.IsolatedGenerationSession;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -9,7 +15,6 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -17,35 +22,33 @@ import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 
-import io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile.MosaicWorldProfile;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.seed.MosaicSeedResolver;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.FeatureStableGenerationRun;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.GenerationContextRegistry;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.IsolatedGenerationSession;
-
 /** Explicit FEATURES verification harness; never runs without its JVM property. */
 public final class Phase2C1Verification {
 
-    public static final String VERIFY_PROPERTY = "randomnibble6plus24generator.phase2c1.verify";
+    public static final String VERIFY_PROPERTY =
+            io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator.MOD_ID
+                    + ".phase2c1.verify";
+
     /** Minecraft 26.2, Mosaic format V2, Seed V1, Feature Ordering V1. */
     public static final String FEATURES_ORIGIN_GOLDEN =
             "5c246f0529e1ae1388cdaf11d42a5a17cf4cb5fbf65f862db62b2dc9bd29edae";
+
     /** Root-cause non-origin anchor under the same frozen versions. */
     public static final String FEATURES_NON_ORIGIN_GOLDEN =
             "44cff6725fa04145cd8e0917f9bbecc578fe5479b2590db869b90c163d7edbf5";
-    private static final Set<ChunkStatus> EXPECTED_STAGES = Set.of(
-            ChunkStatus.EMPTY,
-            ChunkStatus.STRUCTURE_STARTS,
-            ChunkStatus.STRUCTURE_REFERENCES,
-            ChunkStatus.BIOMES,
-            ChunkStatus.NOISE,
-            ChunkStatus.SURFACE,
-            ChunkStatus.CARVERS,
-            ChunkStatus.FEATURES);
 
-    private Phase2C1Verification() {
-    }
+    private static final Set<ChunkStatus> EXPECTED_STAGES =
+            Set.of(
+                    ChunkStatus.EMPTY,
+                    ChunkStatus.STRUCTURE_STARTS,
+                    ChunkStatus.STRUCTURE_REFERENCES,
+                    ChunkStatus.BIOMES,
+                    ChunkStatus.NOISE,
+                    ChunkStatus.SURFACE,
+                    ChunkStatus.CARVERS,
+                    ChunkStatus.FEATURES);
+
+    private Phase2C1Verification() {}
 
     public static void runIfRequested(MinecraftServer server) {
         String mode = System.getProperty(VERIFY_PROPERTY, "");
@@ -63,8 +66,9 @@ public final class Phase2C1Verification {
             throw new IllegalArgumentException("Unknown Phase 2C1 verification mode: " + mode);
         }
         if (GenerationContextRegistry.bindingCount() != 0) {
-            throw new IllegalStateException("Generation context leak after FEATURES verification: "
-                    + GenerationContextRegistry.bindingCount());
+            throw new IllegalStateException(
+                    "Generation context leak after FEATURES verification: "
+                            + GenerationContextRegistry.bindingCount());
         }
         RandomNibble6Plus24Generator.LOGGER.info(
                 "Phase 2C1 {} verification PASS totalMs={}",
@@ -73,12 +77,25 @@ public final class Phase2C1Verification {
     }
 
     private static void runSmoke(MinecraftServer server) {
-        Fixture fixture = new Fixture(
-                Long.getLong("randomnibble6plus24generator.phase2c1.smoke.masterSeed", 123456789L),
-                Level.OVERWORLD,
-                new ChunkPos(
-                        Integer.getInteger("randomnibble6plus24generator.phase2c1.smoke.chunkX", 0),
-                        Integer.getInteger("randomnibble6plus24generator.phase2c1.smoke.chunkZ", 0)));
+        Fixture fixture =
+                new Fixture(
+                        Long.getLong(
+                                io.github.recrivenvi.randomnibble6plus24generator
+                                                .RandomNibble6Plus24Generator.MOD_ID
+                                        + ".phase2c1.smoke.masterSeed",
+                                123456789L),
+                        Level.OVERWORLD,
+                        new ChunkPos(
+                                Integer.getInteger(
+                                        io.github.recrivenvi.randomnibble6plus24generator
+                                                        .RandomNibble6Plus24Generator.MOD_ID
+                                                + ".phase2c1.smoke.chunkX",
+                                        0),
+                                Integer.getInteger(
+                                        io.github.recrivenvi.randomnibble6plus24generator
+                                                        .RandomNibble6Plus24Generator.MOD_ID
+                                                + ".phase2c1.smoke.chunkZ",
+                                        0)));
         Result result = run(server, fixture);
         RandomNibble6Plus24Generator.LOGGER.info(
                 "Phase 2C1 smoke PASS dimension={} masterSeed={} localSeed={} target={} hash={} "
@@ -120,16 +137,20 @@ public final class Phase2C1Verification {
             stats.accept(fixture, result);
         }
         if (fixtures.size() != 72 || hashes.size() != 72) {
-            throw new IllegalStateException("Expected 72 unique FEATURES fixtures, found "
-                    + fixtures.size() + "/" + hashes.size());
+            throw new IllegalStateException(
+                    "Expected 72 unique FEATURES fixtures, found "
+                            + fixtures.size()
+                            + "/"
+                            + hashes.size());
         }
 
-        List<Fixture> replay = List.of(
-                fixtures.get(0),
-                fixtures.get(8),
-                fixtures.get(39),
-                fixtures.get(40),
-                fixtures.get(56));
+        List<Fixture> replay =
+                List.of(
+                        fixtures.get(0),
+                        fixtures.get(8),
+                        fixtures.get(39),
+                        fixtures.get(40),
+                        fixtures.get(56));
         assertReplay(server, replay, hashes, "forward");
         List<Fixture> reverse = new ArrayList<>(replay);
         Collections.reverse(reverse);
@@ -160,14 +181,18 @@ public final class Phase2C1Verification {
         run(server, new Fixture(1L, Level.OVERWORLD, ChunkPos.ZERO));
         run(server, new Fixture(-1L, Level.OVERWORLD, ChunkPos.ZERO));
         Result replay = run(server, golden);
-        String output = System.getProperty("randomnibble6plus24generator.phase2c1.debug.snapshot");
+        String output =
+                System.getProperty(
+                        io.github.recrivenvi.randomnibble6plus24generator
+                                        .RandomNibble6Plus24Generator.MOD_ID
+                                + ".phase2c1.debug.snapshot");
         if (output != null && !output.isBlank()) {
             baseline.snapshot().write(java.nio.file.Path.of(output));
         }
         FeatureStageSnapshot.Diff diff = baseline.snapshot().diff(replay.snapshot());
         RandomNibble6Plus24Generator.LOGGER.info(
                 "Phase 2C1 golden order debug baselineHash={} replayHash={} equivalent={} "
-                + "firstDifference={} differingBlocks={} categories={} baselineRawEntities={} replayRawEntities={}",
+                        + "firstDifference={} differingBlocks={} categories={} baselineRawEntities={} replayRawEntities={}",
                 baseline.snapshot().hash(),
                 replay.snapshot().hash(),
                 diff.equivalent(),
@@ -196,8 +221,7 @@ public final class Phase2C1Verification {
     static List<Fixture> matrixFixtures() {
         List<Fixture> fixtures = new ArrayList<>(72);
         long[] originSeeds = {
-            0L, 1L, -1L, 123456789L, -987654321L,
-            Long.MIN_VALUE, Long.MAX_VALUE, 0x123456789ABCDEFL
+            0L, 1L, -1L, 123456789L, -987654321L, Long.MIN_VALUE, Long.MAX_VALUE, 0x123456789ABCDEFL
         };
         for (long seed : originSeeds) {
             fixtures.add(new Fixture(seed, Level.OVERWORLD, ChunkPos.ZERO));
@@ -247,24 +271,26 @@ public final class Phase2C1Verification {
     }
 
     private static void runParallelReplay(
-            MinecraftServer server,
-            List<Fixture> fixtures,
-            Map<Fixture, String> expected) {
+            MinecraftServer server, List<Fixture> fixtures, Map<Fixture, String> expected) {
         ExecutorService workers = Executors.newFixedThreadPool(fixtures.size());
         try {
             List<Future<Map.Entry<Fixture, String>>> futures = new ArrayList<>();
             for (Fixture fixture : fixtures) {
-                futures.add(workers.submit(() -> Map.entry(fixture, run(server, fixture).snapshot().hash())));
+                futures.add(
+                        workers.submit(
+                                () -> Map.entry(fixture, run(server, fixture).snapshot().hash())));
             }
             for (Future<Map.Entry<Fixture, String>> future : futures) {
                 Map.Entry<Fixture, String> result;
                 try {
                     result = future.get();
                 } catch (Exception exception) {
-                    throw new IllegalStateException("Concurrent FEATURES verification failed", exception);
+                    throw new IllegalStateException(
+                            "Concurrent FEATURES verification failed", exception);
                 }
                 if (!expected.get(result.getKey()).equals(result.getValue())) {
-                    throw new IllegalStateException("Concurrent FEATURES mismatch for " + result.getKey());
+                    throw new IllegalStateException(
+                            "Concurrent FEATURES mismatch for " + result.getKey());
                 }
             }
         } finally {
@@ -275,35 +301,48 @@ public final class Phase2C1Verification {
     private static Result run(MinecraftServer server, Fixture fixture) {
         ServerLevel level = server.getLevel(fixture.dimension());
         if (level == null) {
-            throw new IllegalStateException("Missing verification dimension " + fixture.dimension().identifier());
+            throw new IllegalStateException(
+                    "Missing verification dimension " + fixture.dimension().identifier());
         }
         MosaicWorldProfile profile = MosaicWorldProfile.current();
-        long localSeed = new MosaicSeedResolver(profile).resolveLocalWorldSeed(
-                fixture.masterSeed(), fixture.dimension(), fixture.target());
-        FeatureStableGenerationRun run = new IsolatedGenerationSession(profile)
-                .generateFeaturesStable(level, fixture.masterSeed(), fixture.target());
+        long localSeed =
+                new MosaicSeedResolver(profile)
+                        .resolveLocalWorldSeed(
+                                fixture.masterSeed(), fixture.dimension(), fixture.target());
+        FeatureStableGenerationRun run =
+                new IsolatedGenerationSession(profile)
+                        .generateFeaturesStable(level, fixture.masterSeed(), fixture.target());
         if (!run.executedStages().equals(EXPECTED_STAGES)) {
-            throw new IllegalStateException("Unexpected FEATURES stage boundary: " + run.executedStages());
+            throw new IllegalStateException(
+                    "Unexpected FEATURES stage boundary: " + run.executedStages());
         }
         if (run.featureTrace().observedWorldSeed() != localSeed) {
             throw new IllegalStateException("FEATURES observed incorrect world seed");
         }
         if (run.featureTrace().maxConcurrentFeatureWriters() != 1) {
-            throw new IllegalStateException("FEATURES writer serialization failed: " + run.featureTrace());
+            throw new IllegalStateException(
+                    "FEATURES writer serialization failed: " + run.featureTrace());
         }
         if (run.featureTrace().requestedWriters().size() != 9
-                || !run.featureTrace().requestedWriters().equals(run.featureTrace().completedWriters())
-                || !run.featureTrace().chunksAtOrBeyondFeatures().equals(
-                        Set.copyOf(run.featureTrace().requestedWriters()))) {
-            throw new IllegalStateException("FEATURES writer frontier/order mismatch: " + run.featureTrace());
+                || !run.featureTrace()
+                        .requestedWriters()
+                        .equals(run.featureTrace().completedWriters())
+                || !run.featureTrace()
+                        .chunksAtOrBeyondFeatures()
+                        .equals(Set.copyOf(run.featureTrace().requestedWriters()))) {
+            throw new IllegalStateException(
+                    "FEATURES writer frontier/order mismatch: " + run.featureTrace());
         }
-        if (run.metrics().physicalLoadedChunksBefore() != run.metrics().physicalLoadedChunksAfter()) {
-            throw new IllegalStateException("Isolated FEATURES changed physical loaded-chunk count: " + run.metrics());
+        if (run.metrics().physicalLoadedChunksBefore()
+                != run.metrics().physicalLoadedChunksAfter()) {
+            throw new IllegalStateException(
+                    "Isolated FEATURES changed physical loaded-chunk count: " + run.metrics());
         }
-        FeatureStableSnapshot snapshot = FeatureStableSnapshot.capture(
-                fixture.dimension().identifier().toString(),
-                run.targetChunk(),
-                level.registryAccess());
+        FeatureStableSnapshot snapshot =
+                FeatureStableSnapshot.capture(
+                        fixture.dimension().identifier().toString(),
+                        run.targetChunk(),
+                        level.registryAccess());
         if (fixture.masterSeed() == 123456789L
                 && fixture.dimension().equals(Level.OVERWORLD)
                 && fixture.target().equals(ChunkPos.ZERO)) {
@@ -317,15 +356,15 @@ public final class Phase2C1Verification {
         return new Result(localSeed, run, snapshot);
     }
 
-    record Fixture(long masterSeed, ResourceKey<Level> dimension, ChunkPos target) {
-    }
+    record Fixture(long masterSeed, ResourceKey<Level> dimension, ChunkPos target) {}
 
-    private record Result(long localSeed, FeatureStableGenerationRun run, FeatureStableSnapshot snapshot) {
-    }
+    private record Result(
+            long localSeed, FeatureStableGenerationRun run, FeatureStableSnapshot snapshot) {}
 
     private static void assertHash(String expected, String actual, String label) {
         if (!expected.equals(actual)) {
-            throw new IllegalStateException(label + " mismatch; expected=" + expected + ", actual=" + actual);
+            throw new IllegalStateException(
+                    label + " mismatch; expected=" + expected + ", actual=" + actual);
         }
     }
 
@@ -346,8 +385,10 @@ public final class Phase2C1Verification {
         private void accept(Fixture fixture, Result result) {
             dimensionCounts.merge(fixture.dimension().identifier().toString(), 1, Integer::sum);
             elapsedNanos += result.run().metrics().elapsedNanos();
-            minVirtualChunks = Math.min(minVirtualChunks, result.run().metrics().virtualChunkCount());
-            maxVirtualChunks = Math.max(maxVirtualChunks, result.run().metrics().virtualChunkCount());
+            minVirtualChunks =
+                    Math.min(minVirtualChunks, result.run().metrics().virtualChunkCount());
+            maxVirtualChunks =
+                    Math.max(maxVirtualChunks, result.run().metrics().virtualChunkCount());
             blockEntities += result.snapshot().blockEntityCount();
             blockTicks += result.snapshot().blockTickCount();
             fluidTicks += result.snapshot().fluidTickCount();
@@ -380,15 +421,19 @@ public final class Phase2C1Verification {
             }
         }
 
-        private void verifyEntityUuidExclusion(MinecraftServer server, Map<Fixture, String> hashes) {
+        private void verifyEntityUuidExclusion(
+                MinecraftServer server, Map<Fixture, String> hashes) {
             if (entityFixture == null) {
-                throw new IllegalStateException("FEATURES matrix did not exercise ProtoChunk entity NBT");
+                throw new IllegalStateException(
+                        "FEATURES matrix did not exercise ProtoChunk entity NBT");
             }
             Result replay = run(server, entityFixture);
-            assertHash(hashes.get(entityFixture), replay.snapshot().hash(), "entity canonical replay");
+            assertHash(
+                    hashes.get(entityFixture), replay.snapshot().hash(), "entity canonical replay");
             if (entityRawNbt.equals(replay.snapshot().rawEntityNbt())) {
                 throw new IllegalStateException(
-                        "Entity coverage fixture did not demonstrate raw UUID nondeterminism: " + entityFixture);
+                        "Entity coverage fixture did not demonstrate raw UUID nondeterminism: "
+                                + entityFixture);
             }
             RandomNibble6Plus24Generator.LOGGER.info(
                     "Phase 2C1 entity UUID exclusion PASS fixture={} canonicalHash={} rawNbtChanged=true",

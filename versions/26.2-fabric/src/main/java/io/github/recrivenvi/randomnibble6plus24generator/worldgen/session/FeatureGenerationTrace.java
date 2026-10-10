@@ -3,7 +3,6 @@ package io.github.recrivenvi.randomnibble6plus24generator.worldgen.session;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-
 import net.minecraft.world.level.ChunkPos;
 
 public record FeatureGenerationTrace(

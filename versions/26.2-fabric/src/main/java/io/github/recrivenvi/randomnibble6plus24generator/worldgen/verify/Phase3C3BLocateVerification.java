@@ -1,15 +1,19 @@
 package io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator;
+import io.github.recrivenvi.randomnibble6plus24generator.mixin.ChunkMapInvoker;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.identity.MosaicWorldIdentity;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicPhysicalMaterializer;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.MosaicStructureIndexStore;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.MosaicStructureOverlayStore;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-
 import net.minecraft.commands.CommandSource;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.Holder;
@@ -19,9 +23,9 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ChunkResult;
 import net.minecraft.server.level.ChunkHolder;
 import net.minecraft.server.level.ChunkLevel;
+import net.minecraft.server.level.ChunkResult;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.level.ChunkPos;
@@ -34,21 +38,15 @@ import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.levelgen.structure.StructureStart;
 import net.minecraft.world.phys.Vec3;
 
-import io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.identity.MosaicWorldIdentity;
-import io.github.recrivenvi.randomnibble6plus24generator.mixin.ChunkMapInvoker;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicPhysicalMaterializer;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.MosaicStructureIndexStore;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.MosaicStructureOverlayStore;
-
 /** Test-only V1 /locate probe. It searches only the persisted Mosaic index. */
 public final class Phase3C3BLocateVerification {
 
-    private static final String PREFIX = "randomnibble6plus24generator.phase3c3b.locate.";
+    private static final String PREFIX =
+            io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator.MOD_ID
+                    + ".phase3c3b.locate.";
     private static volatile boolean started;
 
-    private Phase3C3BLocateVerification() {
-    }
+    private Phase3C3BLocateVerification() {}
 
     public static boolean skipInitialSpawnIfRequested() {
         return !System.getProperty(PREFIX + "mode", "").isBlank();
@@ -70,11 +68,17 @@ public final class Phase3C3BLocateVerification {
         MosaicPhysicalMaterializer.Metrics queryBaseline = MosaicPhysicalMaterializer.metrics();
         if (mode.equals("reload")
                 && queryBaseline.artifactCaptureCount() != startupBaseline.artifactCaptureCount()) {
-            throw new IllegalStateException("Mosaic /locate reload regenerated canonical data while loading fixtures");
+            throw new IllegalStateException(
+                    "Mosaic /locate reload regenerated canonical data while loading fixtures");
         }
         int loadedBefore = loadedChunks(server);
-        int indexBefore = fixtures.stream().mapToInt(fixture ->
-                MosaicStructureIndexStore.indexedEntryCount(fixture.level())).sum();
+        int indexBefore =
+                fixtures.stream()
+                        .mapToInt(
+                                fixture ->
+                                        MosaicStructureIndexStore.indexedEntryCount(
+                                                fixture.level()))
+                        .sum();
         JsonArray locations = new JsonArray();
         for (Fixture fixture : fixtures) {
             locations.add(locate(fixture));
@@ -85,11 +89,15 @@ public final class Phase3C3BLocateVerification {
         MosaicPhysicalMaterializer.Metrics after = MosaicPhysicalMaterializer.metrics();
         long artifactDelta = after.artifactCaptureCount() - queryBaseline.artifactCaptureCount();
         if (artifactDelta != 0L) {
-            throw new IllegalStateException("Mosaic /locate generated a canonical Artifact: " + artifactDelta);
+            throw new IllegalStateException(
+                    "Mosaic /locate generated a canonical Artifact: " + artifactDelta);
         }
         if (loadedAfter != loadedBefore) {
-            throw new IllegalStateException("Mosaic /locate changed loaded Chunk count: "
-                    + loadedBefore + " -> " + loadedAfter);
+            throw new IllegalStateException(
+                    "Mosaic /locate changed loaded Chunk count: "
+                            + loadedBefore
+                            + " -> "
+                            + loadedAfter);
         }
 
         JsonObject result = new JsonObject();
@@ -99,8 +107,14 @@ public final class Phase3C3BLocateVerification {
         result.addProperty("fixtureSpec", fixtureSpec());
         result.addProperty("fixtureCount", fixtures.size());
         result.addProperty("indexedEntriesBefore", indexBefore);
-        result.addProperty("indexedEntriesAfter", fixtures.stream().mapToInt(fixture ->
-                MosaicStructureIndexStore.indexedEntryCount(fixture.level())).sum());
+        result.addProperty(
+                "indexedEntriesAfter",
+                fixtures.stream()
+                        .mapToInt(
+                                fixture ->
+                                        MosaicStructureIndexStore.indexedEntryCount(
+                                                fixture.level()))
+                        .sum());
         result.addProperty("loadedChunksBefore", loadedBefore);
         result.addProperty("loadedChunksAfter", loadedAfter);
         result.addProperty("artifactGenerations", artifactDelta);
@@ -117,29 +131,43 @@ public final class Phase3C3BLocateVerification {
     }
 
     private static JsonObject locate(Fixture fixture) {
-        Registry<Structure> registry = fixture.level().registryAccess().lookupOrThrow(Registries.STRUCTURE);
+        Registry<Structure> registry =
+                fixture.level().registryAccess().lookupOrThrow(Registries.STRUCTURE);
         Holder<Structure> holder = registry.wrapAsHolder(fixture.structure());
         HolderSet<Structure> requested = HolderSet.direct(holder);
         int before = loadedChunks(fixture.level().getServer());
-        var located = fixture.level().getChunkSource().getGenerator().findNearestMapStructure(
-                fixture.level(), requested, fixture.point(), 100, false);
+        var located =
+                fixture.level()
+                        .getChunkSource()
+                        .getGenerator()
+                        .findNearestMapStructure(
+                                fixture.level(), requested, fixture.point(), 100, false);
         if (located == null || located.getSecond().value() != fixture.structure()) {
-            throw new IllegalStateException("Mosaic /locate did not find indexed " + fixture.structureId()
-                    + " at " + fixture.owner());
+            throw new IllegalStateException(
+                    "Mosaic /locate did not find indexed "
+                            + fixture.structureId()
+                            + " at "
+                            + fixture.owner());
         }
         ChunkPos locatedOwner = ChunkPos.containing(located.getFirst());
         if (!locatedOwner.equals(fixture.owner())) {
-            throw new IllegalStateException("Mosaic /locate returned a different physical owner: expected "
-                    + fixture.owner() + ", found " + locatedOwner);
+            throw new IllegalStateException(
+                    "Mosaic /locate returned a different physical owner: expected "
+                            + fixture.owner()
+                            + ", found "
+                            + locatedOwner);
         }
         StructureManager manager = fixture.level().structureManager();
-        StructureStart projection = manager.getStructureWithPieceAt(located.getFirst(), fixture.structure());
+        StructureStart projection =
+                manager.getStructureWithPieceAt(located.getFirst(), fixture.structure());
         if (!projection.isValid() || projection.getStructure() != fixture.structure()) {
-            throw new IllegalStateException("Mosaic /locate anchor is not inside a physical projection: "
-                    + located.getFirst());
+            throw new IllegalStateException(
+                    "Mosaic /locate anchor is not inside a physical projection: "
+                            + located.getFirst());
         }
         if (loadedChunks(fixture.level().getServer()) != before) {
-            throw new IllegalStateException("Mosaic /locate loaded a Chunk for " + fixture.structureId());
+            throw new IllegalStateException(
+                    "Mosaic /locate loaded a Chunk for " + fixture.structureId());
         }
         JsonObject result = new JsonObject();
         result.addProperty("structure", fixture.structureId());
@@ -152,61 +180,86 @@ public final class Phase3C3BLocateVerification {
     }
 
     private static JsonObject locateVillageTag(List<Fixture> fixtures) {
-        Fixture village = fixtures.stream()
-                .filter(fixture -> fixture.structureId().startsWith("minecraft:village_"))
-                .findFirst().orElse(null);
+        Fixture village =
+                fixtures.stream()
+                        .filter(fixture -> fixture.structureId().startsWith("minecraft:village_"))
+                        .findFirst()
+                        .orElse(null);
         JsonObject result = new JsonObject();
         if (village == null) {
             result.addProperty("tested", false);
             return result;
         }
-        Registry<Structure> registry = village.level().registryAccess().lookupOrThrow(Registries.STRUCTURE);
-        TagKey<Structure> tag = TagKey.create(
-                Registries.STRUCTURE, Identifier.withDefaultNamespace("village"));
-        HolderSet<Structure> requested = registry.get(tag).orElseThrow(
-                () -> new IllegalStateException("Missing vanilla #minecraft:village structure tag"));
-        var located = village.level().getChunkSource().getGenerator().findNearestMapStructure(
-                village.level(), requested, village.point(), 100, false);
+        Registry<Structure> registry =
+                village.level().registryAccess().lookupOrThrow(Registries.STRUCTURE);
+        TagKey<Structure> tag =
+                TagKey.create(Registries.STRUCTURE, Identifier.withDefaultNamespace("village"));
+        HolderSet<Structure> requested =
+                registry.get(tag)
+                        .orElseThrow(
+                                () ->
+                                        new IllegalStateException(
+                                                "Missing vanilla #minecraft:village structure tag"));
+        var located =
+                village.level()
+                        .getChunkSource()
+                        .getGenerator()
+                        .findNearestMapStructure(
+                                village.level(), requested, village.point(), 100, false);
         if (located == null || !requested.contains(located.getSecond())) {
-            throw new IllegalStateException("Mosaic /locate tag query did not return a village projection");
+            throw new IllegalStateException(
+                    "Mosaic /locate tag query did not return a village projection");
         }
         result.addProperty("tested", true);
         result.addProperty("tag", "#minecraft:village");
-        result.addProperty("structure", String.valueOf(registry.getKey(located.getSecond().value())));
+        result.addProperty(
+                "structure", String.valueOf(registry.getKey(located.getSecond().value())));
         result.addProperty("anchor", located.getFirst().toString());
         return result;
     }
 
     private static JsonObject commandPathProof(MinecraftServer server, List<Fixture> fixtures) {
-        Fixture village = fixtures.stream()
-                .filter(fixture -> fixture.structureId().startsWith("minecraft:village_"))
-                .findFirst().orElseThrow();
+        Fixture village =
+                fixtures.stream()
+                        .filter(fixture -> fixture.structureId().startsWith("minecraft:village_"))
+                        .findFirst()
+                        .orElseThrow();
         RecordingSource recording = new RecordingSource();
-        CommandSourceStack source = server.createCommandSourceStack()
-                .withSource(recording)
-                .withLevel(village.level())
-                .withPosition(Vec3.atCenterOf(village.point()))
-                .withPermission(net.minecraft.server.permissions.PermissionSet.ALL_PERMISSIONS);
-        server.getCommands().performPrefixedCommand(
-                source, "locate structure " + village.structureId());
+        CommandSourceStack source =
+                server.createCommandSourceStack()
+                        .withSource(recording)
+                        .withLevel(village.level())
+                        .withPosition(Vec3.atCenterOf(village.point()))
+                        .withPermission(
+                                net.minecraft.server.permissions.PermissionSet.ALL_PERMISSIONS);
+        server.getCommands()
+                .performPrefixedCommand(source, "locate structure " + village.structureId());
         if (recording.messages.isEmpty()) {
             throw new IllegalStateException("Vanilla /locate command path emitted no feedback");
         }
-        boolean success = recording.messages.stream()
-                .anyMatch(message -> message.getString().contains(village.structureId()));
+        boolean success =
+                recording.messages.stream()
+                        .anyMatch(message -> message.getString().contains(village.structureId()));
         if (!success) {
-            throw new IllegalStateException("Vanilla /locate command path did not report the indexed structure: "
-                    + recording.messages);
+            throw new IllegalStateException(
+                    "Vanilla /locate command path did not report the indexed structure: "
+                            + recording.messages);
         }
         recording.messages.clear();
-        server.getCommands().performPrefixedCommand(source, "locate structure minecraft:stronghold");
-        boolean scopedMiss = recording.messages.stream()
-                .anyMatch(message -> message.getString().contains("generated Mosaic chunks")
-                        || message.getString().contains(
-                                "commands.randomnibble6plus24generator.locate.generated_area_not_found"));
+        server.getCommands()
+                .performPrefixedCommand(source, "locate structure minecraft:stronghold");
+        boolean scopedMiss =
+                recording.messages.stream()
+                        .anyMatch(
+                                message ->
+                                        message.getString().contains("generated Mosaic chunks")
+                                                || message.getString()
+                                                        .contains(
+                                                                "commands.randomnibble6plus24generator.locate.generated_area_not_found"));
         if (!scopedMiss) {
-            throw new IllegalStateException("Mosaic /locate miss did not use the generated-area diagnostic: "
-                    + recording.messages);
+            throw new IllegalStateException(
+                    "Mosaic /locate miss did not use the generated-area diagnostic: "
+                            + recording.messages);
         }
         JsonObject result = new JsonObject();
         result.addProperty("success", true);
@@ -222,33 +275,51 @@ public final class Phase3C3BLocateVerification {
         List<Fixture> result = new ArrayList<>();
         for (String item : encoded.split(";")) {
             String[] parts = item.split("\\|", -1);
-            if (parts.length != 4) throw new IllegalStateException("Malformed Phase 3C3B fixture: " + item);
-            ResourceKey<Level> dimension = ResourceKey.create(Registries.DIMENSION, Identifier.parse(parts[1]));
+            if (parts.length != 4)
+                throw new IllegalStateException("Malformed Phase 3C3B fixture: " + item);
+            ResourceKey<Level> dimension =
+                    ResourceKey.create(Registries.DIMENSION, Identifier.parse(parts[1]));
             ServerLevel level = server.getLevel(dimension);
-            if (level == null) throw new IllegalStateException("Missing Phase 3C3B dimension " + parts[1]);
-            Structure structure = registry.get(Identifier.parse(parts[0])).orElseThrow(
-                    () -> new IllegalStateException("Missing structure " + parts[0])).value();
+            if (level == null)
+                throw new IllegalStateException("Missing Phase 3C3B dimension " + parts[1]);
+            Structure structure =
+                    registry.get(Identifier.parse(parts[0]))
+                            .orElseThrow(
+                                    () ->
+                                            new IllegalStateException(
+                                                    "Missing structure " + parts[0]))
+                            .value();
             ChunkPos owner = new ChunkPos(Integer.parseInt(parts[2]), Integer.parseInt(parts[3]));
             LevelChunk chunk = requestFull(server, level, owner);
-            StructureStart start = MosaicStructureOverlayStore.startsForOwner(level, owner).stream()
-                    .filter(candidate -> candidate.getStructure() == structure)
-                    .findFirst().orElse(null);
+            StructureStart start =
+                    MosaicStructureOverlayStore.startsForOwner(level, owner).stream()
+                            .filter(candidate -> candidate.getStructure() == structure)
+                            .findFirst()
+                            .orElse(null);
             if (start == null || !start.isValid()) {
                 throw new IllegalStateException("No indexed structure projection at " + item);
             }
             net.minecraft.core.BlockPos point = piecePoint(start, owner, level);
-            if (point == null) throw new IllegalStateException("Structure has no physical piece at " + item);
+            if (point == null)
+                throw new IllegalStateException("Structure has no physical piece at " + item);
             result.add(new Fixture(level, owner, structure, parts[0], point, chunk));
         }
         return List.copyOf(result);
     }
 
     private static LevelChunk requestFull(MinecraftServer server, ServerLevel level, ChunkPos pos) {
-        var future = level.getChunkSource().getChunkFuture(pos.x(), pos.z(), ChunkStatus.FULL, true);
+        var future =
+                level.getChunkSource().getChunkFuture(pos.x(), pos.z(), ChunkStatus.FULL, true);
         server.managedBlock(future::isDone);
         ChunkResult<ChunkAccess> result = future.join();
-        ChunkAccess chunk = result.orElseThrow(() ->
-                new IllegalStateException("Failed to load Phase 3C3B fixture " + pos + ": " + result.getError()));
+        ChunkAccess chunk =
+                result.orElseThrow(
+                        () ->
+                                new IllegalStateException(
+                                        "Failed to load Phase 3C3B fixture "
+                                                + pos
+                                                + ": "
+                                                + result.getError()));
         if (!(chunk instanceof LevelChunk levelChunk)) {
             throw new IllegalStateException("Phase 3C3B fixture did not reach FULL: " + pos);
         }
@@ -284,20 +355,24 @@ public final class Phase3C3BLocateVerification {
     private static void releaseProbeHolders(MinecraftServer server) {
         for (ServerLevel level : server.getAllLevels()) {
             ChunkMapInvoker invoker = (ChunkMapInvoker) level.getChunkSource().chunkMap;
-            List<ChunkHolder> holders = invoker
-                    .randomnibble6plus24generator$invokeAllChunksWithAtLeastStatus(ChunkStatus.EMPTY)
-                    .toList();
+            List<ChunkHolder> holders =
+                    invoker.randomnibble6plus24generator$invokeAllChunksWithAtLeastStatus(
+                                    ChunkStatus.EMPTY)
+                            .toList();
             for (ChunkHolder holder : holders) {
                 invoker.randomnibble6plus24generator$invokeUpdateChunkScheduling(
-                        holder.getPos().pack(), ChunkLevel.MAX_LEVEL + 1,
-                        holder, holder.getTicketLevel());
+                        holder.getPos().pack(),
+                        ChunkLevel.MAX_LEVEL + 1,
+                        holder,
+                        holder.getTicketLevel());
             }
             invoker.randomnibble6plus24generator$invokePromoteChunkMap();
         }
     }
 
     private static String fixtureSpec() {
-        return System.getProperty(PREFIX + "fixtureSpec",
+        return System.getProperty(
+                PREFIX + "fixtureSpec",
                 "minecraft:village_desert|minecraft:overworld|-10|11;"
                         + "minecraft:mineshaft|minecraft:overworld|-4|-2;"
                         + "minecraft:trial_chambers|minecraft:overworld|-13|-14;"
@@ -324,8 +399,7 @@ public final class Phase3C3BLocateVerification {
             Structure structure,
             String structureId,
             net.minecraft.core.BlockPos point,
-            LevelChunk chunk) {
-    }
+            LevelChunk chunk) {}
 
     private static final class RecordingSource implements CommandSource {
         private final List<net.minecraft.network.chat.Component> messages = new ArrayList<>();

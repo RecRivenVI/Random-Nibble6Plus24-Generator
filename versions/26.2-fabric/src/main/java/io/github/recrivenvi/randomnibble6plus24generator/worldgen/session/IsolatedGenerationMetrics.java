@@ -8,5 +8,4 @@ public record IsolatedGenerationMetrics(
         int virtualStorageScanCount,
         long suppressedPhysicalPoiUpdates,
         int physicalLoadedChunksBefore,
-        int physicalLoadedChunksAfter) {
-}
+        int physicalLoadedChunksAfter) {}

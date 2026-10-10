@@ -1,5 +1,24 @@
 package io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator;
+import io.github.recrivenvi.randomnibble6plus24generator.mixin.ChunkAccessAccessor;
+import io.github.recrivenvi.randomnibble6plus24generator.mixin.ChunkHolderInvoker;
+import io.github.recrivenvi.randomnibble6plus24generator.mixin.ChunkMapInvoker;
+import io.github.recrivenvi.randomnibble6plus24generator.mixin.LevelTicksAccessor;
+import io.github.recrivenvi.randomnibble6plus24generator.mixin.ServerLevelInvoker;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.artifact.CanonicalChunkArtifact;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.generator.MosaicChunkGenerator;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.identity.MosaicWorldIdentity;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicPhysicalMaterializer;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicPhysicalPoiReconciler;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.PhysicalMosaicTrace;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile.MosaicWorldProfile;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile.MosaicWorldProfileData;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.runtime.MosaicRuntimeContext;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.GenerationContextRegistry;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.MosaicSpawnContextRegistry;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -12,83 +31,56 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.QuartPos;
 import net.minecraft.core.Holder;
-import net.minecraft.core.registries.Registries;
+import net.minecraft.core.QuartPos;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ChunkGenerationTask;
 import net.minecraft.server.level.ChunkHolder;
 import net.minecraft.server.level.ChunkLevel;
-import net.minecraft.server.level.GenerationChunkHolder;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.FullChunkStatus;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.TicketType;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntitySpawnReason;
-import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.Blocks;
-import net.minecraft.world.level.material.Fluids;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
+import net.minecraft.world.level.chunk.ChunkGeneratorStructureState;
 import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.ProtoChunk;
 import net.minecraft.world.level.chunk.status.ChunkPyramid;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.level.chunk.storage.SerializableChunkData;
-import net.minecraft.world.level.chunk.ChunkGeneratorStructureState;
 import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
 import net.minecraft.world.level.levelgen.RandomState;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.levelgen.structure.placement.RandomSpreadStructurePlacement;
+import net.minecraft.world.level.material.Fluids;
 import net.minecraft.world.ticks.SavedTick;
-
-import io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator;
-import io.github.recrivenvi.randomnibble6plus24generator.mixin.ChunkHolderInvoker;
-import io.github.recrivenvi.randomnibble6plus24generator.mixin.ChunkAccessAccessor;
-import io.github.recrivenvi.randomnibble6plus24generator.mixin.ChunkMapInvoker;
-import io.github.recrivenvi.randomnibble6plus24generator.mixin.ServerLevelInvoker;
-import io.github.recrivenvi.randomnibble6plus24generator.mixin.LevelTicksAccessor;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.artifact.CanonicalChunkArtifact;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.generator.MosaicChunkGenerator;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.identity.MosaicWorldIdentity;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicPhysicalGenerationPlan;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicPhysicalMaterializer;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicPhysicalPoiReconciler;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.PhysicalMosaicTrace;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile.MosaicWorldProfile;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile.MosaicWorldProfileData;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.runtime.MosaicRuntimeContext;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.seed.MosaicSeedResolver;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.GenerationContextRegistry;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.MosaicSpawnContextRegistry;
 
 /** Property-gated Phase 3C1 physical SPAWN/FULL verification. */
 public final class Phase3C1Verification {
 
-    private static final String PREFIX = "randomnibble6plus24generator.phase3c1.";
-    private static final Comparator<ChunkPos> Z_THEN_X = Comparator
-            .comparingInt(ChunkPos::z)
-            .thenComparingInt(ChunkPos::x);
+    private static final String PREFIX =
+            io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator.MOD_ID
+                    + ".phase3c1.";
+    private static final Comparator<ChunkPos> Z_THEN_X =
+            Comparator.comparingInt(ChunkPos::z).thenComparingInt(ChunkPos::x);
     private static final Map<ServerLevel, Set<ChunkPos>> EXACT_STATUS_HOLDERS =
             java.util.Collections.synchronizedMap(new java.util.IdentityHashMap<>());
     private static volatile boolean completed;
 
-    private Phase3C1Verification() {
-    }
+    private Phase3C1Verification() {}
 
     public static boolean requested() {
         return !System.getProperty(PREFIX + "verify", "").isBlank();
@@ -96,9 +88,10 @@ public final class Phase3C1Verification {
 
     public static void bootstrapProfileIfRequested(MinecraftServer server) {
         if (!requested()) return;
-        server.getDataStorage().set(
-                MosaicWorldProfileData.TYPE,
-                new MosaicWorldProfileData(MosaicWorldProfile.current()));
+        server.getDataStorage()
+                .set(
+                        MosaicWorldProfileData.TYPE,
+                        new MosaicWorldProfileData(MosaicWorldProfile.current()));
     }
 
     public static boolean skipInitialSpawnIfRequested() {
@@ -114,20 +107,24 @@ public final class Phase3C1Verification {
         if (mode.isBlank()) return;
         ServerLevel level = level(server);
         ensureHiddenMosaic(level);
-        JsonObject result = switch (mode) {
-            case "full", "reload" -> runFull(server, level, mode.equals("reload"));
-            case "pair" -> runPair(server, level);
-            case "runtime" -> runRuntime(server, level);
-            case "ocean-scan" -> scanOceanMonument(level);
-            default -> throw new IllegalArgumentException("Unknown Phase 3C1 verification mode " + mode);
-        };
+        JsonObject result =
+                switch (mode) {
+                    case "full", "reload" -> runFull(server, level, mode.equals("reload"));
+                    case "pair" -> runPair(server, level);
+                    case "runtime" -> runRuntime(server, level);
+                    case "ocean-scan" -> scanOceanMonument(level);
+                    default ->
+                            throw new IllegalArgumentException(
+                                    "Unknown Phase 3C1 verification mode " + mode);
+                };
         result.addProperty("mode", mode);
         result.addProperty("status", "PASS");
         write(result);
         completed = true;
         RandomNibble6Plus24Generator.LOGGER.info("Phase 3C1 {} PASS", mode);
         cleanupExactStatusHolders(server);
-        if (Boolean.parseBoolean(System.getProperty(PREFIX + "autoStop", "true"))) server.halt(false);
+        if (Boolean.parseBoolean(System.getProperty(PREFIX + "autoStop", "true")))
+            server.halt(false);
     }
 
     public static void cleanupExactStatusHolders(MinecraftServer server) {
@@ -140,14 +137,11 @@ public final class Phase3C1Verification {
         ChunkMapInvoker invoker = (ChunkMapInvoker) level.getChunkSource().chunkMap;
         for (ChunkPos pos : positions) {
             long packed = ChunkPos.pack(pos.x(), pos.z());
-            ChunkHolder existing = level.getChunkSource().chunkMap
-                    .getUpdatingChunkIfPresent(packed);
+            ChunkHolder existing =
+                    level.getChunkSource().chunkMap.getUpdatingChunkIfPresent(packed);
             if (existing != null) {
                 invoker.randomnibble6plus24generator$invokeUpdateChunkScheduling(
-                        packed,
-                        ChunkLevel.MAX_LEVEL + 1,
-                        existing,
-                        existing.getTicketLevel());
+                        packed, ChunkLevel.MAX_LEVEL + 1, existing, existing.getTicketLevel());
             }
         }
         invoker.randomnibble6plus24generator$invokePromoteChunkMap();
@@ -160,34 +154,46 @@ public final class Phase3C1Verification {
         ChunkAccess result = request(server, level, target, ChunkStatus.FULL);
         long totalNanos = System.nanoTime() - started;
         if (!(result instanceof LevelChunk full)) {
-            throw new IllegalStateException("Physical Mosaic FULL did not return LevelChunk: "
-                    + (result == null ? "null" : result.getClass().getName()));
+            throw new IllegalStateException(
+                    "Physical Mosaic FULL did not return LevelChunk: "
+                            + (result == null ? "null" : result.getClass().getName()));
         }
         if (full.getPersistedStatus() != ChunkStatus.FULL || !full.isLightCorrect()) {
-            throw new IllegalStateException("Physical Mosaic FULL chunk is not gameplay-ready status="
-                    + full.getPersistedStatus() + " lightCorrect=" + full.isLightCorrect());
+            throw new IllegalStateException(
+                    "Physical Mosaic FULL chunk is not gameplay-ready status="
+                            + full.getPersistedStatus()
+                            + " lightCorrect="
+                            + full.isLightCorrect());
         }
         String artifactGeometry = state.artifactGeometry().get(target);
         String fullGeometry = geometryHash(full, level);
         if (artifactGeometry != null && !artifactGeometry.equals(fullGeometry)) {
             CanonicalChunkArtifact artifact = state.artifacts().get(target);
-            String differences = artifact == null
-                    ? "artifact payload unavailable"
-                    : geometryDifferences(artifact.rehydrate(
-                            level.registryAccess(),
-                            net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext
-                                    .fromLevel(level)), full, level);
+            String differences =
+                    artifact == null
+                            ? "artifact payload unavailable"
+                            : geometryDifferences(
+                                    artifact.rehydrate(
+                                            level.registryAccess(),
+                                            net.minecraft.world.level.levelgen.structure.pieces
+                                                    .StructurePieceSerializationContext.fromLevel(
+                                                    level)),
+                                    full,
+                                    level);
             throw new IllegalStateException(
                     "FULL conversion changed canonical geometry at " + target + ": " + differences);
         }
         PhysicalMosaicTrace.Snapshot trace = PhysicalMosaicTrace.snapshot();
         assertClean(level, reload);
-        if (!reload && trace.spawnSeeds().stream().anyMatch(seed -> seed.observed() != seed.expected())) {
-            throw new IllegalStateException("Physical SPAWN did not use local seed: " + trace.spawnSeeds());
+        if (!reload
+                && trace.spawnSeeds().stream()
+                        .anyMatch(seed -> seed.observed() != seed.expected())) {
+            throw new IllegalStateException(
+                    "Physical SPAWN did not use local seed: " + trace.spawnSeeds());
         }
         if (!trace.lifecycleDuplicates().isEmpty()) {
-            throw new IllegalStateException("Physical LevelChunk lifecycle repeated: "
-                    + trace.lifecycleDuplicates());
+            throw new IllegalStateException(
+                    "Physical LevelChunk lifecycle repeated: " + trace.lifecycleDuplicates());
         }
         PhysicalFullSnapshot snapshot = captureFull(level, full);
         if (!reload) {
@@ -199,14 +205,20 @@ public final class Phase3C1Verification {
         json.addProperty("chunkZ", target.z());
         json.addProperty("requestedStatus", ChunkStatus.FULL.getName());
         json.addProperty("reload", reload);
-        json.addProperty("localWorldSeed", MosaicWorldIdentity.runtimeContext(level)
-                .orElseThrow().resolveLocalWorldSeed(level.dimension(), target));
-        json.addProperty("artifactGenerations", MosaicPhysicalMaterializer.metrics().artifactCaptureCount());
+        json.addProperty(
+                "localWorldSeed",
+                MosaicWorldIdentity.runtimeContext(level)
+                        .orElseThrow()
+                        .resolveLocalWorldSeed(level.dimension(), target));
+        json.addProperty(
+                "artifactGenerations", MosaicPhysicalMaterializer.metrics().artifactCaptureCount());
         json.addProperty("artifactPublishes", MosaicPhysicalMaterializer.metrics().publishCount());
-        json.addProperty("spawnCalls", trace.physicalStatusCalls().getOrDefault(
-                ChunkStatus.SPAWN.getName(), 0L));
-        json.addProperty("fullCalls", trace.physicalStatusCalls().getOrDefault(
-                ChunkStatus.FULL.getName(), 0L));
+        json.addProperty(
+                "spawnCalls",
+                trace.physicalStatusCalls().getOrDefault(ChunkStatus.SPAWN.getName(), 0L));
+        json.addProperty(
+                "fullCalls",
+                trace.physicalStatusCalls().getOrDefault(ChunkStatus.FULL.getName(), 0L));
         json.addProperty("spawnSeedReads", trace.spawnSeeds().size());
         json.add("spawnSeeds", spawnSeeds(trace.spawnSeeds()));
         json.add("spawnChunkReads", spawnReads(trace.spawnReads()));
@@ -219,10 +231,11 @@ public final class Phase3C1Verification {
         json.addProperty("pendingBlockEntityCount", pendingBlockEntityCount(full));
         CanonicalChunkArtifact publishedArtifact = state.artifacts().get(target);
         if (publishedArtifact != null) {
-            ProtoChunk detached = publishedArtifact.rehydrate(
-                    level.registryAccess(),
-                    net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext
-                            .fromLevel(level));
+            ProtoChunk detached =
+                    publishedArtifact.rehydrate(
+                            level.registryAccess(),
+                            net.minecraft.world.level.levelgen.structure.pieces
+                                    .StructurePieceSerializationContext.fromLevel(level));
             json.addProperty("artifactEntityNbtCount", detached.getEntities().size());
             json.add("artifactEntityIds", entityIds(detached));
         }
@@ -251,18 +264,26 @@ public final class Phase3C1Verification {
         JsonArray result = new JsonArray();
         var structures = level.registryAccess().lookupOrThrow(Registries.STRUCTURE);
         chunk.getAllStarts().entrySet().stream()
-                .sorted(Comparator.comparing(entry -> String.valueOf(structures.getKey(entry.getKey()))))
-                .forEach(entry -> {
-                    var start = entry.getValue();
-                    JsonObject value = new JsonObject();
-                    value.addProperty("id", String.valueOf(structures.getKey(entry.getKey())));
-                    value.addProperty("valid", start.isValid());
-                    value.addProperty("start", start.getChunkPos().toString());
-                    value.addProperty("references", start.getReferences());
-                    value.addProperty("pieces", start.getPieces().size());
-                    value.addProperty("box", start.isValid() ? String.valueOf(start.getBoundingBox()) : "null");
-                    result.add(value);
-                });
+                .sorted(
+                        Comparator.comparing(
+                                entry -> String.valueOf(structures.getKey(entry.getKey()))))
+                .forEach(
+                        entry -> {
+                            var start = entry.getValue();
+                            JsonObject value = new JsonObject();
+                            value.addProperty(
+                                    "id", String.valueOf(structures.getKey(entry.getKey())));
+                            value.addProperty("valid", start.isValid());
+                            value.addProperty("start", start.getChunkPos().toString());
+                            value.addProperty("references", start.getReferences());
+                            value.addProperty("pieces", start.getPieces().size());
+                            value.addProperty(
+                                    "box",
+                                    start.isValid()
+                                            ? String.valueOf(start.getBoundingBox())
+                                            : "null");
+                            result.add(value);
+                        });
         return result;
     }
 
@@ -276,33 +297,44 @@ public final class Phase3C1Verification {
     }
 
     /**
-     * Development-only discovery for the Ocean Monument reload fixture.  The
-     * scan never touches the physical chunk map: placement candidates are
-     * filtered from the local seed, then the normal isolated FEATURES runner
-     * confirms that Vanilla actually creates a monument start at the target.
+     * Development-only discovery for the Ocean Monument reload fixture. The scan never touches the
+     * physical chunk map: placement candidates are filtered from the local seed, then the normal
+     * isolated FEATURES runner confirms that Vanilla actually creates a monument start at the
+     * target.
      */
     private static JsonObject scanOceanMonument(ServerLevel level) {
         if (!(level.getChunkSource().getGenerator() instanceof MosaicChunkGenerator mosaic)) {
-            throw new IllegalStateException("Ocean Monument scan requires MosaicChunkGenerator identity");
+            throw new IllegalStateException(
+                    "Ocean Monument scan requires MosaicChunkGenerator identity");
         }
-        MosaicRuntimeContext runtime = MosaicWorldIdentity.runtimeContext(level)
-                .orElseThrow(() -> new IllegalStateException("Missing Mosaic runtime context during Ocean scan"));
+        MosaicRuntimeContext runtime =
+                MosaicWorldIdentity.runtimeContext(level)
+                        .orElseThrow(
+                                () ->
+                                        new IllegalStateException(
+                                                "Missing Mosaic runtime context during Ocean scan"));
         var registry = level.registryAccess();
         var structures = registry.lookupOrThrow(Registries.STRUCTURE);
-        var monumentKey = ResourceKey.create(
-                Registries.STRUCTURE, Identifier.withDefaultNamespace("monument"));
-        Holder<Structure> monument = structures.get(monumentKey)
-                .orElseThrow(() -> new IllegalStateException("Missing minecraft:monument registry entry"));
+        var monumentKey =
+                ResourceKey.create(
+                        Registries.STRUCTURE, Identifier.withDefaultNamespace("monument"));
+        Holder<Structure> monument =
+                structures
+                        .get(monumentKey)
+                        .orElseThrow(
+                                () ->
+                                        new IllegalStateException(
+                                                "Missing minecraft:monument registry entry"));
         var structureSets = registry.lookupOrThrow(Registries.STRUCTURE_SET);
         var noiseRegistry = registry.lookupOrThrow(Registries.NOISE);
-        NoiseBasedChunkGenerator generator = new NoiseBasedChunkGenerator(
-                mosaic.getBiomeSource(), mosaic.generatorSettings());
+        NoiseBasedChunkGenerator generator =
+                new NoiseBasedChunkGenerator(mosaic.getBiomeSource(), mosaic.generatorSettings());
         // Placements are registry data and independent of the candidate seed;
         // the per-candidate local seed is supplied to getPotentialStructureChunk.
-        RandomState templateRandom = RandomState.create(
-                generator.generatorSettings().value(), noiseRegistry, 0L);
-        ChunkGeneratorStructureState templateState = generator.createState(
-                structureSets, templateRandom, 0L);
+        RandomState templateRandom =
+                RandomState.create(generator.generatorSettings().value(), noiseRegistry, 0L);
+        ChunkGeneratorStructureState templateState =
+                generator.createState(structureSets, templateRandom, 0L);
         templateState.ensureStructuresGenerated();
         List<net.minecraft.world.level.levelgen.structure.placement.StructurePlacement> placements =
                 templateState.getPlacementsForStructure(monument);
@@ -323,12 +355,17 @@ public final class Phase3C1Verification {
                 boolean placementMatch = false;
                 for (var placement : placements) {
                     if (placement instanceof RandomSpreadStructurePlacement spread) {
-                        placementMatch |= spread.getPotentialStructureChunk(localSeed, x, z).equals(candidate);
+                        placementMatch |=
+                                spread.getPotentialStructureChunk(localSeed, x, z)
+                                        .equals(candidate);
                     } else {
-                        RandomState candidateRandom = RandomState.create(
-                                generator.generatorSettings().value(), noiseRegistry, localSeed);
-                        ChunkGeneratorStructureState candidateState = generator.createState(
-                                structureSets, candidateRandom, localSeed);
+                        RandomState candidateRandom =
+                                RandomState.create(
+                                        generator.generatorSettings().value(),
+                                        noiseRegistry,
+                                        localSeed);
+                        ChunkGeneratorStructureState candidateState =
+                                generator.createState(structureSets, candidateRandom, localSeed);
                         candidateState.ensureStructuresGenerated();
                         placementMatch |= placement.isStructureChunk(candidateState, x, z);
                     }
@@ -340,28 +377,40 @@ public final class Phase3C1Verification {
                 // Avoid spending a full isolated run on obviously non-ocean
                 // candidates.  This is only a scan hint; the structure start
                 // below remains the authoritative test.
-                RandomState candidateRandom = RandomState.create(
-                        generator.generatorSettings().value(), noiseRegistry, localSeed);
-                Holder<?> biome = generator.getBiomeSource().getNoiseBiome(
-                        QuartPos.fromBlock(candidate.getMiddleBlockX()),
-                        QuartPos.fromBlock(63),
-                        QuartPos.fromBlock(candidate.getMiddleBlockZ()),
-                        candidateRandom.sampler());
-                String biomeId = biome.unwrapKey()
-                        .map(key -> key.identifier().toString())
-                        .orElse("");
+                RandomState candidateRandom =
+                        RandomState.create(
+                                generator.generatorSettings().value(), noiseRegistry, localSeed);
+                Holder<?> biome =
+                        generator
+                                .getBiomeSource()
+                                .getNoiseBiome(
+                                        QuartPos.fromBlock(candidate.getMiddleBlockX()),
+                                        QuartPos.fromBlock(63),
+                                        QuartPos.fromBlock(candidate.getMiddleBlockZ()),
+                                        candidateRandom.sampler());
+                String biomeId =
+                        biome.unwrapKey().map(key -> key.identifier().toString()).orElse("");
                 if (!biomeId.contains("ocean")) continue;
 
-                try (var context = io.github.recrivenvi.randomnibble6plus24generator.worldgen.session
-                        .IsolatedGenerationContext.create(
+                try (var context =
+                        io.github.recrivenvi.randomnibble6plus24generator.worldgen.session
+                                .IsolatedGenerationContext.create(
                                 io.github.recrivenvi.randomnibble6plus24generator.worldgen.session
                                         .IsolatedGenerationMode.ISOLATED_MOSAIC,
-                                level, localSeed, candidate)) {
+                                level,
+                                localSeed,
+                                candidate)) {
                     var run = context.generateFeaturesStable();
-                    boolean found = run.targetChunk().getAllStarts().entrySet().stream()
-                            .anyMatch(entry -> structures.getKey(entry.getKey())
-                                    .equals(monumentKey.identifier())
-                                    && entry.getValue().isValid());
+                    boolean found =
+                            run.targetChunk().getAllStarts().entrySet().stream()
+                                    .anyMatch(
+                                            entry ->
+                                                    structures
+                                                                    .getKey(entry.getKey())
+                                                                    .equals(
+                                                                            monumentKey
+                                                                                    .identifier())
+                                                            && entry.getValue().isValid());
                     if (found) {
                         JsonObject result = new JsonObject();
                         result.addProperty("fixture", "ocean-monument");
@@ -378,8 +427,13 @@ public final class Phase3C1Verification {
                 }
             }
         }
-        throw new IllegalStateException("No Ocean Monument local-seed fixture after attempts="
-                + attempts + ", placementCandidates=" + placementCandidates + ", range=" + range);
+        throw new IllegalStateException(
+                "No Ocean Monument local-seed fixture after attempts="
+                        + attempts
+                        + ", placementCandidates="
+                        + placementCandidates
+                        + ", range="
+                        + range);
     }
 
     private static JsonObject runPair(MinecraftServer server, ServerLevel level) {
@@ -396,7 +450,8 @@ public final class Phase3C1Verification {
         ChunkAccess left = runRequestTask(server, level, first, ChunkStatus.FULL);
         ChunkAccess right = runRequestTask(server, level, second, ChunkStatus.FULL);
         if (!(left instanceof LevelChunk) || !(right instanceof LevelChunk)) {
-            throw new IllegalStateException("Adjacent physical Mosaic pair did not reach LevelChunk");
+            throw new IllegalStateException(
+                    "Adjacent physical Mosaic pair did not reach LevelChunk");
         }
         JsonObject json = new JsonObject();
         json.addProperty("first", first.toString());
@@ -409,7 +464,8 @@ public final class Phase3C1Verification {
         assertClean(level, false);
         json.addProperty("physicalEntitiesBefore", state.entityCountBefore());
         json.addProperty("physicalEntitiesAfter", entityCount(level));
-        json.addProperty("artifactGenerations", MosaicPhysicalMaterializer.metrics().artifactCaptureCount());
+        json.addProperty(
+                "artifactGenerations", MosaicPhysicalMaterializer.metrics().artifactCaptureCount());
         json.addProperty("spawnCalls", PhysicalMosaicTrace.snapshot().spawnSeeds().size());
         return json;
     }
@@ -427,13 +483,18 @@ public final class Phase3C1Verification {
         registerAndEnsureFullTargets(level, allFullTargets);
         for (ChunkPos pos : allFullTargets) runRequestTask(server, level, pos, ChunkStatus.FULL);
 
-        if (!(level.getChunkSource().chunkMap
-                .getUpdatingChunkIfPresent(ChunkPos.pack(first.x(), first.z()))
-                .getChunkIfPresentUnchecked(ChunkStatus.FULL) instanceof LevelChunk)
-                || !(level.getChunkSource().chunkMap
-                        .getUpdatingChunkIfPresent(ChunkPos.pack(second.x(), second.z()))
-                        .getChunkIfPresentUnchecked(ChunkStatus.FULL) instanceof LevelChunk)) {
-            throw new IllegalStateException("Adjacent physical Mosaic pair did not reach LevelChunk");
+        if (!(level.getChunkSource()
+                                .chunkMap
+                                .getUpdatingChunkIfPresent(ChunkPos.pack(first.x(), first.z()))
+                                .getChunkIfPresentUnchecked(ChunkStatus.FULL)
+                        instanceof LevelChunk)
+                || !(level.getChunkSource()
+                                .chunkMap
+                                .getUpdatingChunkIfPresent(ChunkPos.pack(second.x(), second.z()))
+                                .getChunkIfPresentUnchecked(ChunkStatus.FULL)
+                        instanceof LevelChunk)) {
+            throw new IllegalStateException(
+                    "Adjacent physical Mosaic pair did not reach LevelChunk");
         }
         JsonObject json = new JsonObject();
         json.addProperty("first", first.toString());
@@ -446,7 +507,8 @@ public final class Phase3C1Verification {
         assertClean(level, false);
         json.addProperty("physicalEntitiesBefore", state.entityCountBefore());
         json.addProperty("physicalEntitiesAfter", entityCount(level));
-        json.addProperty("artifactGenerations", MosaicPhysicalMaterializer.metrics().artifactCaptureCount());
+        json.addProperty(
+                "artifactGenerations", MosaicPhysicalMaterializer.metrics().artifactCaptureCount());
         json.addProperty("spawnCalls", PhysicalMosaicTrace.snapshot().spawnSeeds().size());
 
         // Vanilla BLOCK_TICKING requires a full 3x3 accessible frontier.  Register
@@ -456,7 +518,12 @@ public final class Phase3C1Verification {
         tickingFrontier.addAll(square(first, 1));
         tickingFrontier.addAll(square(second, 1));
         materializeFullSet(server, level, tickingFrontier);
-        promote(level, server, List.of(first, second), FullChunkStatus.BLOCK_TICKING, tickingFrontier);
+        promote(
+                level,
+                server,
+                List.of(first, second),
+                FullChunkStatus.BLOCK_TICKING,
+                tickingFrontier);
 
         // ENTITY_TICKING asks Vanilla for a radius-two FULL frontier.  Promote only
         // the first fixture in this bounded probe; the adjacent chunk remains a real
@@ -469,7 +536,9 @@ public final class Phase3C1Verification {
         // uses in a live server.  This makes shouldTickBlocksAt/EntityTickList
         // operate on real Mosaic neighbors instead of only our status probe.
         level.getChunkSource().addTicketWithRadius(TicketType.PLAYER_SIMULATION, first, 2);
-        level.getChunkSource().chunkMap.getDistanceManager()
+        level.getChunkSource()
+                .chunkMap
+                .getDistanceManager()
                 .runAllUpdates(level.getChunkSource().chunkMap);
 
         JsonObject gameplay = runGameplaySmoke(server, level, first, second);
@@ -489,15 +558,16 @@ public final class Phase3C1Verification {
         json.addProperty("physicalEntityCountAfterPromotion", entityCount(level));
         PhysicalMosaicTrace.Snapshot runtimeTrace = PhysicalMosaicTrace.snapshot();
         if (!runtimeTrace.lifecycleDuplicates().isEmpty()) {
-            throw new IllegalStateException("Runtime LevelChunk lifecycle repeated: "
-                    + runtimeTrace.lifecycleDuplicates());
+            throw new IllegalStateException(
+                    "Runtime LevelChunk lifecycle repeated: " + runtimeTrace.lifecycleDuplicates());
         }
         json.add("lifecycleCalls", map(runtimeTrace.lifecycleCalls()));
         json.add("lifecycleDuplicates", map(runtimeTrace.lifecycleDuplicates()));
         json.add("runtimeTicks", map(runtimeTrace.runtimeTicks()));
         if (fullStatus(level, first) != FullChunkStatus.ENTITY_TICKING
                 || fullStatus(level, second) != FullChunkStatus.BLOCK_TICKING) {
-            throw new IllegalStateException("Vanilla physical ticket promotion did not reach expected statuses");
+            throw new IllegalStateException(
+                    "Vanilla physical ticket promotion did not reach expected statuses");
         }
         if (GenerationContextRegistry.bindingCount() != 0
                 || MosaicSpawnContextRegistry.bindingCount() != 0) {
@@ -507,19 +577,14 @@ public final class Phase3C1Verification {
     }
 
     private static void materializeFullSet(
-            MinecraftServer server,
-            ServerLevel level,
-            Set<ChunkPos> positions) {
+            MinecraftServer server, ServerLevel level, Set<ChunkPos> positions) {
         List<ChunkPos> ordered = positions.stream().sorted(Z_THEN_X).toList();
         registerAndEnsureFullTargets(level, positions);
         for (ChunkPos pos : ordered) runRequestTask(server, level, pos, ChunkStatus.FULL);
     }
 
     private static JsonObject runGameplaySmoke(
-            MinecraftServer server,
-            ServerLevel level,
-            ChunkPos first,
-            ChunkPos second) {
+            MinecraftServer server, ServerLevel level, ChunkPos first, ChunkPos second) {
         JsonObject json = new JsonObject();
         PhysicalMosaicTrace.Snapshot before = PhysicalMosaicTrace.snapshot();
         int entitiesBefore = entityCount(level);
@@ -528,19 +593,23 @@ public final class Phase3C1Verification {
         // physical chunk seam.
         int y = level.getSeaLevel() + 8;
 
-        Entity marker = BuiltInRegistries.ENTITY_TYPE
-                .getValue(Identifier.withDefaultNamespace("armor_stand"))
-                .create(level, EntitySpawnReason.COMMAND);
-        if (marker == null) throw new IllegalStateException("Unable to create runtime entity fixture");
+        Entity marker =
+                BuiltInRegistries.ENTITY_TYPE
+                        .getValue(Identifier.withDefaultNamespace("armor_stand"))
+                        .create(level, EntitySpawnReason.COMMAND);
+        if (marker == null)
+            throw new IllegalStateException("Unable to create runtime entity fixture");
         marker.setPos(first.getMaxBlockX() - 1.5D, y, first.getMinBlockZ() + 2.5D);
         if (!level.addFreshEntity(marker)) {
-            throw new IllegalStateException("Vanilla physical entity manager rejected runtime fixture");
+            throw new IllegalStateException(
+                    "Vanilla physical entity manager rejected runtime fixture");
         }
         int entitiesAfterAdd = entityCount(level);
         marker.setPos(second.getMinBlockX() + 1.5D, y, second.getMinBlockZ() + 2.5D);
         ((ServerLevelInvoker) level).randomnibble6plus24generator$invokeTickNonPassenger(marker);
         if (!marker.chunkPosition().equals(second)) {
-            throw new IllegalStateException("Runtime entity did not cross the physical Mosaic boundary");
+            throw new IllegalStateException(
+                    "Runtime entity did not cross the physical Mosaic boundary");
         }
         int entitiesAfterMove = entityCount(level);
         json.addProperty("entityAdded", entitiesAfterAdd == entitiesBefore + 1);
@@ -551,9 +620,12 @@ public final class Phase3C1Verification {
         BlockState oldBlock = level.getBlockState(blockTickPos);
         level.setBlock(blockTickPos, Blocks.STONE.defaultBlockState(), 3);
         int blockTicksBeforeSchedule = level.getBlockTicks().count();
-        ChunkHolder blockTickHolder = level.getChunkSource().chunkMap
-                .getUpdatingChunkIfPresent(ChunkPos.pack(first.x(), first.z()));
-        if (!(blockTickHolder.getChunkIfPresentUnchecked(ChunkStatus.FULL) instanceof LevelChunk blockTickChunk)) {
+        ChunkHolder blockTickHolder =
+                level.getChunkSource()
+                        .chunkMap
+                        .getUpdatingChunkIfPresent(ChunkPos.pack(first.x(), first.z()));
+        if (!(blockTickHolder.getChunkIfPresentUnchecked(ChunkStatus.FULL)
+                instanceof LevelChunk blockTickChunk)) {
             throw new IllegalStateException("Runtime block-tick fixture chunk is not FULL");
         }
         level.scheduleTick(blockTickPos, Blocks.STONE, 0);
@@ -593,16 +665,28 @@ public final class Phase3C1Verification {
             // server's regular tick loop.  Drain the same physical LevelTicks
             // containers through Vanilla's private callbacks for this smoke.
             ServerLevelInvoker callbacks = (ServerLevelInvoker) level;
-            level.getBlockTicks().tick(
-                    Long.MAX_VALUE, 65536,
-                    (pos, block) -> callbacks.randomnibble6plus24generator$invokeTickBlock(pos, block));
-            level.getFluidTicks().tick(
-                    Long.MAX_VALUE, 65536,
-                    (pos, fluid) -> callbacks.randomnibble6plus24generator$invokeTickFluid(pos, fluid));
+            level.getBlockTicks()
+                    .tick(
+                            Long.MAX_VALUE,
+                            65536,
+                            (pos, block) ->
+                                    callbacks.randomnibble6plus24generator$invokeTickBlock(
+                                            pos, block));
+            level.getFluidTicks()
+                    .tick(
+                            Long.MAX_VALUE,
+                            65536,
+                            (pos, fluid) ->
+                                    callbacks.randomnibble6plus24generator$invokeTickFluid(
+                                            pos, fluid));
             for (int pass = 0; pass < 3 && !isWater(level.getFluidState(fluidTarget)); pass++) {
-                level.getFluidTicks().tick(
-                        Long.MAX_VALUE, 65536,
-                        (pos, fluid) -> callbacks.randomnibble6plus24generator$invokeTickFluid(pos, fluid));
+                level.getFluidTicks()
+                        .tick(
+                                Long.MAX_VALUE,
+                                65536,
+                                (pos, fluid) ->
+                                        callbacks.randomnibble6plus24generator$invokeTickFluid(
+                                                pos, fluid));
             }
             // Keep the callback itself Vanilla: if the embedded fixture server has
             // not entered its normal tick loop yet, invoke the exact ServerLevel
@@ -610,7 +694,8 @@ public final class Phase3C1Verification {
             if (!isWater(level.getFluidState(fluidTarget))) {
                 callbacks.randomnibble6plus24generator$invokeTickFluid(fluidSource, Fluids.WATER);
             }
-            if (delta(PhysicalMosaicTrace.snapshot().runtimeTicks(), before.runtimeTicks(), "block") == 0) {
+            if (delta(PhysicalMosaicTrace.snapshot().runtimeTicks(), before.runtimeTicks(), "block")
+                    == 0) {
                 callbacks.randomnibble6plus24generator$invokeTickBlock(blockTickPos, Blocks.STONE);
             }
             directSchedulerFallback = true;
@@ -619,43 +704,73 @@ public final class Phase3C1Verification {
         long blockTicks = delta(after.runtimeTicks(), before.runtimeTicks(), "block");
         long fluidTicks = delta(after.runtimeTicks(), before.runtimeTicks(), "fluid");
         long entityTicks = delta(after.runtimeTicks(), before.runtimeTicks(), "entity");
-        long blockEntityTicks = delta(after.runtimeTicks(), before.runtimeTicks(), "block_entity_ticker");
+        long blockEntityTicks =
+                delta(after.runtimeTicks(), before.runtimeTicks(), "block_entity_ticker");
         if (blockTicks <= 0) {
-            throw new IllegalStateException("Vanilla block tick did not execute (firstTicking="
-                    + level.shouldTickBlocksAt(first.pack())
-                    + ",secondTicking=" + level.shouldTickBlocksAt(second.pack())
-                    + ",firstLevel=" + ticketLevel(level, first)
-                    + ",secondLevel=" + ticketLevel(level, second)
-                    + ",scheduledBefore=" + blockTicksBeforeSchedule
-                    + ",scheduledAfter=" + blockTicksAfterSchedule
-                    + ",scheduledAfterTick=" + level.getBlockTicks().count()
-                    + ",gameTime=" + level.getGameTime()
-                    + ",runsNormally=" + level.tickRateManager().runsNormally()
-                    + ",next=" + ((LevelTicksAccessor) level.getBlockTicks())
-                            .randomnibble6plus24generator$getNextTickForContainer().get(first.pack()) + ")");
+            throw new IllegalStateException(
+                    "Vanilla block tick did not execute (firstTicking="
+                            + level.shouldTickBlocksAt(first.pack())
+                            + ",secondTicking="
+                            + level.shouldTickBlocksAt(second.pack())
+                            + ",firstLevel="
+                            + ticketLevel(level, first)
+                            + ",secondLevel="
+                            + ticketLevel(level, second)
+                            + ",scheduledBefore="
+                            + blockTicksBeforeSchedule
+                            + ",scheduledAfter="
+                            + blockTicksAfterSchedule
+                            + ",scheduledAfterTick="
+                            + level.getBlockTicks().count()
+                            + ",gameTime="
+                            + level.getGameTime()
+                            + ",runsNormally="
+                            + level.tickRateManager().runsNormally()
+                            + ",next="
+                            + ((LevelTicksAccessor) level.getBlockTicks())
+                                    .randomnibble6plus24generator$getNextTickForContainer()
+                                    .get(first.pack())
+                            + ")");
         }
         if (fluidTicks <= 0) throw new IllegalStateException("Vanilla fluid tick did not execute");
         if (!isWater(level.getFluidState(fluidTarget))) {
-            throw new IllegalStateException("Vanilla fluid did not cross the physical Mosaic boundary"
-                    + " source=" + level.getBlockState(fluidSource)
-                    + " target=" + level.getBlockState(fluidTarget)
-                    + " sourceFluid=" + level.getFluidState(fluidSource)
-                    + " targetFluid=" + level.getFluidState(fluidTarget)
-                    + " replace=" + level.getFluidState(fluidTarget)
-                            .canBeReplacedWith(level, fluidTarget, Fluids.WATER, Direction.EAST)
-                    + " east=" + level.getFluidState(fluidSource.east())
-                    + " west=" + level.getFluidState(fluidSource.west())
-                    + " north=" + level.getFluidState(fluidSource.north())
-                    + " south=" + level.getFluidState(fluidSource.south())
-                    + " below=" + level.getFluidState(fluidSource.below())
-                    + " scheduled=" + level.getFluidTicks().count());
+            throw new IllegalStateException(
+                    "Vanilla fluid did not cross the physical Mosaic boundary"
+                            + " source="
+                            + level.getBlockState(fluidSource)
+                            + " target="
+                            + level.getBlockState(fluidTarget)
+                            + " sourceFluid="
+                            + level.getFluidState(fluidSource)
+                            + " targetFluid="
+                            + level.getFluidState(fluidTarget)
+                            + " replace="
+                            + level.getFluidState(fluidTarget)
+                                    .canBeReplacedWith(
+                                            level, fluidTarget, Fluids.WATER, Direction.EAST)
+                            + " east="
+                            + level.getFluidState(fluidSource.east())
+                            + " west="
+                            + level.getFluidState(fluidSource.west())
+                            + " north="
+                            + level.getFluidState(fluidSource.north())
+                            + " south="
+                            + level.getFluidState(fluidSource.south())
+                            + " below="
+                            + level.getFluidState(fluidSource.below())
+                            + " scheduled="
+                            + level.getFluidTicks().count());
         }
 
         int blockEntities = 0;
         for (ChunkPos pos : square(first, 1)) {
-            ChunkHolder holder = level.getChunkSource().chunkMap
-                    .getUpdatingChunkIfPresent(ChunkPos.pack(pos.x(), pos.z()));
-            if (holder != null && holder.getChunkIfPresentUnchecked(ChunkStatus.FULL) instanceof LevelChunk chunk) {
+            ChunkHolder holder =
+                    level.getChunkSource()
+                            .chunkMap
+                            .getUpdatingChunkIfPresent(ChunkPos.pack(pos.x(), pos.z()));
+            if (holder != null
+                    && holder.getChunkIfPresentUnchecked(ChunkStatus.FULL)
+                            instanceof LevelChunk chunk) {
                 blockEntities += chunk.getBlockEntities().size();
             }
         }
@@ -693,9 +808,7 @@ public final class Phase3C1Verification {
         return state.getType().isSame(Fluids.WATER);
     }
 
-    private static void registerAndEnsureFullTargets(
-            ServerLevel level,
-            Set<ChunkPos> positions) {
+    private static void registerAndEnsureFullTargets(ServerLevel level, Set<ChunkPos> positions) {
         List<ChunkPos> ordered = positions.stream().sorted(Z_THEN_X).toList();
         for (ChunkPos pos : ordered) {
             MosaicPhysicalMaterializer.registerPhysicalRequest(level, ChunkStatus.FULL, pos);
@@ -714,49 +827,61 @@ public final class Phase3C1Verification {
         var chunkMap = level.getChunkSource().chunkMap;
         ChunkHolderInvoker invoker;
         for (ChunkPos pos : fullFrontier) {
-            ChunkHolder holder = chunkMap.getUpdatingChunkIfPresent(ChunkPos.pack(pos.x(), pos.z()));
+            ChunkHolder holder =
+                    chunkMap.getUpdatingChunkIfPresent(ChunkPos.pack(pos.x(), pos.z()));
             if (holder == null) throw new IllegalStateException("Missing runtime holder " + pos);
-            holder.setTicketLevel(Math.min(holder.getTicketLevel(), ChunkLevel.byStatus(FullChunkStatus.FULL)));
+            holder.setTicketLevel(
+                    Math.min(holder.getTicketLevel(), ChunkLevel.byStatus(FullChunkStatus.FULL)));
         }
         for (ChunkPos pos : centers) {
-            ChunkHolder holder = chunkMap.getUpdatingChunkIfPresent(ChunkPos.pack(pos.x(), pos.z()));
-            if (holder == null) throw new IllegalStateException("Missing runtime center holder " + pos);
+            ChunkHolder holder =
+                    chunkMap.getUpdatingChunkIfPresent(ChunkPos.pack(pos.x(), pos.z()));
+            if (holder == null)
+                throw new IllegalStateException("Missing runtime center holder " + pos);
             holder.setTicketLevel(ChunkLevel.byStatus(desired));
         }
         ChunkMapInvoker chunkMapInvoker = (ChunkMapInvoker) chunkMap;
         chunkMapInvoker.randomnibble6plus24generator$invokePromoteChunkMap();
         chunkMap.getDistanceManager().runAllUpdates(chunkMap);
         for (ChunkPos pos : fullFrontier.stream().sorted(Z_THEN_X).toList()) {
-            ChunkHolder holder = chunkMap.getUpdatingChunkIfPresent(ChunkPos.pack(pos.x(), pos.z()));
+            ChunkHolder holder =
+                    chunkMap.getUpdatingChunkIfPresent(ChunkPos.pack(pos.x(), pos.z()));
             if (holder == null) continue;
             invoker = (ChunkHolderInvoker) holder;
             invoker.randomnibble6plus24generator$invokeUpdateFutures(chunkMap, server);
         }
         for (ChunkPos pos : centers) {
-            ChunkHolder holder = chunkMap.getUpdatingChunkIfPresent(ChunkPos.pack(pos.x(), pos.z()));
+            ChunkHolder holder =
+                    chunkMap.getUpdatingChunkIfPresent(ChunkPos.pack(pos.x(), pos.z()));
             if (holder == null) throw new IllegalStateException("Missing promoted holder " + pos);
             if (desired == FullChunkStatus.BLOCK_TICKING) {
                 awaitChunkFuture(server, holder.getTickingChunkFuture(), "BLOCK_TICKING", pos);
             } else if (desired == FullChunkStatus.ENTITY_TICKING) {
-                awaitChunkFuture(server, holder.getEntityTickingChunkFuture(), "ENTITY_TICKING", pos);
+                awaitChunkFuture(
+                        server, holder.getEntityTickingChunkFuture(), "ENTITY_TICKING", pos);
             }
         }
     }
 
     private static LevelChunk awaitChunkFuture(
             MinecraftServer server,
-            java.util.concurrent.CompletableFuture<net.minecraft.server.level.ChunkResult<LevelChunk>> future,
+            java.util.concurrent.CompletableFuture<
+                            net.minecraft.server.level.ChunkResult<LevelChunk>>
+                    future,
             String status,
             ChunkPos pos) {
         server.managedBlock(future::isDone);
         var result = future.join().orElse(null);
-        if (result == null) throw new IllegalStateException("Missing " + status + " chunk at " + pos);
+        if (result == null)
+            throw new IllegalStateException("Missing " + status + " chunk at " + pos);
         return result;
     }
 
     private static int ticketLevel(ServerLevel level, ChunkPos pos) {
-        ChunkHolder holder = level.getChunkSource().chunkMap
-                .getUpdatingChunkIfPresent(ChunkPos.pack(pos.x(), pos.z()));
+        ChunkHolder holder =
+                level.getChunkSource()
+                        .chunkMap
+                        .getUpdatingChunkIfPresent(ChunkPos.pack(pos.x(), pos.z()));
         if (holder == null) throw new IllegalStateException("Missing holder " + pos);
         return holder.getTicketLevel();
     }
@@ -772,14 +897,17 @@ public final class Phase3C1Verification {
         PhysicalMosaicTrace.enableDetailedVerification();
         Map<ChunkPos, String> artifactGeometry = new ConcurrentHashMap<>();
         Map<ChunkPos, CanonicalChunkArtifact> artifacts = new ConcurrentHashMap<>();
-        MosaicPhysicalMaterializer.setVerificationObserver(publication -> {
-            CanonicalChunkArtifact artifact = publication.prepared().artifact();
-            ChunkAccess detached = artifact.rehydrate(
-                    level.registryAccess(),
-                    net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext.fromLevel(level));
-            artifacts.put(publication.key().pos(), artifact);
-            artifactGeometry.put(publication.key().pos(), geometryHash(detached, level));
-        });
+        MosaicPhysicalMaterializer.setVerificationObserver(
+                publication -> {
+                    CanonicalChunkArtifact artifact = publication.prepared().artifact();
+                    ChunkAccess detached =
+                            artifact.rehydrate(
+                                    level.registryAccess(),
+                                    net.minecraft.world.level.levelgen.structure.pieces
+                                            .StructurePieceSerializationContext.fromLevel(level));
+                    artifacts.put(publication.key().pos(), artifact);
+                    artifactGeometry.put(publication.key().pos(), geometryHash(detached, level));
+                });
         return new VerificationState(artifactGeometry, artifacts, entityCount(level));
     }
 
@@ -789,49 +917,50 @@ public final class Phase3C1Verification {
                 || materializer.requestedTargetCount() != 0
                 || materializer.materializationObligationCount() != 0
                 || materializer.physicalStatusAllowanceCount() != 0) {
-            throw new IllegalStateException("Physical Mosaic handoff leaked materializer state " + materializer);
+            throw new IllegalStateException(
+                    "Physical Mosaic handoff leaked materializer state " + materializer);
         }
         PhysicalMosaicTrace.Snapshot trace = PhysicalMosaicTrace.snapshot();
         if (!trace.generatorCalls().isEmpty()
                 || !trace.forbiddenStatusCalls().isEmpty()
                 || trace.activeStageCount() != 0) {
-            throw new IllegalStateException("Physical Mosaic handoff crossed a forbidden generator boundary " + trace);
+            throw new IllegalStateException(
+                    "Physical Mosaic handoff crossed a forbidden generator boundary " + trace);
         }
         if (GenerationContextRegistry.bindingCount() != 0
                 || MosaicSpawnContextRegistry.bindingCount() != 0) {
             throw new IllegalStateException("Generation context leaked after physical handoff");
         }
         if (reload && !trace.spawnSeeds().isEmpty()) {
-            throw new IllegalStateException("Reload unexpectedly executed SPAWN: " + trace.spawnSeeds());
+            throw new IllegalStateException(
+                    "Reload unexpectedly executed SPAWN: " + trace.spawnSeeds());
         }
     }
 
     private static ChunkAccess request(
-            MinecraftServer server,
-            ServerLevel level,
-            ChunkPos pos,
-            ChunkStatus status) {
+            MinecraftServer server, ServerLevel level, ChunkPos pos, ChunkStatus status) {
         MosaicPhysicalMaterializer.registerPhysicalRequest(level, status, pos);
         ensurePhysicalHolders(level, pos, status);
         return runRequestTask(server, level, pos, status);
     }
 
     private static ChunkAccess runRequestTask(
-            MinecraftServer server,
-            ServerLevel level,
-            ChunkPos pos,
-            ChunkStatus status) {
-        ChunkGenerationTask task = ChunkGenerationTask.create(level.getChunkSource().chunkMap, status, pos);
+            MinecraftServer server, ServerLevel level, ChunkPos pos, ChunkStatus status) {
+        ChunkGenerationTask task =
+                ChunkGenerationTask.create(level.getChunkSource().chunkMap, status, pos);
         runTask(server, task);
         ChunkAccess result = task.getCenter().getChunkIfPresentUnchecked(status);
         if (result == null) {
-            throw new IllegalStateException("Physical Mosaic task did not produce " + status + " at " + pos);
+            throw new IllegalStateException(
+                    "Physical Mosaic task did not produce " + status + " at " + pos);
         }
         return result;
     }
 
-    private static void ensurePhysicalHolders(ServerLevel level, ChunkPos center, ChunkStatus status) {
-        var dependencies = ChunkPyramid.GENERATION_PYRAMID.getStepTo(status).accumulatedDependencies();
+    private static void ensurePhysicalHolders(
+            ServerLevel level, ChunkPos center, ChunkStatus status) {
+        var dependencies =
+                ChunkPyramid.GENERATION_PYRAMID.getStepTo(status).accumulatedDependencies();
         int radius = dependencies.getRadius();
         var chunkMap = level.getChunkSource().chunkMap;
         ChunkMapInvoker invoker = (ChunkMapInvoker) chunkMap;
@@ -842,9 +971,12 @@ public final class Phase3C1Verification {
             long packed = ChunkPos.pack(pos.x(), pos.z());
             ChunkHolder existing = chunkMap.getUpdatingChunkIfPresent(packed);
             if (existing == null) {
-                existing = invoker.randomnibble6plus24generator$invokeUpdateChunkScheduling(
-                        packed, requiredLevel, null, ChunkLevel.MAX_LEVEL + 1);
-                EXACT_STATUS_HOLDERS.computeIfAbsent(level, ignored -> ConcurrentHashMap.newKeySet()).add(pos);
+                existing =
+                        invoker.randomnibble6plus24generator$invokeUpdateChunkScheduling(
+                                packed, requiredLevel, null, ChunkLevel.MAX_LEVEL + 1);
+                EXACT_STATUS_HOLDERS
+                        .computeIfAbsent(level, ignored -> ConcurrentHashMap.newKeySet())
+                        .add(pos);
             } else if (existing.getTicketLevel() > requiredLevel) {
                 invoker.randomnibble6plus24generator$invokeUpdateChunkScheduling(
                         packed, requiredLevel, existing, existing.getTicketLevel());
@@ -864,13 +996,16 @@ public final class Phase3C1Verification {
 
     private static void saveBeforeStop(MinecraftServer server) {
         if (!server.saveEverything(true, true, true)) {
-            throw new IllegalStateException("MinecraftServer.saveEverything failed during Phase 3C1");
+            throw new IllegalStateException(
+                    "MinecraftServer.saveEverything failed during Phase 3C1");
         }
     }
 
     private static long localSeed(ServerLevel level, ChunkPos pos) {
-        MosaicRuntimeContext runtime = MosaicWorldIdentity.runtimeContext(level)
-                .orElseThrow(() -> new IllegalStateException("Missing Mosaic runtime context"));
+        MosaicRuntimeContext runtime =
+                MosaicWorldIdentity.runtimeContext(level)
+                        .orElseThrow(
+                                () -> new IllegalStateException("Missing Mosaic runtime context"));
         return runtime.resolveLocalWorldSeed(level.dimension(), pos);
     }
 
@@ -883,52 +1018,81 @@ public final class Phase3C1Verification {
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
         for (int y = chunk.getMinY(); y < chunk.getMinY() + chunk.getHeight(); y++) {
             for (int z = chunk.getPos().getMinBlockZ(); z <= chunk.getPos().getMaxBlockZ(); z++) {
-                for (int x = chunk.getPos().getMinBlockX(); x <= chunk.getPos().getMaxBlockX(); x++) {
+                for (int x = chunk.getPos().getMinBlockX();
+                        x <= chunk.getPos().getMaxBlockX();
+                        x++) {
                     update(digest, chunk.getBlockState(pos.set(x, y, z)).toString());
                 }
             }
         }
-        for (int sectionY = chunk.getMinSectionY(); sectionY <= chunk.getMaxSectionY(); sectionY++) {
+        for (int sectionY = chunk.getMinSectionY();
+                sectionY <= chunk.getMaxSectionY();
+                sectionY++) {
             for (int quartZ = 0; quartZ < 4; quartZ++) {
                 for (int quartX = 0; quartX < 4; quartX++) {
                     for (int quartY = 0; quartY < 4; quartY++) {
-                        update(digest, stableBiome(chunk.getNoiseBiome(
-                                (chunk.getPos().x() << 2) + quartX,
-                                (sectionY << 2) + quartY,
-                                (chunk.getPos().z() << 2) + quartZ)));
+                        update(
+                                digest,
+                                stableBiome(
+                                        chunk.getNoiseBiome(
+                                                (chunk.getPos().x() << 2) + quartX,
+                                                (sectionY << 2) + quartY,
+                                                (chunk.getPos().z() << 2) + quartZ)));
                     }
                 }
             }
         }
         ChunkStatus.FULL.heightmapsAfter().stream()
-                .sorted(Comparator.comparing(net.minecraft.world.level.levelgen.Heightmap.Types::getSerializationKey))
-                .forEach(type -> chunk.getHeightmaps().stream()
-                        .filter(entry -> entry.getKey() == type)
-                        .findFirst()
-                        .ifPresent(entry -> {
-                            update(digest, entry.getKey().getSerializationKey());
-                            for (long value : entry.getValue().getRawData()) update(digest, value);
-                        }));
+                .sorted(
+                        Comparator.comparing(
+                                net.minecraft.world.level.levelgen.Heightmap.Types
+                                        ::getSerializationKey))
+                .forEach(
+                        type ->
+                                chunk.getHeightmaps().stream()
+                                        .filter(entry -> entry.getKey() == type)
+                                        .findFirst()
+                                        .ifPresent(
+                                                entry -> {
+                                                    update(
+                                                            digest,
+                                                            entry.getKey().getSerializationKey());
+                                                    for (long value : entry.getValue().getRawData())
+                                                        update(digest, value);
+                                                }));
         var structures = level.registryAccess().lookupOrThrow(Registries.STRUCTURE);
         chunk.getAllStarts().entrySet().stream()
-                .sorted(Comparator.comparing(entry -> String.valueOf(structures.getKey(entry.getKey()))))
-                .forEach(entry -> {
-                    var start = entry.getValue();
-                    update(digest, String.valueOf(structures.getKey(entry.getKey())));
-                    update(digest, "valid=" + start.isValid()
-                            + ",start=" + start.getChunkPos()
-                            + ",references=" + start.getReferences()
-                            + ",pieces=" + start.getPieces().size()
-                            + ",box=" + (start.isValid() ? start.getBoundingBox() : "null"));
-                });
+                .sorted(
+                        Comparator.comparing(
+                                entry -> String.valueOf(structures.getKey(entry.getKey()))))
+                .forEach(
+                        entry -> {
+                            var start = entry.getValue();
+                            update(digest, String.valueOf(structures.getKey(entry.getKey())));
+                            update(
+                                    digest,
+                                    "valid="
+                                            + start.isValid()
+                                            + ",start="
+                                            + start.getChunkPos()
+                                            + ",references="
+                                            + start.getReferences()
+                                            + ",pieces="
+                                            + start.getPieces().size()
+                                            + ",box="
+                                            + (start.isValid() ? start.getBoundingBox() : "null"));
+                        });
         chunk.getAllReferences().entrySet().stream()
-                .sorted(Comparator.comparing(entry -> String.valueOf(structures.getKey(entry.getKey()))))
-                .forEach(entry -> {
-                    update(digest, String.valueOf(structures.getKey(entry.getKey())));
-                    long[] refs = entry.getValue().toLongArray();
-                    java.util.Arrays.sort(refs);
-                    for (long ref : refs) update(digest, ref);
-                });
+                .sorted(
+                        Comparator.comparing(
+                                entry -> String.valueOf(structures.getKey(entry.getKey()))))
+                .forEach(
+                        entry -> {
+                            update(digest, String.valueOf(structures.getKey(entry.getKey())));
+                            long[] refs = entry.getValue().toLongArray();
+                            java.util.Arrays.sort(refs);
+                            for (long ref : refs) update(digest, ref);
+                        });
         return java.util.HexFormat.of().formatHex(digest.digest());
     }
 
@@ -938,20 +1102,29 @@ public final class Phase3C1Verification {
                 .orElseGet(() -> String.valueOf(biome.value()));
     }
 
-    private static String geometryDifferences(ChunkAccess expected, ChunkAccess actual, ServerLevel level) {
+    private static String geometryDifferences(
+            ChunkAccess expected, ChunkAccess actual, ServerLevel level) {
         BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
         int differingBlocks = 0;
         String firstBlock = null;
         for (int y = expected.getMinY(); y < expected.getMinY() + expected.getHeight(); y++) {
-            for (int z = expected.getPos().getMinBlockZ(); z <= expected.getPos().getMaxBlockZ(); z++) {
-                for (int x = expected.getPos().getMinBlockX(); x <= expected.getPos().getMaxBlockX(); x++) {
+            for (int z = expected.getPos().getMinBlockZ();
+                    z <= expected.getPos().getMaxBlockZ();
+                    z++) {
+                for (int x = expected.getPos().getMinBlockX();
+                        x <= expected.getPos().getMaxBlockX();
+                        x++) {
                     var expectedState = expected.getBlockState(pos.set(x, y, z));
                     var actualState = actual.getBlockState(pos);
                     if (!expectedState.equals(actualState)) {
                         differingBlocks++;
                         if (firstBlock == null) {
-                            firstBlock = pos.immutable() + " expected=" + expectedState
-                                    + " actual=" + actualState;
+                            firstBlock =
+                                    pos.immutable()
+                                            + " expected="
+                                            + expectedState
+                                            + " actual="
+                                            + actualState;
                         }
                     }
                 }
@@ -962,7 +1135,9 @@ public final class Phase3C1Verification {
         }
         int differingBiomes = 0;
         String firstBiome = null;
-        for (int sectionY = expected.getMinSectionY(); sectionY <= expected.getMaxSectionY(); sectionY++) {
+        for (int sectionY = expected.getMinSectionY();
+                sectionY <= expected.getMaxSectionY();
+                sectionY++) {
             for (int quartZ = 0; quartZ < 4; quartZ++) {
                 for (int quartX = 0; quartX < 4; quartX++) {
                     for (int quartY = 0; quartY < 4; quartY++) {
@@ -974,8 +1149,17 @@ public final class Phase3C1Verification {
                         if (!expectedBiome.equals(actualBiome)) {
                             differingBiomes++;
                             if (firstBiome == null) {
-                                firstBiome = "(" + bx + "," + by + "," + bz + ") expected="
-                                        + expectedBiome + " actual=" + actualBiome;
+                                firstBiome =
+                                        "("
+                                                + bx
+                                                + ","
+                                                + by
+                                                + ","
+                                                + bz
+                                                + ") expected="
+                                                + expectedBiome
+                                                + " actual="
+                                                + actualBiome;
                             }
                         }
                     }
@@ -986,18 +1170,21 @@ public final class Phase3C1Verification {
             return "biomes=" + differingBiomes + " first=" + firstBiome;
         }
         for (var type : ChunkStatus.FULL.heightmapsAfter()) {
-            var entry = expected.getHeightmaps().stream()
-                    .filter(candidate -> candidate.getKey() == type)
-                    .findFirst()
-                    .orElse(null);
+            var entry =
+                    expected.getHeightmaps().stream()
+                            .filter(candidate -> candidate.getKey() == type)
+                            .findFirst()
+                            .orElse(null);
             if (entry == null) continue;
-            var actualMap = actual.getHeightmaps().stream()
-                    .filter(candidate -> candidate.getKey() == entry.getKey())
-                    .map(Map.Entry::getValue)
-                    .findFirst()
-                    .orElse(null);
-            if (actualMap == null || !java.util.Arrays.equals(
-                    entry.getValue().getRawData(), actualMap.getRawData())) {
+            var actualMap =
+                    actual.getHeightmaps().stream()
+                            .filter(candidate -> candidate.getKey() == entry.getKey())
+                            .map(Map.Entry::getValue)
+                            .findFirst()
+                            .orElse(null);
+            if (actualMap == null
+                    || !java.util.Arrays.equals(
+                            entry.getValue().getRawData(), actualMap.getRawData())) {
                 return "heightmap=" + entry.getKey().getSerializationKey();
             }
         }
@@ -1016,10 +1203,16 @@ public final class Phase3C1Verification {
             var tag = chunk.getBlockEntityNbtForSaving(entry.getKey(), level.registryAccess());
             blockEntities.put(entry.getKey().toString(), String.valueOf(tag));
         }
-        List<String> blockTicks = chunk.getTicksForSerialization(level.getGameTime()).blocks().stream()
-                .map(SavedTick::toString).sorted().toList();
-        List<String> fluidTicks = chunk.getTicksForSerialization(level.getGameTime()).fluids().stream()
-                .map(SavedTick::toString).sorted().toList();
+        List<String> blockTicks =
+                chunk.getTicksForSerialization(level.getGameTime()).blocks().stream()
+                        .map(SavedTick::toString)
+                        .sorted()
+                        .toList();
+        List<String> fluidTicks =
+                chunk.getTicksForSerialization(level.getGameTime()).fluids().stream()
+                        .map(SavedTick::toString)
+                        .sorted()
+                        .toList();
         String serializedHash;
         try {
             serializedHash = sha256(SerializableChunkData.copyOf(level, chunk).write().toString());
@@ -1040,7 +1233,8 @@ public final class Phase3C1Verification {
 
     private static int pendingBlockEntityCount(ChunkAccess chunk) {
         return ((ChunkAccessAccessor) chunk)
-                .randomnibble6plus24generator$getPendingBlockEntities().size();
+                .randomnibble6plus24generator$getPendingBlockEntities()
+                .size();
     }
 
     private static JsonArray spawnSeeds(List<PhysicalMosaicTrace.SpawnSeed> seeds) {
@@ -1069,7 +1263,8 @@ public final class Phase3C1Verification {
         return result;
     }
 
-    private static JsonArray structureReloadSeeds(List<PhysicalMosaicTrace.StructureReloadSeed> seeds) {
+    private static JsonArray structureReloadSeeds(
+            List<PhysicalMosaicTrace.StructureReloadSeed> seeds) {
         JsonArray result = new JsonArray();
         for (var seed : seeds) {
             JsonObject value = new JsonObject();
@@ -1099,13 +1294,20 @@ public final class Phase3C1Verification {
     }
 
     private static ServerLevel level(MinecraftServer server) {
-        ResourceKey<Level> dimension = ResourceKey.create(
-                Registries.DIMENSION,
-                Identifier.parse(System.getProperty(PREFIX + "dimension", "minecraft:overworld")));
+        ResourceKey<Level> dimension =
+                ResourceKey.create(
+                        Registries.DIMENSION,
+                        Identifier.parse(
+                                System.getProperty(PREFIX + "dimension", "minecraft:overworld")));
         ServerLevel level = server.getLevel(dimension);
-        if (level == null) throw new IllegalStateException("Missing Phase 3C1 dimension " + dimension.identifier());
-        long expectedSeed = Long.parseLong(System.getProperty(
-                PREFIX + "masterSeed", Long.toString(server.getWorldGenSettings().options().seed())));
+        if (level == null)
+            throw new IllegalStateException(
+                    "Missing Phase 3C1 dimension " + dimension.identifier());
+        long expectedSeed =
+                Long.parseLong(
+                        System.getProperty(
+                                PREFIX + "masterSeed",
+                                Long.toString(server.getWorldGenSettings().options().seed())));
         if (server.getWorldGenSettings().options().seed() != expectedSeed) {
             throw new IllegalStateException("Phase 3C1 master seed mismatch");
         }
@@ -1131,7 +1333,8 @@ public final class Phase3C1Verification {
     }
 
     private static String sha256(String value) {
-        return java.util.HexFormat.of().formatHex(digestBytes(value.getBytes(StandardCharsets.UTF_8)));
+        return java.util.HexFormat.of()
+                .formatHex(digestBytes(value.getBytes(StandardCharsets.UTF_8)));
     }
 
     private static byte[] digestBytes(byte[] bytes) {
@@ -1154,13 +1357,19 @@ public final class Phase3C1Verification {
     }
 
     private static void update(MessageDigest digest, int value) {
-        digest.update(new byte[] {(byte) (value >>> 24), (byte) (value >>> 16), (byte) (value >>> 8), (byte) value});
+        digest.update(
+                new byte[] {
+                    (byte) (value >>> 24), (byte) (value >>> 16), (byte) (value >>> 8), (byte) value
+                });
     }
 
     private static void update(MessageDigest digest, long value) {
-        digest.update(new byte[] {
-                (byte) (value >>> 56), (byte) (value >>> 48), (byte) (value >>> 40), (byte) (value >>> 32),
-                (byte) (value >>> 24), (byte) (value >>> 16), (byte) (value >>> 8), (byte) value});
+        digest.update(
+                new byte[] {
+                    (byte) (value >>> 56), (byte) (value >>> 48), (byte) (value >>> 40),
+                            (byte) (value >>> 32),
+                    (byte) (value >>> 24), (byte) (value >>> 16), (byte) (value >>> 8), (byte) value
+                });
     }
 
     private static void write(JsonObject json) {
@@ -1178,8 +1387,7 @@ public final class Phase3C1Verification {
     private record VerificationState(
             Map<ChunkPos, String> artifactGeometry,
             Map<ChunkPos, CanonicalChunkArtifact> artifacts,
-            int entityCountBefore) {
-    }
+            int entityCountBefore) {}
 
     private record PhysicalFullSnapshot(
             ChunkPos pos,
@@ -1192,9 +1400,22 @@ public final class Phase3C1Verification {
             Map<String, String> blockEntities,
             String serializedHash) {
         private String hash() {
-            return sha256(pos + "|" + status + "|" + lightCorrect + "|" + blockEntityCount
-                    + "|" + pendingBlockEntityCount + "|" + blockTicks + "|" + fluidTicks
-                    + "|" + blockEntities);
+            return sha256(
+                    pos
+                            + "|"
+                            + status
+                            + "|"
+                            + lightCorrect
+                            + "|"
+                            + blockEntityCount
+                            + "|"
+                            + pendingBlockEntityCount
+                            + "|"
+                            + blockTicks
+                            + "|"
+                            + fluidTicks
+                            + "|"
+                            + blockEntities);
         }
     }
 }

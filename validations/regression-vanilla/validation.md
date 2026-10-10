@@ -1,33 +1,27 @@
 # 普通 Vanilla 回归
 
-## 目标与范围
+## 目标
 
 用现有正常世界验证入口检查普通世界生成、结构查询与生命周期隔离。
 
-这是 Minecraft 26.2 Fabric 单 Target 的验证。与 Vanilla Oracle 的比较属于生成合同符合性，不表示跨 Target/Loader parity。原生 Java 验证入口有一部分由生产 Mixin 显式 gated 调用，继续保留在 `versions/26.2-fabric/src/main`；外部驱动与测试 Mod 程序集中在本项目的 `task/`。
+这是 Minecraft 26.2 Fabric 单 Target 验证。工具属于 `worldgen_validation`，独立游戏内入口属于 `src/probe`，产品 Mixin 直接链接的默认关闭 hooks 留在产品中。
 
-## 从仓库根目录操作
+## 运行
 
-需已有 Java 25、当前 Wrapper/依赖，以及已由用户接受的 `instances/26.2-fabric/server/eula.txt`。不要擅自接受 EULA。先阅读脚本参数；它可能创建、保存或清理自己命名的临时世界。正式用户世界不能用作可丢弃 fixture。
+从仓库根目录执行。先由使用者在 `local.toml` 顶层写入 `eula = true`，不要代替使用者接受 EULA。只启动单个高负载 JVM；所有运行限制为 4 个可见处理器。
 
 ```powershell
-Get-Help .\\validations\\regression-vanilla\\task\\Run-Phase3C3ANormalVanilla.ps1 -Detailed
-.\\validations\\regression-vanilla\\task\\Run-Phase3C3ANormalVanilla.ps1
+& .\components\worldgen_validation\scripts\regression-vanilla\Run-Phase3C3ANormalVanilla.ps1
 ```
 
-脚本是完整入口，内部使用 `:version:26.2-fabric:runServer` 并选择对应验证实例。不要只复制脚本中的半条 Gradle 命令而遗漏 JVM properties、preset 或输入文件。测试 Mod 只在对应显式 Gradle property 下加载；JUnit 仍由根 `test` 任务运行。
+其他矩阵与子场景的脚本在同一工具目录。脚本负责隐藏 preset、输入与系统属性，不直接使用日常实例。人工客户端操作仍由使用者完成。
 
-同目录其余任务由脚本文件名和参数表达矩阵、重载、采样或分析子场景；保留其原有入口，不要求全部一次运行。性能/压力验证必须限制资源、单个高负载 JVM，禁止 GUI 自动化替用户验收。
-
-## 实例、输出和历史证据
-
-- `instance/server` 为本验证的服务端运行目录；额外 client、研究模式和子世界按任务分别保留，不合并。
-- 新输出位于 `instance/output` 下；`instance/evidence` 中保留的原始诊断材料不是运行依赖。
-- `result/legacy`（如存在）保留合同/生命周期回归基准及性能对照 JSON，记录的版本、失败、SHA 和输入不改写。它们用于结果比较与诊断，不是当前运行输入；当前 manifest 和路径关联文件应由任务重新生成。
-- 实例内容默认 ignored，长期结果不含游戏存档或凭据。构建、目录和运行入口见 [开发与验证](../../documents/development/guide-development.md)。
-
-## 验收
+## 通过标准
 
 保持原版路径，Mosaic 激活分支为零；仅服务器 ready 不等于视觉或跨 Loader parity。
 
-按任务输出 JSON、异常链与资源/副作用断言验收。人工/视觉结果只能由用户确认。归档结果仅证明其记录的版本和输入；当前源码的 Runtime / Functional / Visual 状态须由重新运行确认，不能由构建成功代替。
+按输出 JSON、异常链、资源与副作用断言判断，真实错误不能被吞掉。构建通过不代替 Runtime、Functional 或 Visual 通过。
+
+## 结果
+
+新结果写入 `result/current/` 固定位置，同一场景覆盖。实例目录为 `instance/26.2-fabric/<角色>/`；旧研究运行目录原地保留并忽略。`result/legacy/` 原样保留历史证据，不能据此宣称当前版本通过。

@@ -1,18 +1,16 @@
 package io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify;
 
-import java.util.List;
 import java.nio.file.Path;
-
+import java.util.List;
+import java.util.Map;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.ProtoChunk;
-import java.util.Map;
 
 /**
- * Canonical FEATURES snapshot. Entity UUID values remain available as raw
- * evidence but are excluded from equality and SHA-256 because Vanilla creates
- * them from a non-worldgen random source.
+ * Canonical FEATURES snapshot. Entity UUID values remain available as raw evidence but are excluded
+ * from equality and SHA-256 because Vanilla creates them from a non-worldgen random source.
  */
 public final class FeatureStableSnapshot {
 
@@ -33,14 +31,11 @@ public final class FeatureStableSnapshot {
     }
 
     public static FeatureStableSnapshot capture(
-            String dimension,
-            ChunkAccess chunk,
-            RegistryAccess registryAccess) {
+            String dimension, ChunkAccess chunk, RegistryAccess registryAccess) {
         FeatureStageSnapshot raw = FeatureStageSnapshot.capture(dimension, chunk, registryAccess);
-        FeatureStageSnapshot canonical = FeatureStageSnapshot.captureWithCanonicalEntityUuids(
-                dimension,
-                chunk,
-                registryAccess);
+        FeatureStageSnapshot canonical =
+                FeatureStageSnapshot.captureWithCanonicalEntityUuids(
+                        dimension, chunk, registryAccess);
         ProtoChunk protoChunk = (ProtoChunk) chunk;
         return new FeatureStableSnapshot(
                 canonical,

@@ -1,10 +1,8 @@
 package io.github.recrivenvi.randomnibble6plus24generator.mixin;
 
 import java.util.concurrent.atomic.AtomicReference;
-
 import net.minecraft.server.level.GenerationChunkHolder;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
-
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 

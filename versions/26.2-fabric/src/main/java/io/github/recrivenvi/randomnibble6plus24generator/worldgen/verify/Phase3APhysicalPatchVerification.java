@@ -1,5 +1,11 @@
 package io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicPhysicalMaterializer;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.PhysicalMosaicTrace;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.GenerationContextRegistry;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -11,10 +17,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
@@ -30,33 +32,31 @@ import net.minecraft.world.level.chunk.ProtoChunk;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
 
-import io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.MosaicPhysicalMaterializer;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.PhysicalMosaicTrace;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.GenerationContextRegistry;
-
 /** Adjacent/3x3/order/modified-neighbor physical Mosaic acceptance. */
 public final class Phase3APhysicalPatchVerification {
 
-    private static final String PREFIX = "randomnibble6plus24generator.phase3a.patch.";
-    private static final Comparator<ChunkPos> Z_THEN_X = Comparator
-            .comparingInt(ChunkPos::z)
-            .thenComparingInt(ChunkPos::x);
+    private static final String PREFIX =
+            io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator.MOD_ID
+                    + ".phase3a.patch.";
+    private static final Comparator<ChunkPos> Z_THEN_X =
+            Comparator.comparingInt(ChunkPos::z).thenComparingInt(ChunkPos::x);
 
-    private Phase3APhysicalPatchVerification() {
-    }
+    private Phase3APhysicalPatchVerification() {}
 
     public static void runIfRequested(MinecraftServer server) {
         String shape = System.getProperty(PREFIX + "verify", "");
         if (shape.isBlank()) return;
-        ResourceKey<Level> dimension = ResourceKey.create(
-                net.minecraft.core.registries.Registries.DIMENSION,
-                Identifier.parse(System.getProperty(PREFIX + "dimension", "minecraft:overworld")));
+        ResourceKey<Level> dimension =
+                ResourceKey.create(
+                        net.minecraft.core.registries.Registries.DIMENSION,
+                        Identifier.parse(
+                                System.getProperty(PREFIX + "dimension", "minecraft:overworld")));
         ServerLevel level = server.getLevel(dimension);
         if (level == null) throw new IllegalStateException("Missing Phase 3A patch dimension");
-        ChunkPos center = new ChunkPos(
-                Integer.parseInt(System.getProperty(PREFIX + "chunkX", "32")),
-                Integer.parseInt(System.getProperty(PREFIX + "chunkZ", "32")));
+        ChunkPos center =
+                new ChunkPos(
+                        Integer.parseInt(System.getProperty(PREFIX + "chunkX", "32")),
+                        Integer.parseInt(System.getProperty(PREFIX + "chunkZ", "32")));
         String order = System.getProperty(PREFIX + "order", "row-major");
         List<ChunkPos> positions = positions(shape, center);
         if (!shape.equals("modified-neighbor")) order(positions, order);
@@ -72,48 +72,76 @@ public final class Phase3APhysicalPatchVerification {
         if (shape.equals("modified-neighbor")) {
             ChunkPos neighbor = positions.getFirst();
             ChunkAccess neighborChunk = requestOne(server, level, neighbor);
-            MosaicPhysicalMaterializer.Publication neighborPublication = publications.stream()
-                    .filter(value -> value.key().pos().equals(neighbor))
-                    .findFirst()
-                    .orElseThrow();
+            MosaicPhysicalMaterializer.Publication neighborPublication =
+                    publications.stream()
+                            .filter(value -> value.key().pos().equals(neighbor))
+                            .findFirst()
+                            .orElseThrow();
             assertArtifactParity(level, dimension, neighborPublication, neighborChunk);
-            markerPos = new BlockPos(neighbor.getMiddleBlockX(), neighborChunk.getMinY() + 8, neighbor.getMiddleBlockZ());
+            markerPos =
+                    new BlockPos(
+                            neighbor.getMiddleBlockX(),
+                            neighborChunk.getMinY() + 8,
+                            neighbor.getMiddleBlockZ());
             neighborChunk.setBlockState(markerPos, Blocks.DIAMOND_BLOCK.defaultBlockState(), 0);
             markerState = neighborChunk.getBlockState(markerPos);
             requestOne(server, level, center);
         } else if (order.equals("parallel")) {
-            List<CompletableFuture<ChunkResult<ChunkAccess>>> futures = positions.stream()
-                    .map(pos -> level.getChunkSource().getChunkFuture(
-                            pos.x(), pos.z(), ChunkStatus.FEATURES, true))
-                    .toList();
+            List<CompletableFuture<ChunkResult<ChunkAccess>>> futures =
+                    positions.stream()
+                            .map(
+                                    pos ->
+                                            level.getChunkSource()
+                                                    .getChunkFuture(
+                                                            pos.x(),
+                                                            pos.z(),
+                                                            ChunkStatus.FEATURES,
+                                                            true))
+                            .toList();
             server.managedBlock(() -> futures.stream().allMatch(CompletableFuture::isDone));
-            futures.forEach(future -> {
-                if (future.join().orElse(null) == null) throw new IllegalStateException("Missing parallel patch Chunk");
-            });
+            futures.forEach(
+                    future -> {
+                        if (future.join().orElse(null) == null)
+                            throw new IllegalStateException("Missing parallel patch Chunk");
+                    });
         } else {
             for (ChunkPos pos : positions) requestOne(server, level, pos);
         }
 
-        if (markerPos != null && level.getChunkSource().getChunk(
-                positions.getFirst().x(), positions.getFirst().z(), ChunkStatus.FEATURES, false)
-                .getBlockState(markerPos) != markerState) {
-            throw new IllegalStateException("Target materialization overwrote modified physical neighbor");
+        if (markerPos != null
+                && level.getChunkSource()
+                                .getChunk(
+                                        positions.getFirst().x(),
+                                        positions.getFirst().z(),
+                                        ChunkStatus.FEATURES,
+                                        false)
+                                .getBlockState(markerPos)
+                        != markerState) {
+            throw new IllegalStateException(
+                    "Target materialization overwrote modified physical neighbor");
         }
         int expectedPublications = positions.size();
         if (publications.size() != expectedPublications) {
             throw new IllegalStateException(
-                    "Patch publication count mismatch expected=" + expectedPublications + " actual=" + publications.size());
+                    "Patch publication count mismatch expected="
+                            + expectedPublications
+                            + " actual="
+                            + publications.size());
         }
         publications.sort(Comparator.comparing(value -> value.key().pos(), Z_THEN_X));
         JsonArray chunks = new JsonArray();
         Long firstSeed = null;
         for (MosaicPhysicalMaterializer.Publication publication : publications) {
             ChunkPos pos = publication.key().pos();
-            ChunkAccess physical = level.getChunkSource().getChunk(pos.x(), pos.z(), ChunkStatus.FEATURES, false);
+            ChunkAccess physical =
+                    level.getChunkSource().getChunk(pos.x(), pos.z(), ChunkStatus.FEATURES, false);
             FeatureStableSnapshot right;
             if (shape.equals("modified-neighbor") && pos.equals(positions.getFirst())) {
-                right = FeatureStableSnapshot.capture(
-                        dimension.identifier().toString(), physical, level.registryAccess());
+                right =
+                        FeatureStableSnapshot.capture(
+                                dimension.identifier().toString(),
+                                physical,
+                                level.registryAccess());
             } else {
                 right = assertArtifactParity(level, dimension, publication, physical);
             }
@@ -121,16 +149,19 @@ public final class Phase3APhysicalPatchVerification {
             JsonObject chunk = new JsonObject();
             chunk.addProperty("x", pos.x());
             chunk.addProperty("z", pos.z());
-            chunk.addProperty("localSeed", Long.toString(publication.prepared().artifact().localWorldSeed()));
+            chunk.addProperty(
+                    "localSeed", Long.toString(publication.prepared().artifact().localWorldSeed()));
             chunk.addProperty("hash", right.hash());
             chunk.addProperty("status", physical.getPersistedStatus().getName());
             chunk.addProperty("lightCorrect", physical.isLightCorrect());
             chunks.add(chunk);
         }
-        if (shape.equals("adjacent") && publications.size() == 2
+        if (shape.equals("adjacent")
+                && publications.size() == 2
                 && publications.get(0).prepared().artifact().localWorldSeed()
                         == publications.get(1).prepared().artifact().localWorldSeed()) {
-            throw new IllegalStateException("Adjacent Mosaic fixtures unexpectedly share their local seed");
+            throw new IllegalStateException(
+                    "Adjacent Mosaic fixtures unexpectedly share their local seed");
         }
         MosaicPhysicalMaterializer.Metrics metrics = MosaicPhysicalMaterializer.metrics();
         if (metrics.isolatedGenerationCount() != expectedPublications
@@ -160,17 +191,23 @@ public final class Phase3APhysicalPatchVerification {
         Phase3APhysicalMaterializationVerification.markCompleted();
         RandomNibble6Plus24Generator.LOGGER.info(
                 "Phase 3A physical patch PASS shape={} order={} chunks={} runtimeMs={}",
-                shape, order, publications.size(), (System.nanoTime() - started) / 1_000_000L);
+                shape,
+                order,
+                publications.size(),
+                (System.nanoTime() - started) / 1_000_000L);
         server.halt(false);
     }
 
     private static ChunkAccess requestOne(MinecraftServer server, ServerLevel level, ChunkPos pos) {
-        CompletableFuture<ChunkResult<ChunkAccess>> future = level.getChunkSource().getChunkFuture(
-                pos.x(), pos.z(), ChunkStatus.FEATURES, true);
+        CompletableFuture<ChunkResult<ChunkAccess>> future =
+                level.getChunkSource().getChunkFuture(pos.x(), pos.z(), ChunkStatus.FEATURES, true);
         server.managedBlock(future::isDone);
         ChunkAccess chunk = future.join().orElse(null);
-        if (chunk == null || chunk.getPersistedStatus() != ChunkStatus.FEATURES || chunk.isLightCorrect()) {
-            throw new IllegalStateException("Physical patch Chunk did not stop at FEATURES: " + pos);
+        if (chunk == null
+                || chunk.getPersistedStatus() != ChunkStatus.FEATURES
+                || chunk.isLightCorrect()) {
+            throw new IllegalStateException(
+                    "Physical patch Chunk did not stop at FEATURES: " + pos);
         }
         return chunk;
     }
@@ -180,17 +217,25 @@ public final class Phase3APhysicalPatchVerification {
             ResourceKey<Level> dimension,
             MosaicPhysicalMaterializer.Publication publication,
             ChunkAccess physical) {
-        ProtoChunk staging = publication.prepared().artifact().rehydrate(
-                level.registryAccess(), StructurePieceSerializationContext.fromLevel(level));
-        FeatureStableSnapshot left = FeatureStableSnapshot.capture(
-                dimension.identifier().toString(), staging, level.registryAccess());
-        FeatureStableSnapshot right = FeatureStableSnapshot.capture(
-                dimension.identifier().toString(), physical, level.registryAccess());
+        ProtoChunk staging =
+                publication
+                        .prepared()
+                        .artifact()
+                        .rehydrate(
+                                level.registryAccess(),
+                                StructurePieceSerializationContext.fromLevel(level));
+        FeatureStableSnapshot left =
+                FeatureStableSnapshot.capture(
+                        dimension.identifier().toString(), staging, level.registryAccess());
+        FeatureStableSnapshot right =
+                FeatureStableSnapshot.capture(
+                        dimension.identifier().toString(), physical, level.registryAccess());
         if (!left.diff(right).equivalent()
                 || left.deterministicMetadataDifference(right) != null
                 || !left.rawEntityNbt().equals(right.rawEntityNbt())
                 || !left.blockEntityNbt().equals(right.blockEntityNbt())) {
-            throw new IllegalStateException("Patch Artifact/physical mismatch at " + physical.getPos());
+            throw new IllegalStateException(
+                    "Patch Artifact/physical mismatch at " + physical.getPos());
         }
         return right;
     }

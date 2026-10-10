@@ -1,0 +1,21 @@
+{
+    "schemaVersion": 1,
+    "id": "${mod_id}_probe",
+    "version": "${mod_version}",
+    "name": "${mod_name} development probes",
+    "environment": "*",
+    "mixins": [
+        "mosaic-candidate-test.mixins.json",
+        "mosaic-generation-shutdown-test.mixins.json",
+        "mosaic-identity-lifecycle-test.mixins.json",
+        "mosaic-lazy-structure-probe.mixins.json",
+        "mosaic-lightweight-probe.mixins.json",
+        "mosaic-performance-probe.mixins.json",
+        "mosaic-poi-test.mixins.json",
+        "mosaic-spawn-reuse-test.mixins.json",
+        "mosaic-stronghold-test.mixins.json"
+    ],
+    "depends": {
+        "${mod_id}": "*"
+    }
+}

@@ -1,1 +1,0 @@
-{"required":true,"package":"io.github.recrivenvi.randomnibble6plus24generator.candidatetest.mixin","compatibilityLevel":"JAVA_25","mixins":["CandidateTestServerMixin"],"injectors":{"defaultRequire":1}}

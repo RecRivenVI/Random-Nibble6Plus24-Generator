@@ -10,7 +10,6 @@ import java.util.HexFormat;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
-
 import net.minecraft.core.Holder;
 import net.minecraft.core.QuartPos;
 import net.minecraft.core.Registry;
@@ -34,8 +33,7 @@ public final class SurfaceStageSnapshot {
             ChunkPos startChunk,
             int references,
             int pieceCount,
-            BoundingBox boundingBox) {
-    }
+            BoundingBox boundingBox) {}
 
     private final ChunkPos chunkPos;
     private final int minY;
@@ -78,11 +76,13 @@ public final class SurfaceStageSnapshot {
         int blockIndex = 0;
         int minBlockX = chunkPos.getMinBlockX();
         int minBlockZ = chunkPos.getMinBlockZ();
-        net.minecraft.core.BlockPos.MutableBlockPos cursor = new net.minecraft.core.BlockPos.MutableBlockPos();
+        net.minecraft.core.BlockPos.MutableBlockPos cursor =
+                new net.minecraft.core.BlockPos.MutableBlockPos();
         for (int y = minY; y < minY + height; y++) {
             for (int z = 0; z < 16; z++) {
                 for (int x = 0; x < 16; x++) {
-                    blocks[blockIndex++] = chunk.getBlockState(cursor.set(minBlockX + x, y, minBlockZ + z));
+                    blocks[blockIndex++] =
+                            chunk.getBlockState(cursor.set(minBlockX + x, y, minBlockZ + z));
                 }
             }
         }
@@ -96,20 +96,21 @@ public final class SurfaceStageSnapshot {
         for (int quartY = 0; quartY < quartHeight; quartY++) {
             for (int quartZ = 0; quartZ < 4; quartZ++) {
                 for (int quartX = 0; quartX < 4; quartX++) {
-                    Holder<Biome> biome = chunk.getNoiseBiome(
-                            minQuartX + quartX,
-                            minQuartY + quartY,
-                            minQuartZ + quartZ);
-                    biomes[biomeIndex++] = biome.unwrapKey()
-                            .map(key -> key.identifier().toString())
-                            .orElseGet(() -> biome.value().toString());
+                    Holder<Biome> biome =
+                            chunk.getNoiseBiome(
+                                    minQuartX + quartX, minQuartY + quartY, minQuartZ + quartZ);
+                    biomes[biomeIndex++] =
+                            biome.unwrapKey()
+                                    .map(key -> key.identifier().toString())
+                                    .orElseGet(() -> biome.value().toString());
                 }
             }
         }
 
         Map<String, long[]> heightmaps = new TreeMap<>();
         for (Map.Entry<Heightmap.Types, Heightmap> entry : chunk.getHeightmaps()) {
-            heightmaps.put(entry.getKey().getSerializationKey(), entry.getValue().getRawData().clone());
+            heightmaps.put(
+                    entry.getKey().getSerializationKey(), entry.getValue().getRawData().clone());
         }
 
         Registry<Structure> structures = registryAccess.lookupOrThrow(Registries.STRUCTURE);
@@ -163,7 +164,12 @@ public final class SurfaceStageSnapshot {
                 int z = inLayer / 16;
                 int x = inLayer % 16;
                 mismatch(
-                        "BlockState at " + (chunkPos.getMinBlockX() + x) + "," + y + "," + (chunkPos.getMinBlockZ() + z),
+                        "BlockState at "
+                                + (chunkPos.getMinBlockX() + x)
+                                + ","
+                                + y
+                                + ","
+                                + (chunkPos.getMinBlockZ() + z),
                         expected.blocks[index],
                         blocks[index]);
             }
@@ -177,7 +183,8 @@ public final class SurfaceStageSnapshot {
         if (!structureStarts.equals(expected.structureStarts)) {
             mismatch("Structure starts", expected.structureStarts, structureStarts);
         }
-        assertLongArrayMapsEqual("Structure references", expected.structureReferences, structureReferences);
+        assertLongArrayMapsEqual(
+                "Structure references", expected.structureReferences, structureReferences);
         if (!hash.equals(expected.hash)) {
             mismatch("Surface hash", expected.hash, hash);
         }
@@ -229,15 +236,16 @@ public final class SurfaceStageSnapshot {
     }
 
     private void assertLongArrayMapsEqual(
-            String label,
-            Map<String, long[]> expected,
-            Map<String, long[]> actual) {
+            String label, Map<String, long[]> expected, Map<String, long[]> actual) {
         if (!expected.keySet().equals(actual.keySet())) {
             mismatch(label + " keys", expected.keySet(), actual.keySet());
         }
         for (String key : expected.keySet()) {
             if (!Arrays.equals(expected.get(key), actual.get(key))) {
-                mismatch(label + " " + key, Arrays.toString(expected.get(key)), Arrays.toString(actual.get(key)));
+                mismatch(
+                        label + " " + key,
+                        Arrays.toString(expected.get(key)),
+                        Arrays.toString(actual.get(key)));
             }
         }
     }

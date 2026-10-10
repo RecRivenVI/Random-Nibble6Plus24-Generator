@@ -1,16 +1,19 @@
 package io.github.recrivenvi.randomnibble6plus24generator.worldgen.generator;
 
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-
 import com.mojang.datafixers.util.Pair;
 import com.mojang.serialization.MapCodec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
-
+import io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.PhysicalMosaicTrace;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile.MosaicWorldProfile;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.MosaicStructureIndexStore;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.MosaicStructureOverlay;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
+import net.minecraft.core.RegistryAccess;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
@@ -29,33 +32,38 @@ import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
 import net.minecraft.world.level.levelgen.RandomState;
 import net.minecraft.world.level.levelgen.blending.Blender;
-import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplateManager;
 import net.minecraft.world.level.levelgen.structure.Structure;
-
-import io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile.MosaicWorldProfile;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.PhysicalMosaicTrace;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.MosaicStructureIndexStore;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.MosaicStructureOverlay;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplateManager;
 
 /**
  * Serialized Mosaic world identity and future worldgen integration point.
  *
- * <p>Phase 1B deliberately implements no generation behavior. Every vanilla
- * generation stage fails before touching its arguments so a Mosaic-marked save
- * cannot silently receive ordinary master-seed terrain.
+ * <p>Phase 1B deliberately implements no generation behavior. Every vanilla generation stage fails
+ * before touching its arguments so a Mosaic-marked save cannot silently receive ordinary
+ * master-seed terrain.
  */
 public final class MosaicChunkGenerator extends ChunkGenerator {
 
-    public static final Identifier CODEC_ID = Identifier.fromNamespaceAndPath(
-            RandomNibble6Plus24Generator.MOD_ID,
-            "mosaic");
+    public static final Identifier CODEC_ID =
+            Identifier.fromNamespaceAndPath(RandomNibble6Plus24Generator.MOD_ID, "mosaic");
 
-    public static final MapCodec<MosaicChunkGenerator> CODEC = RecordCodecBuilder.mapCodec(instance -> instance.group(
-            BiomeSource.CODEC.fieldOf("biome_source").forGetter(MosaicChunkGenerator::getBiomeSource),
-            NoiseGeneratorSettings.CODEC.fieldOf("settings").forGetter(MosaicChunkGenerator::generatorSettings),
-            MosaicWorldProfile.CODEC.fieldOf("mosaic_profile").forGetter(MosaicChunkGenerator::profile))
-            .apply(instance, MosaicChunkGenerator::new));
+    public static final MapCodec<MosaicChunkGenerator> CODEC =
+            RecordCodecBuilder.mapCodec(
+                    instance ->
+                            instance.group(
+                                            BiomeSource.CODEC
+                                                    .fieldOf("biome_source")
+                                                    .forGetter(
+                                                            MosaicChunkGenerator::getBiomeSource),
+                                            NoiseGeneratorSettings.CODEC
+                                                    .fieldOf("settings")
+                                                    .forGetter(
+                                                            MosaicChunkGenerator
+                                                                    ::generatorSettings),
+                                            MosaicWorldProfile.CODEC
+                                                    .fieldOf("mosaic_profile")
+                                                    .forGetter(MosaicChunkGenerator::profile))
+                                    .apply(instance, MosaicChunkGenerator::new));
 
     private final Holder<NoiseGeneratorSettings> settings;
     private final MosaicWorldProfile profile;
@@ -105,9 +113,7 @@ public final class MosaicChunkGenerator extends ChunkGenerator {
 
     @Override
     public void createReferences(
-            WorldGenLevel level,
-            StructureManager structureManager,
-            ChunkAccess chunk) {
+            WorldGenLevel level, StructureManager structureManager, ChunkAccess chunk) {
         throw unavailable("createReferences");
     }
 
@@ -142,9 +148,7 @@ public final class MosaicChunkGenerator extends ChunkGenerator {
 
     @Override
     public void applyBiomeDecoration(
-            WorldGenLevel level,
-            ChunkAccess chunk,
-            StructureManager structureManager) {
+            WorldGenLevel level, ChunkAccess chunk, StructureManager structureManager) {
         throw unavailable("applyBiomeDecoration");
     }
 
@@ -154,8 +158,8 @@ public final class MosaicChunkGenerator extends ChunkGenerator {
     }
 
     /**
-     * Overlay V1 searches only the persisted physical Mosaic structure index.
-     * Unknown chunks are never loaded or generated by this method.
+     * Overlay V1 searches only the persisted physical Mosaic structure index. Unknown chunks are
+     * never loaded or generated by this method.
      */
     @Override
     public Pair<BlockPos, Holder<Structure>> findNearestMapStructure(
@@ -165,7 +169,8 @@ public final class MosaicChunkGenerator extends ChunkGenerator {
             int radius,
             boolean skipKnownStructures) {
         if (!MosaicStructureOverlay.active(level)) return null;
-        return MosaicStructureIndexStore.findNearest(level, structures, origin, radius).orElse(null);
+        return MosaicStructureIndexStore.findNearest(level, structures, origin, radius)
+                .orElse(null);
     }
 
     @Override
@@ -184,9 +189,9 @@ public final class MosaicChunkGenerator extends ChunkGenerator {
     }
 
     /**
-     * Supplies only the seed-independent anchor used by Minecraft's initial
-     * spawn search.  Terrain itself still comes exclusively from the Mosaic
-     * materialization pipeline; no vanilla master-seed worldgen is delegated.
+     * Supplies only the seed-independent anchor used by Minecraft's initial spawn search. Terrain
+     * itself still comes exclusively from the Mosaic materialization pipeline; no vanilla
+     * master-seed worldgen is delegated.
      */
     @Override
     public int getSpawnHeight(LevelHeightAccessor heightAccessor) {
@@ -205,10 +210,7 @@ public final class MosaicChunkGenerator extends ChunkGenerator {
 
     @Override
     public NoiseColumn getBaseColumn(
-            int x,
-            int z,
-            LevelHeightAccessor heightAccessor,
-            RandomState randomState) {
+            int x, int z, LevelHeightAccessor heightAccessor, RandomState randomState) {
         throw unavailable("getBaseColumn");
     }
 

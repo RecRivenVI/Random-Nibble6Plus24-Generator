@@ -4,12 +4,14 @@ import net.minecraft.server.level.ChunkHolder;
 import net.minecraft.server.level.ChunkMap;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
-
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
-/** Test-harness-only access to establish exact-status physical scheduler holders without gameplay tickets. */
+/**
+ * Test-harness-only access to establish exact-status physical scheduler holders without gameplay
+ * tickets.
+ */
 @Mixin(ChunkMap.class)
 public interface ChunkMapInvoker {
 
@@ -24,6 +26,6 @@ public interface ChunkMapInvoker {
     boolean randomnibble6plus24generator$invokePromoteChunkMap();
 
     @Invoker("allChunksWithAtLeastStatus")
-    java.util.stream.Stream<ChunkHolder> randomnibble6plus24generator$invokeAllChunksWithAtLeastStatus(
-            ChunkStatus status);
+    java.util.stream.Stream<ChunkHolder>
+            randomnibble6plus24generator$invokeAllChunksWithAtLeastStatus(ChunkStatus status);
 }

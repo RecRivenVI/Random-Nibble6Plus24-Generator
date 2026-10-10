@@ -1,8 +1,7 @@
 package io.github.recrivenvi.randomnibble6plus24generator.mixin;
 
-import java.util.Map;
-
 import it.unimi.dsi.fastutil.longs.LongSet;
+import java.util.Map;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.ChunkPos;
@@ -10,7 +9,6 @@ import net.minecraft.world.level.chunk.storage.SerializableChunkData;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.levelgen.structure.StructureStart;
 import net.minecraft.world.level.levelgen.structure.pieces.StructurePieceSerializationContext;
-
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
@@ -37,9 +35,7 @@ public interface SerializableChunkDataInvoker {
 
     @Invoker("unpackStructureReferences")
     static Map<Structure, LongSet> randomnibble6plus24generator$unpackStructureReferences(
-            RegistryAccess registryAccess,
-            ChunkPos chunkPos,
-            CompoundTag structureData) {
+            RegistryAccess registryAccess, ChunkPos chunkPos, CompoundTag structureData) {
         throw new AssertionError();
     }
 }

@@ -4,7 +4,6 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
-
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
@@ -12,9 +11,9 @@ import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
 import net.minecraft.world.level.levelgen.RandomState;
 
 /**
- * Short-lived seed bridge for the physical SPAWN status.  It deliberately does
- * not own a generation scheduler or a second world; it only supplies the local
- * seed-dependent view while Vanilla's spawn task is executing.
+ * Short-lived seed bridge for the physical SPAWN status. It deliberately does not own a generation
+ * scheduler or a second world; it only supplies the local seed-dependent view while Vanilla's spawn
+ * task is executing.
  */
 public final class MosaicSpawnGenerationContext implements AutoCloseable {
 
@@ -24,7 +23,8 @@ public final class MosaicSpawnGenerationContext implements AutoCloseable {
     private final NoiseBasedChunkGenerator generator;
     private final RandomState randomState;
     private final Map<ChunkPos, net.minecraft.world.level.chunk.ChunkAccess> biomeChunks;
-    private final Map<String, AtomicLong> chunkReads = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<String, AtomicLong> chunkReads =
+            new java.util.concurrent.ConcurrentHashMap<>();
     private volatile boolean closed;
 
     public MosaicSpawnGenerationContext(
@@ -67,25 +67,33 @@ public final class MosaicSpawnGenerationContext implements AutoCloseable {
     }
 
     /**
-     * SPAWN's Vanilla WorldGenRegion is allowed to read the target LIGHT
-     * chunk.  Any other chunk read is recorded and rejected by the caller so
-     * that a physical Mosaic neighbour can never silently become the local
-     * seed universe.
+     * SPAWN's Vanilla WorldGenRegion is allowed to read the target LIGHT chunk. Any other chunk
+     * read is recorded and rejected by the caller so that a physical Mosaic neighbour can never
+     * silently become the local seed universe.
      */
     public void recordChunkRead(ChunkPos requested, ChunkStatus requestedStatus) {
-        String key = requested.x() + "," + requested.z() + "@"
-                + (requestedStatus == null ? "null" : requestedStatus.getName());
+        String key =
+                requested.x()
+                        + ","
+                        + requested.z()
+                        + "@"
+                        + (requestedStatus == null ? "null" : requestedStatus.getName());
         chunkReads.computeIfAbsent(key, ignored -> new AtomicLong()).incrementAndGet();
     }
 
     public boolean hasNonTargetChunkReads() {
-        return chunkReads.keySet().stream().anyMatch(key -> {
-            int at = key.indexOf('@');
-            String pos = at < 0 ? key : key.substring(0, at);
-            return !pos.equals(target.x() + "," + target.z())
-                    && biomeChunks.keySet().stream().noneMatch(value ->
-                            pos.equals(value.x() + "," + value.z()));
-        });
+        return chunkReads.keySet().stream()
+                .anyMatch(
+                        key -> {
+                            int at = key.indexOf('@');
+                            String pos = at < 0 ? key : key.substring(0, at);
+                            return !pos.equals(target.x() + "," + target.z())
+                                    && biomeChunks.keySet().stream()
+                                            .noneMatch(
+                                                    value ->
+                                                            pos.equals(
+                                                                    value.x() + "," + value.z()));
+                        });
     }
 
     public Map<String, Long> chunkReads() {

@@ -2,7 +2,6 @@ package io.github.recrivenvi.randomnibble6plus24generator.worldgen.session;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import net.minecraft.nbt.StreamTagVisitor;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.storage.ChunkScanAccess;
