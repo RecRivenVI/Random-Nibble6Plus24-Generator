@@ -4,7 +4,7 @@ Random Nibble6Plus24 Generator 保留所有权利（All Rights Reserved），不
 
 Raven's Mod Template
 文件：AGENTS.md、CLAUDE.md、.rumdl.toml、.editorconfig、.gitattributes、.github/workflows/specification.yml、.github/workflows/check.yml、components/configuration/、components/conventions/、components/compliance/、gradle/libs.versions.toml、gradle/gradle-daemon-jvm.properties、通用构建文档及派生的构建入口。
-来源：1.2.1，https://github.com/RecRivenVI/Ravens-Mod-Template
+来源：1.2.2，https://github.com/RecRivenVI/Ravens-Mod-Template
 版权声明：Copyright (c) 2026 RavenYin
 许可：MIT，许可原文见 licenses/ravens_mod_template-mit.txt，随发行包保留。
 SPDX-License-Identifier: MIT

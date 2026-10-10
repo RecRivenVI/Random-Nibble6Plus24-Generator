@@ -27,6 +27,7 @@ Thumbs.db
 
 # 验证实例
 /validations/*/instance/
+/validations/*/result/current/
 
 # 保留的旧运行目录
 /versions/*/logs/

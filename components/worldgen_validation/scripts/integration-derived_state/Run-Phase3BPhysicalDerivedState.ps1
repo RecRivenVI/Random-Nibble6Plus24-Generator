@@ -26,7 +26,7 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
-$runRoot = (Resolve-Path (Join-Path $repositoryRoot 'validations\integration-derived_state\instance\26.2-fabric\server')).Path
+$runRoot = (Resolve-Path (Join-Path $repositoryRoot "validations\integration-derived_state\instance\${validationTarget}\server")).Path
 $propertiesPath = Join-Path $runRoot 'server.properties'
 $originalProperties = [IO.File]::ReadAllText($propertiesPath)
 $originalJavaToolOptions = $env:JAVA_TOOL_OPTIONS
@@ -34,7 +34,7 @@ $scenario = "$Mode-$TargetStatus-$Order"
 $worldName = "phase3b-$scenario-$MasterSeed-$($Dimension.Replace(':','-'))-$ChunkX-$ChunkZ"
 $worldPath = [IO.Path]::GetFullPath((Join-Path $runRoot $worldName))
 if ([string]::IsNullOrWhiteSpace($ResultPath)) {
-    $ResultPath = Join-Path $repositoryRoot 'validations\integration-derived_state\result\current\phase3b-result.json'
+    $ResultPath = Join-Path $repositoryRoot "validations\integration-derived_state\result\current\${validationTarget}\phase3b-result.json"
 }
 $resultPath = [IO.Path]::GetFullPath($ResultPath)
 
@@ -62,7 +62,7 @@ function Write-HiddenPresetPack {
     New-Item -ItemType Directory -Path $presetDirectory -Force | Out-Null
     [IO.File]::WriteAllText(
         (Join-Path $packRoot 'pack.mcmeta'),
-        '{"pack":{"pack_format":107,"min_format":[107,1],"max_format":[107,1],"description":"Phase 3B hidden Mosaic verification fixture"}}')
+        $validationPackMetadata)
     $profile = '"mosaic_profile":{"format_version":2,"seed_derivation_algorithm_version":1,"feature_ordering_algorithm_version":1,"presentation_algorithm_version":1,"primary_dimension":"minecraft:overworld"}'
     $preset = @"
 {
@@ -118,7 +118,7 @@ function Invoke-Phase3B([string]$verifyMode, [string]$output, [bool]$expectNoArt
         "-Drandomnibble6plus24generator.phase3b.output=$($output.Replace('\','/'))"
     )
     $env:JAVA_TOOL_OPTIONS = $options -join ' '
-    & (Join-Path $repositoryRoot 'gradlew.bat') ':version:26.2-fabric:runValidationIntegrationDerivedStateServer' "--args=nogui --world $worldName" | Out-Host
+    & (Join-Path $repositoryRoot 'gradlew.bat') ":version:${validationTarget}:runValidationIntegrationDerivedStateServer" "--args=nogui --world $worldName" | Out-Host
     if ($LASTEXITCODE -ne 0) { throw "Phase 3B server failed: $LASTEXITCODE" }
     $result = Get-Content -LiteralPath $output -Raw | ConvertFrom-Json
     if ($result.status -ne 'PASS') { throw "Phase 3B result failed: $result" }
@@ -156,7 +156,7 @@ try {
             '-Drandomnibble6plus24generator.phase3a.patch.order=row-major',
             "-Drandomnibble6plus24generator.phase3a.patch.output=$($phase3aPath.Replace('\','/'))"
         ) -join ' '
-        & (Join-Path $repositoryRoot 'gradlew.bat') ':version:26.2-fabric:runValidationIntegrationDerivedStateServer' "--args=nogui --world $worldName" | Out-Host
+        & (Join-Path $repositoryRoot 'gradlew.bat') ":version:${validationTarget}:runValidationIntegrationDerivedStateServer" "--args=nogui --world $worldName" | Out-Host
         if ($LASTEXITCODE -ne 0) { throw "Phase 3A FEATURES preparation failed: $LASTEXITCODE" }
         $result = Invoke-Phase3B 'reload' $resultPath $true
     } else {

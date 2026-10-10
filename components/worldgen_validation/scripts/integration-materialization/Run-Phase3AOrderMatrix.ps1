@@ -3,7 +3,7 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
 $runner = Join-Path $PSScriptRoot 'Run-Phase3APhysicalMaterialization.ps1'
-$outputRoot = Join-Path $repositoryRoot 'validations\integration-materialization\result\current\phase3a-orders'
+$outputRoot = Join-Path $repositoryRoot "validations\integration-materialization\result\current\${validationTarget}\phase3a-orders"
 New-Item -ItemType Directory -Path $outputRoot -Force | Out-Null
 $orders = @('row-major', 'reverse', 'shuffle', 'parallel')
 $results = @{}

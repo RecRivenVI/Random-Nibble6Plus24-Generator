@@ -1,5 +1,5 @@
 tool = "worldgen_validation"
-targets = ["26.2-fabric"]
+targets = ["26.2-fabric", "26.3-fabric"]
 
 [instances.server]
 memory-max = "3G"

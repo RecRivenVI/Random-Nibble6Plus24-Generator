@@ -8,9 +8,9 @@ param(
 . (Join-Path $PSScriptRoot '../Validation-Environment.ps1')
 $ErrorActionPreference = 'Stop'
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
-$runRoot = (Resolve-Path (Join-Path $repositoryRoot 'validations\conformance-worldgen\instance\26.2-fabric\server')).Path
+$runRoot = (Resolve-Path (Join-Path $repositoryRoot "validations\conformance-worldgen\instance\${validationTarget}\server")).Path
 $serverPropertiesPath = Join-Path $runRoot 'server.properties'
-$resultRoot = Join-Path $repositoryRoot 'validations\conformance-worldgen\result\current\phase2c1-native'
+$resultRoot = Join-Path $repositoryRoot "validations\conformance-worldgen\result\current\${validationTarget}\phase2c1-native"
 $originalProperties = [IO.File]::ReadAllText($serverPropertiesPath)
 $originalJavaToolOptions = $env:JAVA_TOOL_OPTIONS
 
@@ -81,7 +81,7 @@ try {
                     $env:JAVA_TOOL_OPTIONS += " -Drandomnibble6plus24generator.phase2c1.native.referenceSnapshot=$referencePath"
                 }
 
-                & (Join-Path $repositoryRoot 'gradlew.bat') ':version:26.2-fabric:runValidationConformanceWorldgenServer' "--args=nogui --world $worldName"
+                & (Join-Path $repositoryRoot 'gradlew.bat') ":version:${validationTarget}:runValidationConformanceWorldgenServer" "--args=nogui --world $worldName"
                 if ($LASTEXITCODE -ne 0) {
                     throw "Native FEATURES Gradle run failed for $($fixture.Name)/${repeat}: $LASTEXITCODE"
                 }

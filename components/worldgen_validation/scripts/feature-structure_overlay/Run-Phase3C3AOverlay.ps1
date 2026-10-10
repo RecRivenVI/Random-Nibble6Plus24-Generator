@@ -15,13 +15,13 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
-$runRoot = (Resolve-Path (Join-Path $repositoryRoot 'validations\feature-structure_overlay\instance\26.2-fabric\server')).Path
+$runRoot = (Resolve-Path (Join-Path $repositoryRoot "validations\feature-structure_overlay\instance\${validationTarget}\server")).Path
 $propertiesPath = Join-Path $runRoot 'server.properties'
 $originalProperties = [IO.File]::ReadAllText($propertiesPath)
 $originalJavaToolOptions = $env:JAVA_TOOL_OPTIONS
 $worldName = "phase3c3a-overlay-$MasterSeed"
 $worldPath = [IO.Path]::GetFullPath((Join-Path $runRoot $worldName))
-$resultRoot = [IO.Path]::GetFullPath((Join-Path $repositoryRoot 'validations\feature-structure_overlay\result\current\phase3c3a-overlay'))
+$resultRoot = [IO.Path]::GetFullPath((Join-Path $repositoryRoot "validations\feature-structure_overlay\result\current\${validationTarget}\phase3c3a-overlay"))
 $resultPath = Join-Path $resultRoot "$Mode.json"
 $previousPath = Join-Path $resultRoot 'probe.json'
 
@@ -46,7 +46,7 @@ function Write-HiddenPresetPack {
     $presetDirectory = Join-Path $packRoot 'data\randomnibble6plus24generator\worldgen\world_preset'
     New-Item -ItemType Directory -Path $presetDirectory -Force | Out-Null
     [IO.File]::WriteAllText((Join-Path $packRoot 'pack.mcmeta'),
-        '{"pack":{"pack_format":107,"min_format":[107,1],"max_format":[107,1],"description":"Phase 3C3A hidden Mosaic overlay"}}')
+        $validationPackMetadata)
     $profile = '"mosaic_profile":{"format_version":2,"seed_derivation_algorithm_version":1,"feature_ordering_algorithm_version":1,"presentation_algorithm_version":1,"primary_dimension":"minecraft:overworld"}'
     $preset = @"
 {
@@ -123,7 +123,7 @@ try {
     }
     if ($TraceCandidates) { $options += '-Drandomnibble6plus24generator.phase3c3a.overlay.traceCandidates=true' }
     $env:JAVA_TOOL_OPTIONS = $options -join ' '
-    & (Join-Path $repositoryRoot 'gradlew.bat') ':version:26.2-fabric:runValidationFeatureStructureOverlayServer' "--args=nogui --world $worldName" | Out-Host
+    & (Join-Path $repositoryRoot 'gradlew.bat') ":version:${validationTarget}:runValidationFeatureStructureOverlayServer" "--args=nogui --world $worldName" | Out-Host
     if ($LASTEXITCODE -ne 0) { throw "Phase 3C3A overlay server failed: $LASTEXITCODE" }
     $latestLog = Join-Path $runRoot 'logs\latest.log'
     $passLog = Select-String -Path $latestLog -Pattern 'Phase 3C3A (Structure Overlay|Overlay projection replacement) PASS' -Quiet

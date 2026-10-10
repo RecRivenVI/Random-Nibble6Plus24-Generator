@@ -12,10 +12,10 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
-$runRoot = (Resolve-Path (Join-Path $repositoryRoot 'validations\conformance-worldgen\instance\26.2-fabric\server')).Path
+$runRoot = (Resolve-Path (Join-Path $repositoryRoot "validations\conformance-worldgen\instance\${validationTarget}\server")).Path
 $serverPropertiesPath = Join-Path $runRoot 'server.properties'
 $safeFixtureId = $FixtureId -replace '[^A-Za-z0-9_.-]', '_'
-$outputRoot = Join-Path $repositoryRoot "validations\conformance-worldgen\result\current\phase2c1r-stage-$safeFixtureId"
+$outputRoot = Join-Path $repositoryRoot "validations\conformance-worldgen\result\current\${validationTarget}\phase2c1r-stage-$safeFixtureId"
 $nativeEvidence = Join-Path $outputRoot 'native'
 $isolatedEvidence = Join-Path $outputRoot "isolated-host-$HostSeed"
 $nativeResult = Join-Path $outputRoot 'native-result.json'
@@ -64,7 +64,7 @@ try {
         $parts = $BlockProbe.Split(',')
         $env:JAVA_TOOL_OPTIONS += " -Drandomnibble6plus24generator.phase2c1r.stageProbeBlockX=$($parts[0]) -Drandomnibble6plus24generator.phase2c1r.stageProbeBlockY=$($parts[1]) -Drandomnibble6plus24generator.phase2c1r.stageProbeBlockZ=$($parts[2])"
     }
-    & (Join-Path $repositoryRoot 'gradlew.bat') ':version:26.2-fabric:runValidationConformanceWorldgenServer' "--args=nogui --world $nativeWorld"
+    & (Join-Path $repositoryRoot 'gradlew.bat') ":version:${validationTarget}:runValidationConformanceWorldgenServer" "--args=nogui --world $nativeWorld"
     if ($LASTEXITCODE -ne 0) { throw "Native stage process failed: $LASTEXITCODE" }
 
     Set-LevelSeed ([string]$HostSeed)
@@ -81,7 +81,7 @@ try {
         $parts = $BlockProbe.Split(',')
         $env:JAVA_TOOL_OPTIONS += " -Drandomnibble6plus24generator.phase2c1r.stageProbeBlockX=$($parts[0]) -Drandomnibble6plus24generator.phase2c1r.stageProbeBlockY=$($parts[1]) -Drandomnibble6plus24generator.phase2c1r.stageProbeBlockZ=$($parts[2])"
     }
-    & (Join-Path $repositoryRoot 'gradlew.bat') ':version:26.2-fabric:runValidationConformanceWorldgenServer' "--args=nogui --world $isolatedWorld"
+    & (Join-Path $repositoryRoot 'gradlew.bat') ":version:${validationTarget}:runValidationConformanceWorldgenServer" "--args=nogui --world $isolatedWorld"
     if ($LASTEXITCODE -ne 0) { throw "Isolated stage process failed: $LASTEXITCODE" }
     Get-Content -LiteralPath $nativeResult
     Get-Content -LiteralPath $isolatedResult

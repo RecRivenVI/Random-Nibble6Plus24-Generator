@@ -5,11 +5,11 @@ param(
 . (Join-Path $PSScriptRoot '../Validation-Environment.ps1')
 $ErrorActionPreference='Stop'
 $repo=(Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
-$run=Join-Path $repo 'validations\regression-generation_shutdown\instance\26.2-fabric\server'
+$run=Join-Path $repo "validations\regression-generation_shutdown\instance\${validationTarget}\server"
 if(-not $World){$World='shutdown-'+[guid]::NewGuid().ToString('N').Substring(0,12)}
 if($World -notmatch '^shutdown-[a-zA-Z0-9-]+$'){throw 'Unsafe world name'}
 $worldPath=Join-Path $run $World
-$output=Join-Path $repo "validations\regression-generation_shutdown\result\current\generation-shutdown\$Mode"
+$output=Join-Path $repo "validations\regression-generation_shutdown\result\current\${validationTarget}\generation-shutdown\$Mode"
 New-Item -ItemType Directory -Path $run,$output -Force|Out-Null
 $levelType='minecraft:normal'
 if($Mode -eq 'reload'){
@@ -23,7 +23,7 @@ if($Mode -eq 'reload'){
         $pack=Join-Path $worldPath 'datapacks\shutdown-test'
         $preset=Join-Path $pack 'data\randomnibble6plus24generator\worldgen\world_preset'
         New-Item -ItemType Directory -Path $preset -Force|Out-Null
-        [IO.File]::WriteAllText((Join-Path $pack 'pack.mcmeta'),'{"pack":{"pack_format":107,"min_format":[107,1],"max_format":[107,1],"description":"Generation shutdown regression"}}')
+        [IO.File]::WriteAllText((Join-Path $pack 'pack.mcmeta'),$validationPackMetadata)
         $profile=@{format_version=2;seed_derivation_algorithm_version=1;feature_ordering_algorithm_version=1;presentation_algorithm_version=1;primary_dimension='minecraft:overworld'}
         $dimensions=[ordered]@{}
         foreach($dimension in @('overworld','the_nether','the_end')){
@@ -50,7 +50,7 @@ try{
     $p.PriorityClass=[Diagnostics.ProcessPriorityClass]::BelowNormal
     Push-Location $repo
     $env:JAVA_TOOL_OPTIONS=('-XX:ActiveProcessorCount={0} -Dmosaic.shutdown.test.mode={1} -Dmosaic.shutdown.test.output="{2}" -Dmosaic.shutdown.test.reference="{3}"' -f $TestProcessors,$Mode,$output.Replace('\','/'),$Reference.Replace('\','/'))
-    & .\gradlew.bat --no-daemon --no-parallel --max-workers=2 ':version:26.2-fabric:runValidationRegressionGenerationShutdownServer' "--args=nogui --world $World" *> (Join-Path $output 'console.log')
+    & .\gradlew.bat --no-daemon --no-parallel --max-workers=2 ":version:${validationTarget}:runValidationRegressionGenerationShutdownServer" "--args=nogui --world $World" *> (Join-Path $output 'console.log')
     $log=Get-Content -Raw -LiteralPath (Join-Path $output 'console.log')
     $fault=$Mode -in @('error','unexpected','close-error','close-unexpected')
     if($fault){

@@ -6,10 +6,10 @@ Set-StrictMode -Version Latest
 if ($HostSeeds.Count -lt 3) { throw 'At least three host seeds are required.' }
 
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
-$runRoot = (Resolve-Path (Join-Path $repositoryRoot 'validations\conformance-worldgen\instance\26.2-fabric\server')).Path
+$runRoot = (Resolve-Path (Join-Path $repositoryRoot "validations\conformance-worldgen\instance\${validationTarget}\server")).Path
 $serverPropertiesPath = Join-Path $runRoot 'server.properties'
-$matrixRoot = Join-Path $repositoryRoot 'validations\conformance-worldgen\result\current\phase2c1f-matrix'
-$outputRoot = Join-Path $repositoryRoot 'validations\conformance-worldgen\result\current\phase2c1f-host-independence'
+$matrixRoot = Join-Path $repositoryRoot "validations\conformance-worldgen\result\current\${validationTarget}\phase2c1f-matrix"
+$outputRoot = Join-Path $repositoryRoot "validations\conformance-worldgen\result\current\${validationTarget}\phase2c1f-host-independence"
 $plan = @(Get-Content -LiteralPath (Join-Path $matrixRoot 'plan.json') -Raw | ConvertFrom-Json)
 $selected = @('ow-origin-03','ow-nonorigin-14','nether-47','end-59')
 $originalProperties = [IO.File]::ReadAllText($serverPropertiesPath)
@@ -59,7 +59,7 @@ try {
             "-Drandomnibble6plus24generator.phase2c1f.manifest=$($manifestPath.Replace('\','/'))",
             "-Drandomnibble6plus24generator.phase2c1f.output=$($resultPath.Replace('\','/'))"
         ) -join ' '
-        & (Join-Path $repositoryRoot 'gradlew.bat') ':version:26.2-fabric:runValidationConformanceWorldgenServer' "--args=nogui --world $worldName"
+        & (Join-Path $repositoryRoot 'gradlew.bat') ":version:${validationTarget}:runValidationConformanceWorldgenServer" "--args=nogui --world $worldName"
         if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $resultPath)) {
             throw "Host-independence process failed for host $hostSeed"
         }

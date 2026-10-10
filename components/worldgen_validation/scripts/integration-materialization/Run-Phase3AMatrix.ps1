@@ -3,9 +3,12 @@ param([switch]$KeepWorlds)
 . (Join-Path $PSScriptRoot '../Validation-Environment.ps1')
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+if ($validationTarget -ne '26.2-fabric') {
+    throw 'This golden matrix contains Minecraft 26.2 hashes only. For 26.3, use independent native evidence and Run-Phase3APhysicalMaterialization; do not reuse cross-version goldens.'
+}
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
 $runner = Join-Path $PSScriptRoot 'Run-Phase3APhysicalMaterialization.ps1'
-$outputRoot = Join-Path $repositoryRoot 'validations\integration-materialization\result\current\phase3a-matrix'
+$outputRoot = Join-Path $repositoryRoot "validations\integration-materialization\result\current\${validationTarget}\phase3a-matrix"
 New-Item -ItemType Directory -Path $outputRoot -Force | Out-Null
 
 $fixtures = @(

@@ -5,9 +5,9 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
-$serverRunRoot = (Resolve-Path (Join-Path $repositoryRoot 'validations\conformance-carvers\instance\26.2-fabric\server')).Path
+$serverRunRoot = (Resolve-Path (Join-Path $repositoryRoot "validations\conformance-carvers\instance\${validationTarget}\server")).Path
 $serverPropertiesPath = Join-Path $serverRunRoot 'server.properties'
-$resultRoot = Join-Path $repositoryRoot 'validations\conformance-carvers\result\current\phase2b-native-control'
+$resultRoot = Join-Path $repositoryRoot "validations\conformance-carvers\result\current\${validationTarget}\phase2b-native-control"
 $originalProperties = [IO.File]::ReadAllText($serverPropertiesPath)
 $originalJavaToolOptions = $env:JAVA_TOOL_OPTIONS
 
@@ -78,7 +78,7 @@ try {
             "-Drandomnibble6plus24generator.phase2b.native.output=$($resultPath.Replace('\', '/'))"
         ) -join ' '
 
-        & (Join-Path $repositoryRoot 'gradlew.bat') ':version:26.2-fabric:runValidationConformanceCarversServer' "--args=nogui --world $worldName"
+        & (Join-Path $repositoryRoot 'gradlew.bat') ":version:${validationTarget}:runValidationConformanceCarversServer" "--args=nogui --world $worldName"
         if ($LASTEXITCODE -ne 0) {
             throw "Native control Gradle run failed for $($fixture.Name) with exit code $LASTEXITCODE"
         }

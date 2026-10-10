@@ -1,12 +1,15 @@
 # Random Nibble6Plus24 Generator
 
-Minecraft Java 26.2 Fabric 的 Random Chunk Mosaic 实验项目：每个物理 Chunk 使用独立派生的 local world seed，通过隔离生成、数据提取及物化进入真实 Minecraft 生命周期。
+Minecraft Java Fabric 的 Random Chunk Mosaic 实验项目：每个物理 Chunk 使用独立派生的 local world seed，通过隔离生成、数据提取及物化进入真实 Minecraft 生命周期。
+
+已登记的 Target 如下；参考 Target 为 26.3，构建、原生对照与人工进入、探索、保存退出和重进验收通过。26.2 Target、实例与历史证据继续保留。主线持续跟进 Minecraft 最新正式版与最新 Fabric Loader（只有 Loader 可采用测试版），结果见[版本升级计划](documents/project/plan-target_upgrade.md)。
 
 ## Target
 
 | Target | 加载器版本 | Java |
 | --- | --- | --- |
 | `26.2-fabric` | 0.19.5 | 25 |
+| `26.3-fabric` | 0.19.5 | 25 |
 
 ## 快速开始
 
@@ -14,13 +17,15 @@ Minecraft Java 26.2 Fabric 的 Random Chunk Mosaic 实验项目：每个物理 C
 
 ```powershell
 .\gradlew.bat check verifyRelease
-.\gradlew.bat :version:26.2-fabric:runClient
+.\gradlew.bat :version:26.3-fabric:runClient
 ```
 
 日常客户端保留本项目已有实例。隐藏 Mosaic 存档可继续加载和探索；尚未公开 Create World 入口。不要把研究验证世界当作正式存档。
 
 ## 文档
 
+- [当前状态与路线图](documents/project/roadmap-development.md)
+- [Target 与依赖升级计划](documents/project/plan-target_upgrade.md)
 - [玩家能力与限制](documents/usage/guide-mosaic.md)
 - [开发与验证](documents/development/workflow-development.md)
 - [构建配置](documents/reference/configuration-repository.md)

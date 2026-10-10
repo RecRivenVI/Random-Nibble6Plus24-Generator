@@ -16,13 +16,13 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
-$runRoot = (Resolve-Path (Join-Path $repositoryRoot 'validations\integration-production_lifecycle\instance\26.2-fabric\server')).Path
+$runRoot = (Resolve-Path (Join-Path $repositoryRoot "validations\integration-production_lifecycle\instance\${validationTarget}\server")).Path
 $propertiesPath = Join-Path $runRoot 'server.properties'
 $originalProperties = [IO.File]::ReadAllText($propertiesPath)
 $originalJavaToolOptions = $env:JAVA_TOOL_OPTIONS
 $worldName = "phase3c2-production-$MasterSeed-$($Dimension.Replace(':','-'))-$ChunkX-$ChunkZ"
 $worldPath = [IO.Path]::GetFullPath((Join-Path $runRoot $worldName))
-$resultRoot = [IO.Path]::GetFullPath((Join-Path $repositoryRoot 'validations\integration-production_lifecycle\result\current\phase3c2-production'))
+$resultRoot = [IO.Path]::GetFullPath((Join-Path $repositoryRoot "validations\integration-production_lifecycle\result\current\${validationTarget}\phase3c2-production"))
 $resultPath = Join-Path $resultRoot "$Mode-$ChunkX-$ChunkZ.json"
 
 function Remove-World {
@@ -49,7 +49,7 @@ function Write-HiddenPresetPack {
     New-Item -ItemType Directory -Path $presetDirectory -Force | Out-Null
     [IO.File]::WriteAllText(
         (Join-Path $packRoot 'pack.mcmeta'),
-        '{"pack":{"pack_format":107,"min_format":[107,1],"max_format":[107,1],"description":"Phase 3C2 hidden production Mosaic"}}')
+        $validationPackMetadata)
     $profile = '"mosaic_profile":{"format_version":2,"seed_derivation_algorithm_version":1,"feature_ordering_algorithm_version":1,"presentation_algorithm_version":1,"primary_dimension":"minecraft:overworld"}'
     $preset = @"
 {
@@ -100,7 +100,7 @@ function Invoke-Production([string]$productionMode, [string]$output, [bool]$muta
     if ($mutateBeforeStop) { $options += '-Drandomnibble6plus24generator.phase3c2.production.mutate=true' }
     if ($expectMarker) { $options += '-Drandomnibble6plus24generator.phase3c2.production.expectMarker=true' }
     $env:JAVA_TOOL_OPTIONS = $options -join ' '
-    & (Join-Path $repositoryRoot 'gradlew.bat') ':version:26.2-fabric:runValidationIntegrationProductionLifecycleServer' "--args=nogui --world $worldName" | Out-Host
+    & (Join-Path $repositoryRoot 'gradlew.bat') ":version:${validationTarget}:runValidationIntegrationProductionLifecycleServer" "--args=nogui --world $worldName" | Out-Host
     if ($LASTEXITCODE -ne 0) { throw "Phase 3C2 production server failed: $LASTEXITCODE" }
     $result = Get-Content -LiteralPath $output -Raw | ConvertFrom-Json
     if ($result.status -ne 'PASS') { throw "Phase 3C2 production result failed: $result" }
@@ -130,7 +130,7 @@ try {
         $firstPath = Join-Path $resultRoot "full-$ChunkX-$ChunkZ.json"
         $first = Invoke-Production 'full' $firstPath ([bool]$Mutate) $false
         $reloadPath = Join-Path $resultRoot "reload-$ChunkX-$ChunkZ.json"
-        $reload = Invoke-Production 'reload' $reloadPath $false $true
+        $reload = Invoke-Production 'reload' $reloadPath $false ([bool]$first.markerWritten)
         if ($reload.artifactGenerations -ne 0 -or $reload.spawnCalls -ne 0) {
             throw "Production reload regenerated canonical data: $($reload | ConvertTo-Json -Depth 8)"
         }

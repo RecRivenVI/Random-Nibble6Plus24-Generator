@@ -9,9 +9,9 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
-$runRoot = (Resolve-Path (Join-Path $repositoryRoot 'validations\conformance-worldgen\instance\26.2-fabric\server')).Path
+$runRoot = (Resolve-Path (Join-Path $repositoryRoot "validations\conformance-worldgen\instance\${validationTarget}\server")).Path
 $serverPropertiesPath = Join-Path $runRoot 'server.properties'
-$resultRoot = Join-Path $repositoryRoot 'validations\conformance-worldgen\result\current\phase2c1f-matrix'
+$resultRoot = Join-Path $repositoryRoot "validations\conformance-worldgen\result\current\${validationTarget}\phase2c1f-matrix"
 $planPath = Join-Path $resultRoot 'plan.json'
 $manifestPath = Join-Path $resultRoot 'native-manifest.json'
 $isolatedResultPath = Join-Path $resultRoot "isolated-host-$HostSeed.json"
@@ -39,7 +39,7 @@ function Set-LevelSeed([string]$seed) {
 
 function Invoke-Server([string]$worldName) {
     Remove-FixtureWorld $worldName
-    & (Join-Path $repositoryRoot 'gradlew.bat') ':version:26.2-fabric:runValidationConformanceWorldgenServer' "--args=nogui --world $worldName"
+    & (Join-Path $repositoryRoot 'gradlew.bat') ":version:${validationTarget}:runValidationConformanceWorldgenServer" "--args=nogui --world $worldName"
     if ($LASTEXITCODE -ne 0) { throw "Phase 2C1F server failed for ${worldName}: $LASTEXITCODE" }
     if (-not $KeepWorlds) { Remove-FixtureWorld $worldName }
 }

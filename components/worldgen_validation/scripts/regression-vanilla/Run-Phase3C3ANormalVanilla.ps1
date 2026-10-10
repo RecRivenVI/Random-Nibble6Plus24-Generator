@@ -8,7 +8,7 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
-$runRoot = (Resolve-Path (Join-Path $repositoryRoot 'validations\regression-vanilla\instance\26.2-fabric\server')).Path
+$runRoot = (Resolve-Path (Join-Path $repositoryRoot "validations\regression-vanilla\instance\${validationTarget}\server")).Path
 $propertiesPath = Join-Path $runRoot 'server.properties'
 $originalProperties = [IO.File]::ReadAllText($propertiesPath)
 $originalJavaToolOptions = $env:JAVA_TOOL_OPTIONS
@@ -46,7 +46,7 @@ try {
     $startInfo = [Diagnostics.ProcessStartInfo]::new()
     $gradleWrapper = Join-Path $repositoryRoot 'gradlew.bat'
     $startInfo.FileName = 'cmd.exe'
-    $startInfo.Arguments = '/d /c ""' + $gradleWrapper + '" :version:26.2-fabric:runValidationRegressionVanillaServer --args="nogui --world ' + $worldName + '""'
+    $startInfo.Arguments = '/d /c ""' + $gradleWrapper + "`" :version:${validationTarget}:runValidationRegressionVanillaServer --args=`"nogui --world " + $worldName + '""'
     $startInfo.WorkingDirectory = $repositoryRoot
     $startInfo.UseShellExecute = $false
     $startInfo.CreateNoWindow = $true

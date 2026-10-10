@@ -2,7 +2,10 @@ package io.github.recrivenvi.randomnibble6plus24generator.worldgen.materializati
 
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.SpawnBiomeSnapshot;
 
-/** Transient, physical ProtoChunk-owned input. Not serialized or copied into LevelChunk. */
+/**
+ * Transient {@link net.minecraft.world.level.chunk.ProtoChunk}-owned input; not serialized or
+ * copied into LevelChunk.
+ */
 public interface MosaicSpawnBiomeCarrier {
     SpawnBiomeSnapshot randomnibble6plus24generator$spawnBiomes();
 

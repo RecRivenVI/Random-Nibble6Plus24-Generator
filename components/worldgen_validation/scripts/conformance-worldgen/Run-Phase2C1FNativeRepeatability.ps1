@@ -5,9 +5,9 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
-$runRoot = (Resolve-Path (Join-Path $repositoryRoot 'validations\conformance-worldgen\instance\26.2-fabric\server')).Path
+$runRoot = (Resolve-Path (Join-Path $repositoryRoot "validations\conformance-worldgen\instance\${validationTarget}\server")).Path
 $serverPropertiesPath = Join-Path $runRoot 'server.properties'
-$matrixRoot = Join-Path $repositoryRoot 'validations\conformance-worldgen\result\current\phase2c1f-matrix'
+$matrixRoot = Join-Path $repositoryRoot "validations\conformance-worldgen\result\current\${validationTarget}\phase2c1f-matrix"
 $plan = @(Get-Content -LiteralPath (Join-Path $matrixRoot 'plan.json') -Raw | ConvertFrom-Json)
 $originalProperties = [IO.File]::ReadAllText($serverPropertiesPath)
 $originalJavaToolOptions = $env:JAVA_TOOL_OPTIONS
@@ -55,7 +55,7 @@ try {
         if ($fixture.dimension -eq 'minecraft:overworld') {
             $env:JAVA_TOOL_OPTIONS += ' -Drandomnibble6plus24generator.phase2c1.native.runBeforeInitialSpawn=true'
         }
-        & (Join-Path $repositoryRoot 'gradlew.bat') ':version:26.2-fabric:runValidationConformanceWorldgenServer' "--args=nogui --world $worldName"
+        & (Join-Path $repositoryRoot 'gradlew.bat') ":version:${validationTarget}:runValidationConformanceWorldgenServer" "--args=nogui --world $worldName"
         if ($LASTEXITCODE -ne 0) { throw "Repeat native process failed for $id" }
         if (-not $KeepWorlds) { Remove-FixtureWorld $worldName }
         $repeat = Get-Content -LiteralPath $resultPath -Raw | ConvertFrom-Json

@@ -4,11 +4,11 @@ param([switch]$KeepWorlds)
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
 $repositoryRoot=(Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
-$runRoot=(Resolve-Path (Join-Path $repositoryRoot 'validations\integration-artifact\instance\26.2-fabric\server')).Path
+$runRoot=(Resolve-Path (Join-Path $repositoryRoot "validations\integration-artifact\instance\${validationTarget}\server")).Path
 $propertiesPath=Join-Path $runRoot 'server.properties'
 $originalProperties=[IO.File]::ReadAllText($propertiesPath)
 $originalJavaToolOptions=$env:JAVA_TOOL_OPTIONS
-$outputRoot=Join-Path $repositoryRoot 'validations\integration-artifact\result\current\phase2d-transport'
+$outputRoot=Join-Path $repositoryRoot "validations\integration-artifact\result\current\${validationTarget}\phase2d-transport"
 New-Item -ItemType Directory -Path $outputRoot -Force|Out-Null
 $fixtures=@(
     @{Id='non-origin';Master='123456789';Dim='minecraft:overworld';X=125;Z=-37},
@@ -27,7 +27,7 @@ function Set-Seed([string]$seed){
 }
 function Run-Server([string]$world){
     Remove-World $world
-    & (Join-Path $repositoryRoot 'gradlew.bat') ':version:26.2-fabric:runValidationIntegrationArtifactServer' "--args=nogui --world $world"
+    & (Join-Path $repositoryRoot 'gradlew.bat') ":version:${validationTarget}:runValidationIntegrationArtifactServer" "--args=nogui --world $world"
     if($LASTEXITCODE -ne 0){throw "Phase 2D transport server failed $world"}
     if(-not $KeepWorlds){Remove-World $world}
 }

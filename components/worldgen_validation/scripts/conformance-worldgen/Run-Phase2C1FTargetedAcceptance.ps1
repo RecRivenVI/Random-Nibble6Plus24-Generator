@@ -4,12 +4,12 @@ param([long]$HostSeed = 314159265, [switch]$KeepWorld)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repositoryRoot=(Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
-$runRoot=(Resolve-Path (Join-Path $repositoryRoot 'validations\conformance-worldgen\instance\26.2-fabric\server')).Path
+$runRoot=(Resolve-Path (Join-Path $repositoryRoot "validations\conformance-worldgen\instance\${validationTarget}\server")).Path
 $propertiesPath=Join-Path $runRoot 'server.properties'
 $originalProperties=[IO.File]::ReadAllText($propertiesPath)
 $originalJavaToolOptions=$env:JAVA_TOOL_OPTIONS
-$buildRoot=Join-Path $repositoryRoot 'versions\26.2-fabric\build'
-$outputRoot=Join-Path $buildRoot 'phase2c1f-targeted-acceptance'
+$evidenceRoot=Join-Path $repositoryRoot "validations\conformance-worldgen\result\current\${validationTarget}"
+$outputRoot=Join-Path $evidenceRoot 'phase2c1f-targeted-acceptance'
 New-Item -ItemType Directory -Path $outputRoot -Force|Out-Null
 
 $fixtures=@(
@@ -20,7 +20,7 @@ $fixtures=@(
 )
 
 $manifest=foreach($fixture in $fixtures){
-    $root=Join-Path $buildRoot $fixture.Root
+    $root=Join-Path $evidenceRoot $fixture.Root
     $native=Get-Content -LiteralPath (Join-Path $root 'native-result.json') -Raw|ConvertFrom-Json
     [pscustomobject]@{
         id=$fixture.Id;masterSeed=$fixture.Master;localSeed=$fixture.Local;dimension=$fixture.Dim
@@ -55,7 +55,7 @@ try{
         "-Drandomnibble6plus24generator.phase2c1f.manifest=$($manifestPath.Replace('\','/'))",
         "-Drandomnibble6plus24generator.phase2c1f.output=$($resultPath.Replace('\','/'))"
     ) -join ' '
-    & (Join-Path $repositoryRoot 'gradlew.bat') ':version:26.2-fabric:runValidationConformanceWorldgenServer' "--args=nogui --world $worldName"
+    & (Join-Path $repositoryRoot 'gradlew.bat') ":version:${validationTarget}:runValidationConformanceWorldgenServer" "--args=nogui --world $worldName"
     if($LASTEXITCODE -ne 0 -or -not(Test-Path -LiteralPath $resultPath)){throw 'Targeted acceptance process failed'}
     $result=Get-Content -LiteralPath $resultPath -Raw|ConvertFrom-Json
     if($result.status -ne 'PASS' -or $result.fixtures -ne 4){throw "Targeted acceptance mismatch $result"}

@@ -4,9 +4,9 @@ param([switch]$MosaicOnly)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repository = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
-$run = Join-Path $repository 'validations\conformance-world_identity\instance\26.2-fabric\server'
+$run = Join-Path $repository "validations\conformance-world_identity\instance\${validationTarget}\server"
 $stamp = [guid]::NewGuid().ToString('N').Substring(0, 12)
-$results = Join-Path $repository "validations\conformance-world_identity\result\current\identity-lifecycle"
+$results = Join-Path $repository "validations\conformance-world_identity\result\current\${validationTarget}\identity-lifecycle"
 New-Item -ItemType Directory -Path $run, $results -Force | Out-Null
 $previousOptions = $env:JAVA_TOOL_OPTIONS
 $variants = if ($MosaicOnly) { @('mosaic') } else { @('vanilla', 'mosaic') }
@@ -21,7 +21,7 @@ try {
             $preset = Join-Path $pack 'data\randomnibble6plus24generator\worldgen\world_preset'
             New-Item -ItemType Directory -Path $preset -Force | Out-Null
             [IO.File]::WriteAllText((Join-Path $pack 'pack.mcmeta'),
-                '{"pack":{"pack_format":107,"min_format":[107,1],"max_format":[107,1],"description":"Identity lifecycle fixture"}}')
+                $validationPackMetadata)
             $profile = @{format_version=2;seed_derivation_algorithm_version=1;feature_ordering_algorithm_version=1;presentation_algorithm_version=1;primary_dimension='minecraft:overworld'}
             $dimensions = [ordered]@{}
             foreach ($dimension in @('overworld', 'the_nether', 'the_end')) {
@@ -44,7 +44,7 @@ simulation-distance=2
         foreach ($pass in @('create', 'restart')) {
             $output = Join-Path $results "$variant-$pass.json"
             $env:JAVA_TOOL_OPTIONS = "-Dmosaic.identity.test.mosaic=$($variant -eq 'mosaic') -Dmosaic.identity.test.output=$($output.Replace('\','/'))"
-            & (Join-Path $repository 'gradlew.bat') ':version:26.2-fabric:runValidationConformanceWorldIdentityServer' "--args=nogui --world $world" *> (Join-Path $results "$variant-$pass.log")
+            & (Join-Path $repository 'gradlew.bat') ":version:${validationTarget}:runValidationConformanceWorldIdentityServer" "--args=nogui --world $world" *> (Join-Path $results "$variant-$pass.log")
             if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $output)) { throw "Identity runtime test failed: $variant/$pass; see $results" }
             $result = Get-Content -LiteralPath $output -Raw | ConvertFrom-Json
             if ($result.status -ne 'PASS' -or $result.hotFilesystemProbes -ne 0) { throw "Identity runtime regression: $result" }

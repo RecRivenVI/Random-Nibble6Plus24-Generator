@@ -2,12 +2,12 @@ param([int]$TestProcessors=4,[long]$CpuAffinity=0)
 . (Join-Path $PSScriptRoot '../Validation-Environment.ps1')
 $ErrorActionPreference='Stop'
 $repo=(Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
-$run=Join-Path $repo 'validations\conformance-stronghold\instance\26.2-fabric\server'
+$run=Join-Path $repo "validations\conformance-stronghold\instance\${validationTarget}\server"
 $label='stronghold-life-'+[guid]::NewGuid().ToString('N').Substring(0,12)
-$output=Join-Path $repo "validations\conformance-stronghold\result\current\stronghold-test"
+$output=Join-Path $repo "validations\conformance-stronghold\result\current\${validationTarget}\stronghold-test"
 $preset=Join-Path $run "$label\datapacks\stronghold-test\data\randomnibble6plus24generator\worldgen\world_preset"
 New-Item -ItemType Directory -Path $preset,$output -Force|Out-Null
-[IO.File]::WriteAllText((Join-Path $run "$label\datapacks\stronghold-test\pack.mcmeta"),'{"pack":{"pack_format":107,"min_format":[107,1],"max_format":[107,1],"description":"Stronghold production lifecycle test"}}')
+[IO.File]::WriteAllText((Join-Path $run "$label\datapacks\stronghold-test\pack.mcmeta"),$validationPackMetadata)
 $profile=@{format_version=2;seed_derivation_algorithm_version=1;feature_ordering_algorithm_version=1;presentation_algorithm_version=1;primary_dimension='minecraft:overworld'}
 $dimensions=[ordered]@{}
 foreach($dimension in @('overworld','the_nether','the_end')){
@@ -36,7 +36,7 @@ try{
     Push-Location $repo
     foreach($pass in @('create','reload')){
         $env:JAVA_TOOL_OPTIONS=('-XX:ActiveProcessorCount={0} -Dmosaic.stronghold.test.lifecycle={1} -Dmosaic.stronghold.test.output="{2}" -Dmosaic.stronghold.test.reference="{3}"' -f $TestProcessors,$pass,(Join-Path $output "$pass.json").Replace('\','/'),(Join-Path $output 'create.json').Replace('\','/'))
-        & .\gradlew.bat --no-daemon --no-parallel --max-workers=2 ':version:26.2-fabric:runValidationConformanceStrongholdServer' "--args=nogui --world $label" *> (Join-Path $output "$pass.log")
+        & .\gradlew.bat --no-daemon --no-parallel --max-workers=2 ":version:${validationTarget}:runValidationConformanceStrongholdServer" "--args=nogui --world $label" *> (Join-Path $output "$pass.log")
         if($LASTEXITCODE -ne 0){throw "Stronghold lifecycle server failed: $output"}
         $result=Get-Content -Raw -LiteralPath (Join-Path $output "$pass.json")|ConvertFrom-Json
         if($result.status -ne 'PASS'){throw "Stronghold lifecycle failed: $($result.failure)"}

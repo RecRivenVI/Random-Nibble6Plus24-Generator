@@ -9,7 +9,7 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
-$runRoot = (Resolve-Path (Join-Path $repositoryRoot 'validations\integration-spawn_full\instance\26.2-fabric\server')).Path
+$runRoot = (Resolve-Path (Join-Path $repositoryRoot "validations\integration-spawn_full\instance\${validationTarget}\server")).Path
 $propertiesPath = Join-Path $runRoot 'server.properties'
 $originalProperties = [IO.File]::ReadAllText($propertiesPath)
 $fixtureConfiguration = [IO.File]::ReadAllText((Join-Path $repositoryRoot 'validations/integration-spawn_full/validation.toml'))
@@ -19,7 +19,7 @@ $Username = $fixtureIdentity
 $originalJavaToolOptions = $env:JAVA_TOOL_OPTIONS
 $worldName = "phase3c2r-spawn-$MasterSeed"
 $worldPath = [IO.Path]::GetFullPath((Join-Path $runRoot $worldName))
-$outputPath = [IO.Path]::GetFullPath((Join-Path $repositoryRoot 'validations\integration-spawn_full\result\current\phase3c2r-spawn-result.json'))
+$outputPath = [IO.Path]::GetFullPath((Join-Path $repositoryRoot "validations\integration-spawn_full\result\current\${validationTarget}\phase3c2r-spawn-result.json"))
 
 function Remove-World {
     $prefix = $runRoot + [IO.Path]::DirectorySeparatorChar
@@ -45,7 +45,7 @@ function Write-HiddenPresetPack {
     New-Item -ItemType Directory -Path $presetDirectory -Force | Out-Null
     [IO.File]::WriteAllText(
         (Join-Path $packRoot 'pack.mcmeta'),
-        '{"pack":{"pack_format":107,"min_format":[107,1],"max_format":[107,1],"description":"Phase 3C2R spawn regression"}}')
+        $validationPackMetadata)
     $profile = '"mosaic_profile":{"format_version":2,"seed_derivation_algorithm_version":1,"feature_ordering_algorithm_version":1,"presentation_algorithm_version":1,"primary_dimension":"minecraft:overworld"}'
     $preset = @"
 {
@@ -87,7 +87,7 @@ function Start-Server {
     $startInfo = [Diagnostics.ProcessStartInfo]::new()
     $gradleWrapper = Join-Path $repositoryRoot 'gradlew.bat'
     $startInfo.FileName = 'cmd.exe'
-    $startInfo.Arguments = '/d /c ""' + $gradleWrapper + '" :version:26.2-fabric:runValidationIntegrationSpawnFullServer --args="nogui --world ' + $worldName + '""'
+    $startInfo.Arguments = '/d /c ""' + $gradleWrapper + "`" :version:${validationTarget}:runValidationIntegrationSpawnFullServer --args=`"nogui --world " + $worldName + '""'
     $startInfo.WorkingDirectory = $repositoryRoot
     $startInfo.UseShellExecute = $false
     $startInfo.CreateNoWindow = $true
@@ -112,7 +112,7 @@ function Start-Client {
     $startInfo = [Diagnostics.ProcessStartInfo]::new()
     $gradleWrapper = Join-Path $repositoryRoot 'gradlew.bat'
     $startInfo.FileName = 'cmd.exe'
-    $startInfo.Arguments = '/d /c ""' + $gradleWrapper + '" :version:26.2-fabric:runValidationIntegrationSpawnFullClient --args="--offlineDeveloperMode --quickPlayPath quickplay-log.json --quickPlayMultiplayer localhost:25565""'
+    $startInfo.Arguments = '/d /c ""' + $gradleWrapper + "`" :version:${validationTarget}:runValidationIntegrationSpawnFullClient --args=`"--offlineDeveloperMode --quickPlayPath quickplay-log.json --quickPlayMultiplayer localhost:25565`"`""
     $startInfo.WorkingDirectory = $repositoryRoot
     $startInfo.UseShellExecute = $false
     $startInfo.CreateNoWindow = $true

@@ -24,7 +24,7 @@ $results = @()
 foreach ($fixture in $fixtures) {
     $firstHost = $true
     foreach ($hostSeed in $HostSeeds) {
-        $resultPath = Join-Path $repositoryRoot "validations\conformance-worldgen\result\current\phase2c1r-$($fixture.Id)\isolated-host-$hostSeed-generated-result.json"
+        $resultPath = Join-Path $repositoryRoot "validations\conformance-worldgen\result\current\${validationTarget}\phase2c1r-$($fixture.Id)\isolated-host-$hostSeed-generated-result.json"
         if (Test-Path -LiteralPath $resultPath) {
             $existing = Get-Content -LiteralPath $resultPath -Raw | ConvertFrom-Json
             if ($existing.status -eq 'MATCH') {

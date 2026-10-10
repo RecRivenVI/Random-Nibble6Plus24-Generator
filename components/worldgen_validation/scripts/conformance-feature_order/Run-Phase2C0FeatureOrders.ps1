@@ -5,14 +5,14 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
-$serverRunRoot = (Resolve-Path (Join-Path $repositoryRoot 'validations\conformance-feature_order\instance\26.2-fabric\server')).Path
+$serverRunRoot = (Resolve-Path (Join-Path $repositoryRoot "validations\conformance-feature_order\instance\${validationTarget}\server")).Path
 $serverPropertiesPath = Join-Path $serverRunRoot 'server.properties'
 $originalProperties = [IO.File]::ReadAllText($serverPropertiesPath)
 $originalJavaToolOptions = $env:JAVA_TOOL_OPTIONS
 $outputRoot = if ($Smoke) {
-    Join-Path $repositoryRoot 'validations\conformance-feature_order\result\current\phase2c0-feature-smoke'
+    Join-Path $repositoryRoot "validations\conformance-feature_order\result\current\${validationTarget}\phase2c0-feature-smoke"
 } else {
-    Join-Path $repositoryRoot 'validations\conformance-feature_order\result\current\phase2c0-feature-order'
+    Join-Path $repositoryRoot "validations\conformance-feature_order\result\current\${validationTarget}\phase2c0-feature-order"
 }
 $allowedWorldPrefix = [IO.Path]::GetFullPath((Join-Path $serverRunRoot 'phase2c0-feature-'))
 
@@ -73,7 +73,7 @@ try {
                     "-Drandomnibble6plus24generator.phase2c0.features.compare=$($compare.ToString().ToLowerInvariant())"
                 ) -join ' '
 
-                & (Join-Path $repositoryRoot 'gradlew.bat') ':version:26.2-fabric:runValidationConformanceFeatureOrderServer' "--args=nogui --world $worldName"
+                & (Join-Path $repositoryRoot 'gradlew.bat') ":version:${validationTarget}:runValidationConformanceFeatureOrderServer" "--args=nogui --world $worldName"
                 if ($LASTEXITCODE -ne 0) {
                     throw "FEATURES order Gradle run failed for $($dimension.Name)/$order with exit code $LASTEXITCODE"
                 }

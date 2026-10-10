@@ -15,14 +15,14 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
-$runRoot = (Resolve-Path (Join-Path $repositoryRoot 'validations\integration-spawn_full\instance\26.2-fabric\server')).Path
+$runRoot = (Resolve-Path (Join-Path $repositoryRoot "validations\integration-spawn_full\instance\${validationTarget}\server")).Path
 $propertiesPath = Join-Path $runRoot 'server.properties'
 $originalProperties = [IO.File]::ReadAllText($propertiesPath)
 $originalJavaToolOptions = $env:JAVA_TOOL_OPTIONS
 $worldName = "phase3c1-$Mode-$MasterSeed-$($Dimension.Replace(':','-'))-$ChunkX-$ChunkZ"
 $worldPath = [IO.Path]::GetFullPath((Join-Path $runRoot $worldName))
 if ([string]::IsNullOrWhiteSpace($ResultPath)) {
-    $ResultPath = Join-Path $repositoryRoot 'validations\integration-spawn_full\result\current\phase3c1-result.json'
+    $ResultPath = Join-Path $repositoryRoot "validations\integration-spawn_full\result\current\${validationTarget}\phase3c1-result.json"
 }
 $resultPath = [IO.Path]::GetFullPath($ResultPath)
 
@@ -50,7 +50,7 @@ function Write-HiddenPresetPack {
     New-Item -ItemType Directory -Path $presetDirectory -Force | Out-Null
     [IO.File]::WriteAllText(
         (Join-Path $packRoot 'pack.mcmeta'),
-        '{"pack":{"pack_format":107,"min_format":[107,1],"max_format":[107,1],"description":"Phase 3C1 hidden Mosaic fixture"}}')
+        $validationPackMetadata)
     $profile = '"mosaic_profile":{"format_version":2,"seed_derivation_algorithm_version":1,"feature_ordering_algorithm_version":1,"presentation_algorithm_version":1,"primary_dimension":"minecraft:overworld"}'
     $preset = @"
 {
@@ -98,7 +98,7 @@ function Invoke-Phase3C1([string]$verifyMode, [string]$output) {
         "-Drandomnibble6plus24generator.phase3c1.output=$($output.Replace('\','/'))"
     )
     $env:JAVA_TOOL_OPTIONS = $options -join ' '
-    & (Join-Path $repositoryRoot 'gradlew.bat') ':version:26.2-fabric:runValidationIntegrationSpawnFullServer' "--args=nogui --world $worldName" | Out-Host
+    & (Join-Path $repositoryRoot 'gradlew.bat') ":version:${validationTarget}:runValidationIntegrationSpawnFullServer" "--args=nogui --world $worldName" | Out-Host
     if ($LASTEXITCODE -ne 0) { throw "Phase 3C1 server failed: $LASTEXITCODE" }
     $result = Get-Content -LiteralPath $output -Raw | ConvertFrom-Json
     if ($result.status -ne 'PASS') { throw "Phase 3C1 result failed: $result" }

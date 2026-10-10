@@ -8,11 +8,23 @@ if (-not (Test-Path -LiteralPath $localConfiguration) -or
 Add-Type -AssemblyName Microsoft.VisualBasic
 $validationCaller = (Get-PSCallStack)[1].ScriptName
 $validationProject = Split-Path -Leaf (Split-Path -Parent $validationCaller)
-$validationServer = Join-Path $validationRepository "validations/$validationProject/instance/26.2-fabric/server"
+$validationTarget = if ($env:MOSAIC_VALIDATION_TARGET) { $env:MOSAIC_VALIDATION_TARGET } else { '26.2-fabric' }
+if ($validationTarget -notin @('26.2-fabric', '26.3-fabric')) { throw "Unregistered validation target: $validationTarget" }
+$registeredValidation = Get-Content -LiteralPath (Join-Path $validationRepository "validations/$validationProject/validation.toml") -Raw
+if ($registeredValidation -notmatch ('targets\s*=\s*\[[^\]]*"' + [regex]::Escape($validationTarget) + '"')) {
+    throw "Validation $validationProject does not support $validationTarget"
+}
+$targetFacts = ConvertFrom-StringData (Get-Content -LiteralPath (Join-Path $validationRepository "versions/$validationTarget/target.properties") -Raw)
+$validationPackMetadata = @{ pack = @{ pack_format = [int]$targetFacts.data_pack_major; min_format = @([int]$targetFacts.data_pack_major, [int]$targetFacts.data_pack_minor); max_format = @([int]$targetFacts.data_pack_major, [int]$targetFacts.data_pack_minor); description = 'Hidden Mosaic validation world' } } | ConvertTo-Json -Depth 4 -Compress
+$validationServer = Join-Path $validationRepository "validations/$validationProject/instance/$validationTarget/server"
 New-Item -ItemType Directory -Path $validationServer -Force | Out-Null
 $validationProperties = Join-Path $validationServer 'server.properties'
 if (-not (Test-Path -LiteralPath $validationProperties)) {
-    [IO.File]::WriteAllText($validationProperties, "online-mode=false`nwhite-list=false`nserver-ip=127.0.0.1`nview-distance=2`nsimulation-distance=2`n", [Text.UTF8Encoding]::new($false))
+    [IO.File]::WriteAllText($validationProperties, "level-seed=0`nonline-mode=false`nwhite-list=false`nserver-ip=127.0.0.1`nview-distance=2`nsimulation-distance=2`n", [Text.UTF8Encoding]::new($false))
+}
+$validationPropertiesText = [IO.File]::ReadAllText($validationProperties)
+if ($validationPropertiesText -notmatch '(?m)^level-seed=') {
+    [IO.File]::WriteAllText($validationProperties, $validationPropertiesText.TrimEnd() + "`nlevel-seed=0`n", [Text.UTF8Encoding]::new($false))
 }
 function Move-ValidationToRecycleBin {
     param([Parameter(Mandatory)][string]$LiteralPath)

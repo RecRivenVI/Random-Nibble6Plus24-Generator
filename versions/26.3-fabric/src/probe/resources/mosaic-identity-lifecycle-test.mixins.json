@@ -1,0 +1,13 @@
+{
+    "required": true,
+    "package": "io.github.recrivenvi.randomnibble6plus24generator.identitytest.mixin",
+    "compatibilityLevel": "JAVA_25",
+    "mixins": [
+        "IdentityTestServerMixin",
+        "IdentityTestProfileIoMixin"
+    ],
+    "injectors": {
+        "defaultRequire": 1
+    },
+    "plugin": "io.github.recrivenvi.randomnibble6plus24generator.probe.ValidationMixinPlugin"
+}

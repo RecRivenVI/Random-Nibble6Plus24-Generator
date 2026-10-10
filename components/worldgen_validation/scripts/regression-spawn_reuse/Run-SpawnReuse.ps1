@@ -12,11 +12,11 @@ $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
 if($Fixtures -notmatch '^(spawn-candidates|[a-z_]+:-?\d+:-?\d+(,[a-z_]+:-?\d+:-?\d+)*)$'){throw 'Invalid fixture list; quote comma-separated arguments'}
 $repository=(Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
-$run=Join-Path $repository 'validations\regression-spawn_reuse\instance\26.2-fabric\server'
+$run=Join-Path $repository "validations\regression-spawn_reuse\instance\${validationTarget}\server"
 if(-not $WorldName){$WorldName='spawn-reuse-'+[guid]::NewGuid().ToString('N').Substring(0,12)}
 if($WorldName -notmatch '^spawn-reuse-[a-zA-Z0-9-]+$'){throw 'Unsafe test world name'}
 $world=Join-Path $run $WorldName
-$output=Join-Path $repository "validations\regression-spawn_reuse\result\current\spawn-reuse\$Mode"
+$output=Join-Path $repository "validations\regression-spawn_reuse\result\current\${validationTarget}\spawn-reuse\$Mode"
 New-Item -ItemType Directory -Path $run,$output -Force | Out-Null
 if($Mode -eq 'reload'){
     if(-not (Test-Path -LiteralPath (Join-Path $world 'level.dat'))){throw 'Reload requires an existing fixture'}
@@ -25,7 +25,7 @@ if($Mode -eq 'reload'){
     $pack=Join-Path $world 'datapacks\spawn-reuse-test'
     $preset=Join-Path $pack 'data\randomnibble6plus24generator\worldgen\world_preset'
     New-Item -ItemType Directory -Path $preset -Force|Out-Null
-    [IO.File]::WriteAllText((Join-Path $pack 'pack.mcmeta'),'{"pack":{"pack_format":107,"min_format":[107,1],"max_format":[107,1],"description":"SPAWN reuse regression fixture"}}')
+    [IO.File]::WriteAllText((Join-Path $pack 'pack.mcmeta'),$validationPackMetadata)
     $profile=@{format_version=2;seed_derivation_algorithm_version=1;feature_ordering_algorithm_version=1;presentation_algorithm_version=1;primary_dimension='minecraft:overworld'}
     $dimensions=[ordered]@{}
     foreach($dimension in @('overworld','the_nether','the_end')){
@@ -58,7 +58,7 @@ try{
     if($ReferenceDirectory){$flags+=('-Dmosaic.spawn.test.reference="{0}"' -f (Resolve-Path -LiteralPath $ReferenceDirectory).Path.Replace('\','/'))}
     if($Fortress){$flags+='-Dmosaic.spawn.test.fortress=true'}
     $env:JAVA_TOOL_OPTIONS=$flags -join ' '
-    & (Join-Path $repository 'gradlew.bat') ':version:26.2-fabric:runValidationRegressionSpawnReuseServer' "--args=nogui --world $WorldName" *> (Join-Path $output 'console.log')
+    & (Join-Path $repository 'gradlew.bat') ":version:${validationTarget}:runValidationRegressionSpawnReuseServer" "--args=nogui --world $WorldName" *> (Join-Path $output 'console.log')
     if($LASTEXITCODE -ne 0){throw "SPAWN regression failed; see $output"}
     $log=Get-Content -Raw -LiteralPath (Join-Path $output 'console.log')
     if($log -match 'Encountered an unexpected exception|Exception stopping the server|Caught exception in thread|A single server tick took'){

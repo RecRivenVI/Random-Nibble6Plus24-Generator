@@ -17,10 +17,10 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
-$runRoot = (Resolve-Path (Join-Path $repositoryRoot 'validations\conformance-worldgen\instance\26.2-fabric\server')).Path
+$runRoot = (Resolve-Path (Join-Path $repositoryRoot "validations\conformance-worldgen\instance\${validationTarget}\server")).Path
 $serverPropertiesPath = Join-Path $runRoot 'server.properties'
 $safeFixtureId = $FixtureId -replace '[^A-Za-z0-9_.-]', '_'
-$outputRoot = Join-Path $repositoryRoot "validations\conformance-worldgen\result\current\phase2c1r-$safeFixtureId"
+$outputRoot = Join-Path $repositoryRoot "validations\conformance-worldgen\result\current\${validationTarget}\phase2c1r-$safeFixtureId"
 $nativeEvidence = Join-Path $outputRoot 'native'
 $isolatedEvidence = Join-Path $outputRoot "isolated-host-$HostSeed-$FrontierState"
 $nativeResult = Join-Path $outputRoot 'native-result.json'
@@ -93,7 +93,7 @@ try {
         if ($dimension -eq 'minecraft:overworld') {
             $env:JAVA_TOOL_OPTIONS += ' -Drandomnibble6plus24generator.phase2c1.native.runBeforeInitialSpawn=true'
         }
-        & (Join-Path $repositoryRoot 'gradlew.bat') ':version:26.2-fabric:runValidationConformanceWorldgenServer' "--args=nogui --world $nativeWorld"
+        & (Join-Path $repositoryRoot 'gradlew.bat') ":version:${validationTarget}:runValidationConformanceWorldgenServer" "--args=nogui --world $nativeWorld"
         if ($LASTEXITCODE -ne 0) { throw "Native evidence process failed: $LASTEXITCODE" }
     }
 
@@ -114,7 +114,7 @@ try {
     if ([string]$HostSeed -eq $localSeed) {
         $env:JAVA_TOOL_OPTIONS += ' -Drandomnibble6plus24generator.phase2c1r.isolated.allowSameHostSeed=true'
     }
-    & (Join-Path $repositoryRoot 'gradlew.bat') ':version:26.2-fabric:runValidationConformanceWorldgenServer' "--args=nogui --world $isolatedWorld"
+    & (Join-Path $repositoryRoot 'gradlew.bat') ":version:${validationTarget}:runValidationConformanceWorldgenServer" "--args=nogui --world $isolatedWorld"
     if ($LASTEXITCODE -ne 0) { throw "Isolated evidence process failed: $LASTEXITCODE" }
 
     $nativeSummary = Get-Content -LiteralPath $nativeResult -Raw | ConvertFrom-Json

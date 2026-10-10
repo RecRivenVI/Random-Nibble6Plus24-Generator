@@ -5,11 +5,11 @@ param(
 . (Join-Path $PSScriptRoot '../Validation-Environment.ps1')
 $ErrorActionPreference='Stop'
 $repo=(Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
-$run=Join-Path $repo 'validations\regression-poi_ownership\instance\26.2-fabric\server'
+$run=Join-Path $repo "validations\regression-poi_ownership\instance\${validationTarget}\server"
 if(-not $World){$World='poi-'+[guid]::NewGuid().ToString('N').Substring(0,12)}
 if($World -notmatch '^poi-[a-zA-Z0-9-]+$'){throw 'Unsafe test world name'}
 $worldPath=Join-Path $run $World
-$output=Join-Path $repo "validations\regression-poi_ownership\result\current\poi-ownership\$Mode"
+$output=Join-Path $repo "validations\regression-poi_ownership\result\current\${validationTarget}\poi-ownership\$Mode"
 New-Item -ItemType Directory -Path $run,$output -Force|Out-Null
 $levelType='randomnibble6plus24generator:poi_test'
 if($Mode -eq 'reload'){
@@ -21,7 +21,7 @@ if($Mode -eq 'reload'){
         $pack=Join-Path $worldPath 'datapacks\poi-test'
         $preset=Join-Path $pack 'data\randomnibble6plus24generator\worldgen\world_preset'
         New-Item -ItemType Directory -Path $preset -Force|Out-Null
-        [IO.File]::WriteAllText((Join-Path $pack 'pack.mcmeta'),'{"pack":{"pack_format":107,"min_format":[107,1],"max_format":[107,1],"description":"Physical POI ownership regression"}}')
+        [IO.File]::WriteAllText((Join-Path $pack 'pack.mcmeta'),$validationPackMetadata)
         $profile=@{format_version=2;seed_derivation_algorithm_version=1;feature_ordering_algorithm_version=1;presentation_algorithm_version=1;primary_dimension='minecraft:overworld'}
         $dimensions=[ordered]@{}
         foreach($dimension in @('overworld','the_nether','the_end')){
@@ -48,7 +48,7 @@ try{
     $process.PriorityClass=[Diagnostics.ProcessPriorityClass]::BelowNormal
     Push-Location $repo
     $env:JAVA_TOOL_OPTIONS=('-XX:ActiveProcessorCount={0} -Dmosaic.poi.test.mode={1} -Dmosaic.poi.test.output="{2}" -Dmosaic.poi.test.reference="{3}"' -f $TestProcessors,$Mode,$output.Replace('\','/'),$Reference.Replace('\','/'))
-    & .\gradlew.bat --no-daemon --no-parallel --max-workers=2 ':version:26.2-fabric:runValidationRegressionPoiOwnershipServer' "--args=nogui --world $World" *> (Join-Path $output 'console.log')
+    & .\gradlew.bat --no-daemon --no-parallel --max-workers=2 ":version:${validationTarget}:runValidationRegressionPoiOwnershipServer" "--args=nogui --world $World" *> (Join-Path $output 'console.log')
     $result=Get-Content -Raw -LiteralPath (Join-Path $output 'result.json')|ConvertFrom-Json
     if($Mode -eq 'audit') {"AUDIT $output"}else{
         if($LASTEXITCODE -ne 0 -or $result.status -ne 'PASS'){throw "POI ownership failed: $output"}
