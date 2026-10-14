@@ -96,7 +96,14 @@ public final class CanonicalChunkArtifact {
             throw new IllegalArgumentException("Canonical artifact requires a ProtoChunk target");
         }
         if (source.getPersistedStatus() != ChunkStatus.FEATURES
-                || run.featureTrace().requestedWriters().size() != 9
+                || !run.featureTrace()
+                        .requestedWriters()
+                        .equals(
+                                io.github.recrivenvi.randomnibble6plus24generator.worldgen.session
+                                        .FeatureOrderingPlan.forProfile(source.getPos(), profile)
+                                        .writers())
+                || run.featureTrace().orderingAlgorithmVersion()
+                        != profile.featureOrderingAlgorithmVersion()
                 || !run.featureTrace()
                         .requestedWriters()
                         .equals(run.featureTrace().completedWriters())) {

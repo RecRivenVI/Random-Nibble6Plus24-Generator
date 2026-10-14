@@ -46,8 +46,27 @@ public final class Phase3C2ProductionVerification {
             Comparator.comparingInt(ChunkPos::z).thenComparingInt(ChunkPos::x);
     private static volatile int ticksBeforeRun = 1;
     private static volatile boolean started;
+    private static final java.util.concurrent.atomic.AtomicLong singleWriterRuns =
+            new java.util.concurrent.atomic.AtomicLong();
+    private static final java.util.concurrent.atomic.AtomicLong clippedWrites =
+            new java.util.concurrent.atomic.AtomicLong();
 
     private Phase3C2ProductionVerification() {}
+
+    public static void observeFeatureRun(
+            io.github.recrivenvi.randomnibble6plus24generator.worldgen.session
+                            .FeatureStableGenerationRun
+                    run,
+            long discardedWrites) {
+        if (System.getProperty(PREFIX + "mode", "").isBlank()
+                || run.featureTrace().orderingAlgorithmVersion() != 2) return;
+        if (run.featureTrace().requestedWriters().size() != 1
+                || run.featureTrace().maxConcurrentFeatureWriters() != 1) {
+            throw new IllegalStateException("Target-only production writer invariant failed");
+        }
+        singleWriterRuns.incrementAndGet();
+        clippedWrites.addAndGet(discardedWrites);
+    }
 
     public static void runIfRequested(MinecraftServer server) {
         String mode = System.getProperty(PREFIX + "mode", "");
@@ -177,6 +196,11 @@ public final class Phase3C2ProductionVerification {
         }
         JsonObject result = new JsonObject();
         result.addProperty("status", "PASS");
+        result.add(
+                "developmentB",
+                map(
+                        io.github.recrivenvi.randomnibble6plus24generator.worldgen.features
+                                .BDevelopmentWorld.metrics(server)));
         result.addProperty("mode", mode);
         result.addProperty("dimension", level.dimension().identifier().toString());
         result.addProperty("target", target().toString());
@@ -184,6 +208,10 @@ public final class Phase3C2ProductionVerification {
         var runtime = MosaicWorldIdentity.runtimeContext(level).orElseThrow();
         long targetLocalSeed = runtime.resolveLocalWorldSeed(level.dimension(), target());
         result.addProperty("localWorldSeed", targetLocalSeed);
+        result.addProperty(
+                "featureOrderingVersion", runtime.profile().featureOrderingAlgorithmVersion());
+        result.addProperty("singleWriterRuns", singleWriterRuns.get());
+        result.addProperty("discardedFeatureWrites", clippedWrites.get());
         if ("pair".equals(mode)) {
             ChunkPos adjacent = positions.get(1);
             long adjacentLocalSeed = runtime.resolveLocalWorldSeed(level.dimension(), adjacent);

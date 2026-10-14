@@ -24,6 +24,7 @@ public record MosaicWorldProfile(
     public static final int FORMAT_VERSION_V2 = 2;
     public static final int SEED_DERIVATION_ALGORITHM_V1 = 1;
     public static final int FEATURE_ORDERING_ALGORITHM_V1 = 1;
+    public static final int FEATURE_ORDERING_TARGET_ONLY = 2;
     public static final int PRESENTATION_ALGORITHM_V1 = 1;
 
     private static final Codec<MosaicWorldProfile> RAW_CODEC =
@@ -83,6 +84,16 @@ public record MosaicWorldProfile(
                 Level.OVERWORLD);
     }
 
+    /** Explicit opt-in for new worlds; existing serialized V1 worlds never change behavior. */
+    public static MosaicWorldProfile targetOnly() {
+        return new MosaicWorldProfile(
+                FORMAT_VERSION_V2,
+                SEED_DERIVATION_ALGORITHM_V1,
+                FEATURE_ORDERING_TARGET_ONLY,
+                PRESENTATION_ALGORITHM_V1,
+                Level.OVERWORLD);
+    }
+
     public void requireSupported() {
         DataResult<MosaicWorldProfile> result = validateSupported(this);
         result.getOrThrow(IllegalArgumentException::new);
@@ -99,7 +110,8 @@ public record MosaicWorldProfile(
                             "Unsupported Mosaic seed derivation algorithm version: "
                                     + profile.seedDerivationAlgorithmVersion());
         }
-        if (profile.featureOrderingAlgorithmVersion() != FEATURE_ORDERING_ALGORITHM_V1) {
+        if (profile.featureOrderingAlgorithmVersion() != FEATURE_ORDERING_ALGORITHM_V1
+                && profile.featureOrderingAlgorithmVersion() != FEATURE_ORDERING_TARGET_ONLY) {
             return DataResult.error(
                     () ->
                             "Unsupported Mosaic feature ordering algorithm version: "

@@ -28,6 +28,20 @@ Thumbs.db
 # 验证实例
 /validations/*/instance/
 /validations/*/result/current/
+/validations/*/result/compact/
+/validations/*/result/terrain_*/
+/validations/*/result/structure_reuse*/
+/validations/conformance-feature_b/result/preparation/
+/validations/conformance-feature_b/result/lightweight/
+/validations/conformance-feature_b/result/native_cat/
+/validations/performance-worldgen/result/b_milestone/
+/validations/conformance-feature_c/result/flow/
+/validations/conformance-feature_c/result/frontier/
+/validations/conformance-feature_c/result/replay/
+/validations/conformance-feature_c/result/native_repeat/
+/validations/conformance-feature_a/result/conifers/
+/validations/conformance-feature_a/result/comparison/
+/validations/conformance-feature_a/result/lightweight_*/
 
 # 保留的旧运行目录
 /versions/*/logs/

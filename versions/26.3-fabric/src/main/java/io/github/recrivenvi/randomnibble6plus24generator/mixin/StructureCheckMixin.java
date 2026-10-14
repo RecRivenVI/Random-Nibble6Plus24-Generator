@@ -22,8 +22,21 @@ abstract class StructureCheckMixin {
                 .ifPresent(
                         isolated -> {
                             StructureStart start =
-                                    isolated.structureManager()
-                                            .forWorldGenRegion(region)
+                                    (region
+                                                            instanceof
+                                                            io.github.recrivenvi
+                                                                            .randomnibble6plus24generator
+                                                                            .worldgen.features
+                                                                            .StrictFeatureRegion
+                                                                    strict
+                                                    ? strict.structureQueries(context.pos())
+                                                            .orElseGet(
+                                                                    () ->
+                                                                            isolated.structureManager()
+                                                                                    .forWorldGenRegion(
+                                                                                            region))
+                                                    : isolated.structureManager()
+                                                            .forWorldGenRegion(region))
                                             .getStructureWithPieceAt(
                                                     context.pos(),
                                                     ((StructureCheck) (Object) this)

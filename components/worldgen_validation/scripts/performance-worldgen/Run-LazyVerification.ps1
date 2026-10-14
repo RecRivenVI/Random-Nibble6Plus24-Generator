@@ -2,11 +2,11 @@ param([switch]$Lazy,[switch]$Smoke,[switch]$Rings,[switch]$Strongholds,[switch]$
 . (Join-Path $PSScriptRoot '../Validation-Environment.ps1')
 $ErrorActionPreference='Stop'
 $repo=(Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
-$run=Join-Path $repo 'validations\performance-worldgen\instance\26.2-fabric\server'
+$run=Join-Path $repo "validations\performance-worldgen\instance\${validationTarget}\server"
 if(-not $Label){$Label='lazy-'+[guid]::NewGuid().ToString('N').Substring(0,8)}
 if($Label -notmatch '^[a-z0-9-]+$'){throw 'Unsafe label'}
 $world=Join-Path $run "DISPOSABLE-$Label"
-$output=Join-Path $repo "validations\performance-worldgen\result\current\lazy_verification"
+$output=Join-Path $repo "validations\performance-worldgen\result\current\${validationTarget}\lazy_verification"
 if((Test-Path -LiteralPath $world)){throw 'Fresh fixture required'}
 New-Item -ItemType Directory -Path $world,$output -Force|Out-Null
 [IO.File]::WriteAllText((Join-Path $run 'server.properties'),@"
@@ -42,7 +42,7 @@ try{
  if($Lightweight){$flags+='-Dmosaic.lazy.lightweight=true'}
  if($Reference){$flags+=('-Dmosaic.lazy.reference="{0}"' -f (Resolve-Path -LiteralPath $Reference).Path.Replace('\','/'))}
  $env:JAVA_TOOL_OPTIONS='-XX:ActiveProcessorCount=4 '+($flags -join ' ')
- & (Join-Path $repo 'gradlew.bat') '--no-daemon' '--no-parallel' '--max-workers=2' ':version:26.2-fabric:runValidationPerformanceWorldgenServer' "--args=nogui --world DISPOSABLE-$Label" *> (Join-Path $output 'console.log')
+ & (Join-Path $repo 'gradlew.bat') '--no-daemon' '--no-parallel' '--max-workers=2' ":version:${validationTarget}:runValidationPerformanceWorldgenServer" "--args=nogui --world DISPOSABLE-$Label" *> (Join-Path $output 'console.log')
  if(-not(Test-Path -LiteralPath (Join-Path $output 'report.json'))){throw "Missing report: $output"}
  $result=Get-Content -Raw -LiteralPath (Join-Path $output 'report.json')|ConvertFrom-Json
  if($result.status -ne 'PASS'){throw "Lazy comparison failed: $($result.failure)"}

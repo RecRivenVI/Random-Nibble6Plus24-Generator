@@ -23,6 +23,8 @@
         "LevelTicksAccessor",
         "MinecraftServerMixin",
         "MinecraftServerInvoker",
+        "NoiseBasedChunkGeneratorAccessor",
+        "MaterialRuleContextInvoker",
         "PaleMossDecoratorMixin",
         "ProtoChunkSpawnBiomeMixin",
         "SavedDataIdentityMixin",
@@ -36,6 +38,9 @@
         "StructureManagerMixin",
         "StructureCheckMixin",
         "StructurePlacementAccessor",
+        "StructureGenerationMixin",
+        "StructureTemplatePaletteMixin",
+        "StructureTemplatePoolMixin",
         "WorldGenRegionMixin",
         "WorldGenerationContextMixin"
     ],

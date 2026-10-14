@@ -13,6 +13,10 @@
 ```powershell
 $env:MOSAIC_VALIDATION_TARGET = '26.3-fabric' # 旧版回归改为 26.2-fabric
 & .\components\worldgen_validation\scripts\integration-production_lifecycle\Run-Phase3C2Production.ps1
+# 26.3 新地图单区块装饰试验与重载；旧合同回归不传此参数
+& .\components\worldgen_validation\scripts\integration-production_lifecycle\Run-Phase3C2Production.ps1 -FeatureOrderingVersion 2 -VerifyReload -Mutate
+# 新按需 B 实验世界；序列化身份不同于已有 Ordering 2
+& .\components\worldgen_validation\scripts\integration-production_lifecycle\Run-Phase3C2Production.ps1 -FeatureOrderingVersion 2 -DevelopmentB -VerifyReload -Mutate
 ```
 
 其他矩阵与子场景的脚本在同一工具目录。脚本负责隐藏 preset、输入与系统属性，不直接使用日常实例。人工客户端操作仍由使用者完成。
@@ -20,6 +24,8 @@ $env:MOSAIC_VALIDATION_TARGET = '26.3-fabric' # 旧版回归改为 26.2-fabric
 ## 通过标准
 
 不靠手动逐阶段调用；去重、保存、重启、已修改 Chunk 和各维度生命周期保持正确。
+
+`-DevelopmentB` 仅创建全新 `development_b` 隐藏生成器世界，校验 marker 与显式运行 opt-in，使用按需 B 后复用既有物化和生命周期。结果写入 `features-2/development-b`，要求新生成计数大于零、重载为零；缺失 marker、混合维度身份或未启用时 fail closed。既有 `mosaic` codec 的 Ordering 1/2 世界不切换，也不公开 WorldPreset。
 
 26.3 冷区请求额外检查所有 BIOMES 物理依赖的实际状态和 palette，并执行运行期刷怪使用的环境属性查询；`physicalBiomeChecks` 必须大于零，不允许用未物化 ProtoChunk 完成 biome future。FULL 重载继续要求已有 target 不重新生成。
 

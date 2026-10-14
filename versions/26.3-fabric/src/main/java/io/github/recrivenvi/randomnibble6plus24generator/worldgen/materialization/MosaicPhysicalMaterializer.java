@@ -46,8 +46,8 @@ public final class MosaicPhysicalMaterializer {
             new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<GenerationKey, ChunkStatus> PHYSICAL_STATUS_ALLOWANCES =
             new ConcurrentHashMap<>();
-    private static final ConcurrentHashMap<GenerationKey, Map<GenerationKey, ChunkStatus>>
-            ACTIVE_PHYSICAL_PLANS = new ConcurrentHashMap<>();
+    private static final PhysicalGenerationPlanIndex<GenerationKey> PHYSICAL_PLANS =
+            new PhysicalGenerationPlanIndex<>();
     private static final Object PLAN_LOCK = new Object();
     private static final Map<GeneratingChunkMap, ServerLevel> PHYSICAL_CHUNK_MAPS =
             java.util.Collections.synchronizedMap(new IdentityHashMap<>());
@@ -130,13 +130,9 @@ public final class MosaicPhysicalMaterializer {
                         (requiredPos, requiredStatus) ->
                                 keyedRequirements.put(key(level, requiredPos), requiredStatus));
         synchronized (PLAN_LOCK) {
-            ACTIVE_PHYSICAL_PLANS.put(key, Map.copyOf(keyedRequirements));
-            keyedRequirements.forEach(
-                    (requiredKey, requiredStatus) ->
-                            PHYSICAL_STATUS_ALLOWANCES.merge(
-                                    requiredKey,
-                                    requiredStatus,
-                                    (left, right) -> right.isAfter(left) ? right : left));
+            PHYSICAL_PLANS
+                    .replace(key, keyedRequirements)
+                    .forEach(MosaicPhysicalMaterializer::refreshPhysicalRequirement);
         }
         PhysicalMosaicTrace.recordPlan(level, plan);
     }
@@ -234,6 +230,14 @@ public final class MosaicPhysicalMaterializer {
                         try {
                             promise.complete(prepare(level, pos, key));
                         } catch (Throwable throwable) {
+                            if (!lifecycle.isExpected(throwable))
+                                io.github.recrivenvi.randomnibble6plus24generator
+                                        .RandomNibble6Plus24Generator.LOGGER
+                                        .error(
+                                                "Mosaic canonical preparation failed at {} {}",
+                                                level.dimension().identifier(),
+                                                pos,
+                                                throwable);
                             if (!promise.completeExceptionally(throwable)
                                     && !lifecycle.isExpected(throwable)) {
                                 // An unrelated caller may have cancelled the result first. A real
@@ -373,32 +377,29 @@ public final class MosaicPhysicalMaterializer {
     private static void completePhysicalRequest(GenerationKey key) {
         REQUESTED_PHYSICAL_STATUSES.remove(key);
         synchronized (PLAN_LOCK) {
-            Map<GenerationKey, ChunkStatus> removed = ACTIVE_PHYSICAL_PLANS.remove(key);
-            if (removed == null) {
+            var affected = PHYSICAL_PLANS.remove(key);
+            if (affected.isEmpty()) {
                 removeObligationIfUnused(key);
                 PHYSICAL_STATUS_ALLOWANCES.remove(key);
                 return;
             }
-            for (GenerationKey affected : removed.keySet()) {
-                removeObligationIfUnused(affected);
-                ChunkStatus remaining = null;
-                for (Map<GenerationKey, ChunkStatus> active : ACTIVE_PHYSICAL_PLANS.values()) {
-                    ChunkStatus candidate = active.get(affected);
-                    if (candidate != null && (remaining == null || candidate.isAfter(remaining))) {
-                        remaining = candidate;
-                    }
-                }
-                if (remaining == null) PHYSICAL_STATUS_ALLOWANCES.remove(affected);
-                else PHYSICAL_STATUS_ALLOWANCES.put(affected, remaining);
-            }
+            affected.forEach(MosaicPhysicalMaterializer::refreshPhysicalRequirement);
+        }
+    }
+
+    private static void refreshPhysicalRequirement(GenerationKey key) {
+        ChunkStatus remaining = PHYSICAL_PLANS.maximum(key);
+        if (remaining == null) {
+            MATERIALIZATION_OBLIGATIONS.remove(key);
+            PHYSICAL_STATUS_ALLOWANCES.remove(key);
+        } else {
+            PHYSICAL_STATUS_ALLOWANCES.put(key, remaining);
         }
     }
 
     private static void removeObligationIfUnused(GenerationKey obligation) {
-        boolean stillRequired =
-                ACTIVE_PHYSICAL_PLANS.values().stream()
-                        .anyMatch(plan -> plan.containsKey(obligation));
-        if (!stillRequired) MATERIALIZATION_OBLIGATIONS.remove(obligation);
+        if (PHYSICAL_PLANS.maximum(obligation) == null)
+            MATERIALIZATION_OBLIGATIONS.remove(obligation);
     }
 
     private static void clearPlansContaining(ServerLevel level, ChunkPos failedPos) {
@@ -408,11 +409,7 @@ public final class MosaicPhysicalMaterializer {
     private static void clearPlansContaining(GenerationKey failedKey) {
         java.util.List<GenerationKey> owners;
         synchronized (PLAN_LOCK) {
-            owners =
-                    ACTIVE_PHYSICAL_PLANS.entrySet().stream()
-                            .filter(entry -> entry.getValue().containsKey(failedKey))
-                            .map(Map.Entry::getKey)
-                            .toList();
+            owners = PHYSICAL_PLANS.ownersDependingOn(failedKey);
         }
         if (owners.isEmpty()) {
             MATERIALIZATION_OBLIGATIONS.remove(failedKey);
@@ -529,7 +526,9 @@ public final class MosaicPhysicalMaterializer {
         REQUESTED_PHYSICAL_STATUSES.keySet().removeIf(key -> key.server() == server);
         MATERIALIZATION_OBLIGATIONS.keySet().removeIf(key -> key.server() == server);
         PHYSICAL_STATUS_ALLOWANCES.keySet().removeIf(key -> key.server() == server);
-        ACTIVE_PHYSICAL_PLANS.keySet().removeIf(key -> key.server() == server);
+        synchronized (PLAN_LOCK) {
+            PHYSICAL_PLANS.removeOwnersIf(key -> key.server() == server);
+        }
         ARTIFACT_CAPTURES_BY_KEY.keySet().removeIf(key -> key.server() == server);
         PUBLISHES_BY_KEY.keySet().removeIf(key -> key.server() == server);
         synchronized (PHYSICAL_CHUNK_MAPS) {
@@ -556,7 +555,9 @@ public final class MosaicPhysicalMaterializer {
         REQUESTED_PHYSICAL_STATUSES.keySet().removeIf(belongs);
         MATERIALIZATION_OBLIGATIONS.keySet().removeIf(belongs);
         PHYSICAL_STATUS_ALLOWANCES.keySet().removeIf(belongs);
-        ACTIVE_PHYSICAL_PLANS.keySet().removeIf(belongs);
+        synchronized (PLAN_LOCK) {
+            PHYSICAL_PLANS.removeOwnersIf(belongs);
+        }
         ARTIFACT_CAPTURES_BY_KEY.keySet().removeIf(belongs);
         PUBLISHES_BY_KEY.keySet().removeIf(belongs);
         synchronized (PHYSICAL_CHUNK_MAPS) {
@@ -613,7 +614,9 @@ public final class MosaicPhysicalMaterializer {
         REQUESTED_PHYSICAL_STATUSES.clear();
         MATERIALIZATION_OBLIGATIONS.clear();
         PHYSICAL_STATUS_ALLOWANCES.clear();
-        ACTIVE_PHYSICAL_PLANS.clear();
+        synchronized (PLAN_LOCK) {
+            PHYSICAL_PLANS.clear();
+        }
         PHYSICAL_CHUNK_MAPS.clear();
         REQUEST_COUNT.set(0L);
         DEDUP_HITS.set(0L);
@@ -656,19 +659,38 @@ public final class MosaicPhysicalMaterializer {
         long artifactNanos;
         try (IsolatedGenerationContext context =
                 IsolatedGenerationContext.create(
-                        IsolatedGenerationMode.ISOLATED_MOSAIC, level, localSeed, pos)) {
-            FeatureStableGenerationRun run = context.generateFeaturesStable();
+                        IsolatedGenerationMode.ISOLATED_MOSAIC,
+                        level,
+                        localSeed,
+                        pos,
+                        runtime.profile())) {
+            var developmentB =
+                    io.github.recrivenvi.randomnibble6plus24generator.worldgen.features
+                                    .BDevelopmentWorld.active(level)
+                            ? io.github.recrivenvi.randomnibble6plus24generator.worldgen.features
+                                    .BFeaturePreparation.generate(context, runtime.profile())
+                            : null;
+            FeatureStableGenerationRun run =
+                    developmentB == null ? context.generateFeaturesStable() : developmentB.run();
+            io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify
+                    .Phase3C2ProductionVerification.observeFeatureRun(
+                    run, context.discardedFeatureWriteCount());
             // Do not retain the isolated session or start Artifact/materialization for a closing
             // world.
             // Already-running Vanilla work finishes in its existing executor and closes via
             // try-with-resources.
             lifecycle.checkPreparing();
-            spawnBiomes = context.captureSpawnBiomes(runtime.profile());
+            spawnBiomes =
+                    developmentB == null
+                            ? context.captureSpawnBiomes(runtime.profile())
+                            : developmentB.spawnBiomes();
             isolatedMetrics = run.metrics();
             failIf(FaultPoint.AFTER_ISOLATED_STABLE_GENERATION);
             externalStructureStarts =
-                    context.captureExternalStructureStarts(
-                            StructurePieceSerializationContext.fromLevel(level));
+                    developmentB == null
+                            ? context.captureExternalStructureStarts(
+                                    StructurePieceSerializationContext.fromLevel(level))
+                            : developmentB.externalStarts();
             long artifactStarted = System.nanoTime();
             artifact =
                     CanonicalChunkArtifact.capture(
@@ -684,6 +706,9 @@ public final class MosaicPhysicalMaterializer {
                     .computeIfAbsent(key, ignored -> new AtomicLong())
                     .incrementAndGet();
             failIf(FaultPoint.AFTER_ARTIFACT_CAPTURE);
+            if (developmentB != null)
+                io.github.recrivenvi.randomnibble6plus24generator.worldgen.features
+                        .BDevelopmentWorld.record(level, developmentB);
         }
         long isolatedNanos = System.nanoTime() - isolatedStarted;
         failIf(FaultPoint.AFTER_SESSION_CLOSE);

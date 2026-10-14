@@ -1,5 +1,6 @@
 package io.github.recrivenvi.randomnibble6plus24generator.worldgen.session;
 
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile.MosaicWorldProfile;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -10,16 +11,27 @@ import net.minecraft.world.level.chunk.status.ChunkPyramid;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.level.chunk.status.ChunkStep;
 
-/** Frozen FEATURES writer ordering contract for Mosaic format version 2. */
+/** Persisted FEATURES writer selection for Mosaic format version 2. */
 public record FeatureOrderingPlan(
         int algorithmVersion, int blockStateWriteRadius, List<ChunkPos> writers) {
 
     public static final int TARGET_LOCAL_ZX_ROW_MAJOR_V1 = 1;
+    public static final int TARGET_ONLY_CLIPPED = 2;
     private static final Comparator<ChunkPos> Z_THEN_X =
             Comparator.comparingInt(ChunkPos::z).thenComparingInt(ChunkPos::x);
 
     public FeatureOrderingPlan {
         writers = List.copyOf(writers);
+    }
+
+    public static FeatureOrderingPlan forProfile(ChunkPos target, MosaicWorldProfile profile) {
+        profile.requireSupported();
+        return switch (profile.featureOrderingAlgorithmVersion()) {
+            case TARGET_LOCAL_ZX_ROW_MAJOR_V1 -> targetLocalZxRowMajorV1(target);
+            case TARGET_ONLY_CLIPPED ->
+                    new FeatureOrderingPlan(TARGET_ONLY_CLIPPED, 0, List.of(target));
+            default -> throw new IllegalArgumentException("Unsupported FEATURES ordering");
+        };
     }
 
     public static FeatureOrderingPlan targetLocalZxRowMajorV1(ChunkPos target) {

@@ -2,7 +2,7 @@ param([Parameter(Mandatory=$true)][string]$Label)
 $ErrorActionPreference='Stop'
 if($Label -notmatch '^[a-z0-9-]+$'){throw 'Unsafe label'}
 $repo=(Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
-$output=Join-Path $repo "validations\performance-worldgen\result\current\lazy_verification"
+$output=Join-Path $repo "validations\performance-worldgen\result\current\${validationTarget}\lazy_verification"
 $researchProcess=[Diagnostics.Process]::GetCurrentProcess()
 $previousAffinity=$researchProcess.ProcessorAffinity
 $previousPriority=$researchProcess.PriorityClass

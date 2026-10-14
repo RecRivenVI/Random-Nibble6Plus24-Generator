@@ -47,6 +47,7 @@ import net.minecraft.world.level.lighting.LevelLightEngine;
 public final class IsolatedGenerationContext implements AutoCloseable {
 
     private final IsolatedGenerationMode mode;
+    private final MosaicWorldProfile profile;
     private final ServerLevel hostLevel;
     private final ResourceKey<Level> dimension;
     private final ChunkPos target;
@@ -82,6 +83,8 @@ public final class IsolatedGenerationContext implements AutoCloseable {
     private final AtomicLong localUncachedBiomeReads = new AtomicLong();
     private final Map<String, FeatureWriteAccumulator> featureWrites = new TreeMap<>();
     private final Map<String, Long> physicalLevelEscapes = new TreeMap<>();
+    private final Map<Long, ChunkAccess> featureReadViews = new java.util.HashMap<>();
+    private final AtomicLong discardedFeatureWrites = new AtomicLong();
     private volatile Set<Long> expectedFeatureWriters = Set.of();
     private volatile int carverSourceChunkCount;
     private volatile int configuredCarverCount;
@@ -90,9 +93,15 @@ public final class IsolatedGenerationContext implements AutoCloseable {
     private boolean closed;
 
     private IsolatedGenerationContext(
-            IsolatedGenerationMode mode, ServerLevel hostLevel, long worldSeed, ChunkPos target) {
+            IsolatedGenerationMode mode,
+            ServerLevel hostLevel,
+            long worldSeed,
+            ChunkPos target,
+            MosaicWorldProfile profile) {
         long setupStarted = System.nanoTime();
         this.mode = mode;
+        this.profile = java.util.Objects.requireNonNull(profile, "profile");
+        profile.requireSupported();
         this.hostLevel = hostLevel;
         this.dimension = hostLevel.dimension();
         this.target = target;
@@ -183,7 +192,52 @@ public final class IsolatedGenerationContext implements AutoCloseable {
 
     public static IsolatedGenerationContext create(
             IsolatedGenerationMode mode, ServerLevel hostLevel, long worldSeed, ChunkPos target) {
-        return new IsolatedGenerationContext(mode, hostLevel, worldSeed, target);
+        return create(mode, hostLevel, worldSeed, target, MosaicWorldProfile.current());
+    }
+
+    public static IsolatedGenerationContext create(
+            IsolatedGenerationMode mode,
+            ServerLevel hostLevel,
+            long worldSeed,
+            ChunkPos target,
+            MosaicWorldProfile profile) {
+        return new IsolatedGenerationContext(mode, hostLevel, worldSeed, target, profile);
+    }
+
+    public boolean clipsFeatureWrites() {
+        return profile.featureOrderingAlgorithmVersion()
+                == MosaicWorldProfile.FEATURE_ORDERING_TARGET_ONLY;
+    }
+
+    public boolean featureWriteAllowed(BlockPos pos) {
+        return !clipsFeatureWrites()
+                || (net.minecraft.core.SectionPos.blockToSectionCoord(pos.getX()) == target.x()
+                        && net.minecraft.core.SectionPos.blockToSectionCoord(pos.getZ())
+                                == target.z());
+    }
+
+    public void recordDiscardedFeatureWrite() {
+        discardedFeatureWrites.incrementAndGet();
+    }
+
+    public void recordDiscardedFeatureWrites(long count) {
+        if (count < 0) throw new IllegalArgumentException("Negative discarded-write count");
+        discardedFeatureWrites.addAndGet(count);
+    }
+
+    public long discardedFeatureWriteCount() {
+        return discardedFeatureWrites.get();
+    }
+
+    public ChunkAccess featureReadView(ChunkAccess source) {
+        if (!clipsFeatureWrites() || source.getPos().equals(target)) return source;
+        return featureReadViews.computeIfAbsent(
+                ChunkPos.pack(source.getPos().x(), source.getPos().z()),
+                ignored ->
+                        new FeatureReadOnlyChunk(
+                                source,
+                                hostLevel.palettedContainerFactory(),
+                                this::recordDiscardedFeatureWrite));
     }
 
     public SurfaceGenerationRun generate() {
@@ -211,12 +265,12 @@ public final class IsolatedGenerationContext implements AutoCloseable {
     }
 
     /**
-     * Completes the finite V1 writer frontier in its frozen absolute Z/X order. A plain
+     * Completes the finite writer frontier selected by the persisted world profile. A plain
      * single-center generate-to-FEATURES operation is intentionally not exposed.
      */
     public FeatureStableGenerationRun generateFeaturesStable() {
         ensureOpen();
-        FeatureOrderingPlan plan = FeatureOrderingPlan.targetLocalZxRowMajorV1(target);
+        FeatureOrderingPlan plan = FeatureOrderingPlan.forProfile(target, profile);
         expectedFeatureWriters = plan.packedWriterSet();
         requestedFeatureWriters.clear();
         completedFeatureWriters.clear();
@@ -247,7 +301,7 @@ public final class IsolatedGenerationContext implements AutoCloseable {
                 plan.writers().stream().collect(java.util.stream.Collectors.toUnmodifiableSet());
         if (!actualFeatureChunks.equals(expectedFeatureChunks)) {
             throw new IllegalStateException(
-                    "FeatureOrderingAlgorithmVersion 1 frontier violation; expected="
+                    "FEATURES frontier violation; expected="
                             + expectedFeatureChunks
                             + ", actual="
                             + actualFeatureChunks);
@@ -308,6 +362,69 @@ public final class IsolatedGenerationContext implements AutoCloseable {
                         physicalLevelEscapeSummary()));
     }
 
+    /** Explicit single-writer experimental handoff; never used by the old scheduler path. */
+    public void beginStandaloneFeatures() {
+        ensureOpen();
+        var plan = FeatureOrderingPlan.forProfile(target, profile);
+        if (!clipsFeatureWrites()
+                || !plan.writers().equals(List.of(target))
+                || !requestedFeatureWriters.isEmpty())
+            throw new IllegalStateException("Standalone B requires a fresh target-only context");
+        expectedFeatureWriters = plan.packedWriterSet();
+        requestedFeatureWriters.add(target);
+        beginFeatureWriter(target);
+    }
+
+    public FeatureStableGenerationRun captureStandaloneFeatures(
+            net.minecraft.world.level.chunk.ProtoChunk chunk,
+            long elapsedNanos,
+            int fullChunks,
+            int physicalLoadedBefore,
+            Map<String, Integer> statusDistribution) {
+        ensureOpen();
+        if (!chunk.getPos().equals(target)
+                || chunk.getPersistedStatus() != ChunkStatus.FEATURES
+                || !requestedFeatureWriters.equals(List.of(target))
+                || !completedFeatureWriters.equals(List.of(target))
+                || activeFeatureWriters.get() != 0
+                || maxConcurrentFeatureWriters.get() != 1
+                || observedFeatureSeed.get() == null
+                || observedFeatureSeed.get() != worldSeed)
+            throw new IllegalStateException("Unfinished/misowned standalone B handoff");
+        var metrics =
+                new IsolatedGenerationMetrics(
+                        contextSetupNanos,
+                        structureStateNanos,
+                        elapsedNanos,
+                        fullChunks,
+                        chunkScanAccess.scanCount(),
+                        suppressedPhysicalPoiUpdates.get(),
+                        physicalLoadedBefore,
+                        hostLevel.getChunkSource().getLoadedChunksCount());
+        return new FeatureStableGenerationRun(
+                chunk,
+                metrics,
+                executedStages(),
+                new FeatureGenerationTrace(
+                        profile.featureOrderingAlgorithmVersion(),
+                        FeatureOrderingPlan.forProfile(target, profile).blockStateWriteRadius(),
+                        requestedFeatureWriters,
+                        completedFeatureWriters,
+                        Set.of(target),
+                        maxConcurrentFeatureWriters.get(),
+                        observedFeatureSeed.get(),
+                        paleMossGeneratorRedirects.get(),
+                        cappedProcessorSeedRedirects.get(),
+                        decorationSeedReads.get(),
+                        featureSeedInvocationCount.get(),
+                        featureSeedSequenceHash.get(),
+                        localUncachedBiomeReads.get(),
+                        featureVisibleBiomeSequence,
+                        statusDistribution,
+                        featureWriteSummary(),
+                        physicalLevelEscapeSummary()));
+    }
+
     /**
      * Captures same-local-universe starts from the ordered writer frontier whose pieces intersect
      * the target's 16x16 footprint. The returned NBT is detached before the session closes so the
@@ -328,7 +445,12 @@ public final class IsolatedGenerationContext implements AutoCloseable {
         List<CompoundTag> result = new java.util.ArrayList<>();
         for (ChunkPos writer : plan.writers()) {
             if (writer.equals(target)) continue;
-            ChunkAccess chunk = chunkMap.chunkAt(writer, ChunkStatus.FEATURES);
+            ChunkAccess chunk =
+                    chunkMap.chunkAt(
+                            writer,
+                            clipsFeatureWrites()
+                                    ? ChunkStatus.STRUCTURE_STARTS
+                                    : ChunkStatus.FEATURES);
             if (chunk == null) continue;
             for (StructureStart start : chunk.getAllStarts().values()) {
                 if (start == null || !start.isValid()) continue;
@@ -371,9 +493,9 @@ public final class IsolatedGenerationContext implements AutoCloseable {
     public SpawnBiomeSnapshot captureSpawnBiomes(MosaicWorldProfile profile) {
         ensureOpen();
         if (!chunkMap.chunksAtOrBeyond(ChunkStatus.FEATURES)
-                .containsAll(SpawnBiomeSnapshot.neighbors(target))) {
+                .containsAll(FeatureOrderingPlan.forProfile(target, profile).writers())) {
             throw new IllegalStateException(
-                    "SPAWN input capture requires the completed V2 FEATURES frontier");
+                    "SPAWN input capture requires the completed profile FEATURES frontier");
         }
         return SpawnBiomeSnapshot.capture(
                 dimension,
@@ -513,7 +635,7 @@ public final class IsolatedGenerationContext implements AutoCloseable {
         long packed = ChunkPos.pack(writer.x(), writer.z());
         if (!expectedFeatureWriters.contains(packed)) {
             throw new IllegalStateException(
-                    "Unexpected FEATURES writer outside V1 frontier: " + writer);
+                    "Unexpected FEATURES writer outside the profile frontier: " + writer);
         }
         int active = activeFeatureWriters.incrementAndGet();
         maxConcurrentFeatureWriters.accumulateAndGet(active, Math::max);
@@ -614,6 +736,7 @@ public final class IsolatedGenerationContext implements AutoCloseable {
         if (!closed) {
             closed = true;
             GenerationContextRegistry.unbind(this);
+            featureReadViews.clear();
         }
     }
 

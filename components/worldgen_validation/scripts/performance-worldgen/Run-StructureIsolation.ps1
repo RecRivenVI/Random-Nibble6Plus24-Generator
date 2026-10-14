@@ -12,11 +12,11 @@ param(
 $ErrorActionPreference='Stop'
 Set-StrictMode -Version Latest
 $repo=(Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
-$run=Join-Path $repo 'validations\performance-worldgen\instance\26.2-fabric\server'
+$run=Join-Path $repo "validations\performance-worldgen\instance\${validationTarget}\server"
 if(-not $Label){$Label="structures-$Structures-v$View-"+[guid]::NewGuid().ToString('N').Substring(0,8)}
 if($Label -notmatch '^[a-z0-9-]+$'){throw 'Unsafe research label'}
 $world=Join-Path $run "DISPOSABLE-$Label"
-$output=Join-Path $repo "validations\performance-worldgen\result\current\structure_isolation\$Structures-v$View-s$Simulation-$LazyStructure-$RepairC-$RepairD1"
+$output=Join-Path $repo "validations\performance-worldgen\result\current\${validationTarget}\structure_isolation\$Structures-v$View-s$Simulation-$LazyStructure-$RepairC-$RepairD1"
 if((Test-Path -LiteralPath $world)){throw 'Every experiment requires fresh world and output'}
 New-Item -ItemType Directory -Path (Join-Path $world 'datapacks'),$output -Force|Out-Null
 Copy-Item -LiteralPath (Join-Path $repo 'validations\performance-worldgen\task\hidden_mosaic') -Destination (Join-Path $world 'datapacks\phase3c2-hidden-mosaic') -Recurse
@@ -56,7 +56,7 @@ try{
     if($NormalResources){$flags+='-Dmosaic.profile.maxCpu=0.80'}
     if($NormalResources){$env:JAVA_TOOL_OPTIONS=$flags -join ' '}
     else{$env:JAVA_TOOL_OPTIONS='-XX:ActiveProcessorCount=4 '+($flags -join ' ')}
-    & (Join-Path $repo 'gradlew.bat') '--no-daemon' '--no-parallel' '--max-workers=2' ':version:26.2-fabric:runValidationPerformanceWorldgenServer' "--args=nogui --world DISPOSABLE-$Label" *> (Join-Path $output 'console.log')
+    & (Join-Path $repo 'gradlew.bat') '--no-daemon' '--no-parallel' '--max-workers=2' ":version:${validationTarget}:runValidationPerformanceWorldgenServer" "--args=nogui --world DISPOSABLE-$Label" *> (Join-Path $output 'console.log')
     if(-not (Test-Path -LiteralPath (Join-Path $output 'checkpoint.jfr'))){throw "No complete measurement window: $output"}
     $log=Get-Content -Raw -LiteralPath (Join-Path $output 'console.log')
     if($log -match 'Disabled (ring|structure)|before research save validation'){throw "Structure isolation assertion failed: $output"}

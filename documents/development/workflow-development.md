@@ -2,7 +2,7 @@
 
 项目登记 Minecraft 26.2 Fabric 与 26.3 Fabric Target，均使用 Java 25。26.3 已通过移植验收，是当前参考 Target；26.2 保留独立实现和实例。项目事实由 `gradle.properties` 提供，加载器与 API 版本由 `target.properties` 提供，通用工具与 JUnit 版本由版本目录提供。
 
-已实现的版本与准备升级的版本分开记录：[路线图](../project/roadmap-development.md)描述当前状态与优先级，[升级计划](../project/plan-target_upgrade.md)记录此次升级选择与验收结果。完成升级不自动授权新功能或 D2 性能工作；不要把待移植版本填入当前支持表。
+开发按[当前里程碑](../project/milestone-features.md)组织，已完成能力与限制见[生成实现状态](../project/status-generation.md)。只执行当前里程碑中明确授权的工作，不从历史安排推导后续任务；未通过验收的版本或能力不写入当前支持表。
 
 ## 构建与运行
 
@@ -14,7 +14,7 @@
 .\gradlew.bat :version:26.3-fabric:runServer
 ```
 
-日常实例按 Target 分别位于 `instances/26.2-fabric/` 与 `instances/26.3-fabric/`，不套额外的 `.minecraft`。旧版本实例与存档不移动、不原地升级。个人运行设置写入被忽略的 `local.toml`；共享预设可写入 `instances.toml`，具体格式见[仓库配置](../reference/configuration-repository.md)。
+日常实例按 Target 分别位于 `instances/26.2-fabric/` 与 `instances/26.3-fabric/`，不套额外的 `.minecraft`。旧版本实例与存档不移动、不原地升级。个人运行设置写入被忽略的 `local.toml`；共享预设可写入 `instances.toml`，具体格式见[仓库配置](../../gradle/conventions/specification/reference/configuration-repository.md)。
 
 服务端必须由使用者明确接受 EULA。新建普通世界不会自动变成 Mosaic，当前没有公开的 Mosaic WorldPreset。
 
@@ -28,7 +28,7 @@
 
 分别报告构建、运行和人工观察。单元测试不证明玩家进入、飞行、保存退出或视觉效果；不使用 GUI 自动化替代用户操作。
 
-冻结世界生成合同不变。D1 的历史性能结论仍是 PARTIAL，不自动进入 D2、V3 或 Preview。历史结果保持原始字节，不能代替当前重新运行。
+冻结世界生成合同不变。历史结果保持原始字节，不能代替当前重新运行；里程碑完成后停止，由使用者决定新的开发范围。
 
 升级 Minecraft 时，既有 golden 仍只证明其原 Minecraft 版本。新版本需要以同版本的普通 Vanilla 世界重新建立对照，单独记录结果；不能直接替换旧 hash，也不能为了通过移植扩大忽略字段或修改冻结合同。新 Target 使用独立实例，不直接升级用户已有存档。
 

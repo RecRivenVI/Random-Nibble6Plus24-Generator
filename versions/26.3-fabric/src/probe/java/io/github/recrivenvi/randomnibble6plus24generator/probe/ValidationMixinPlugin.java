@@ -24,12 +24,23 @@ public final class ValidationMixinPlugin implements IMixinConfigPlugin {
                     case "poitest.mixin" -> name.equals("regression-poi_ownership");
                     case "spawntest.mixin" -> name.equals("regression-spawn_reuse");
                     case "strongholdtest.mixin" -> name.equals("conformance-stronghold");
+                    case "prefeaturestest.mixin" -> name.equals("conformance-prefeatures");
+                    case "featurebtest.mixin" -> name.equals("conformance-feature_b");
+                    case "featureatest.mixin" -> name.equals("conformance-feature_a");
+                    case "featurectest.mixin" -> name.equals("conformance-feature_c");
+                    case "performance.mixin" -> name.equals("performance-worldgen");
                     default -> false;
                 };
     }
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
+        if (mixinClassName.contains("performance.mixin.StructureIsolation"))
+            return enabled && Boolean.getBoolean("mosaic.profile.structureExperiment");
+        if (mixinClassName.endsWith("RepairCOracleMixin"))
+            return enabled && Boolean.getBoolean("mosaic.repairC.oracle");
+        if (mixinClassName.endsWith("CandidateOracleMixin"))
+            return enabled && Boolean.getBoolean("mosaic.candidate.study");
         return enabled;
     }
 

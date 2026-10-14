@@ -68,17 +68,53 @@ public final class MosaicChunkGenerator extends ChunkGenerator {
                                                     .forGetter(MosaicChunkGenerator::profile))
                                     .apply(instance, MosaicChunkGenerator::new));
 
+    // A distinct serialized identity prevents a missing development marker from reverting a
+    // new experimental save to the existing Ordering 2 pipeline. No public world preset uses it.
+    public static final Identifier DEVELOPMENT_B_CODEC_ID =
+            Identifier.fromNamespaceAndPath(RandomNibble6Plus24Generator.MOD_ID, "development_b");
+    public static final MapCodec<MosaicChunkGenerator> DEVELOPMENT_B_CODEC =
+            CODEC.xmap(
+                    generator ->
+                            new MosaicChunkGenerator(
+                                    generator.getBiomeSource(),
+                                    generator.settings,
+                                    generator.profile,
+                                    true),
+                    generator ->
+                            new MosaicChunkGenerator(
+                                    generator.getBiomeSource(),
+                                    generator.settings,
+                                    generator.profile));
+
     private final Holder<NoiseGeneratorSettings> settings;
     private final MosaicWorldProfile profile;
+    private final boolean developmentB;
 
     public MosaicChunkGenerator(
             BiomeSource biomeSource,
             Holder<NoiseGeneratorSettings> settings,
             MosaicWorldProfile profile) {
+        this(biomeSource, settings, profile, false);
+    }
+
+    private MosaicChunkGenerator(
+            BiomeSource biomeSource,
+            Holder<NoiseGeneratorSettings> settings,
+            MosaicWorldProfile profile,
+            boolean developmentB) {
         super(biomeSource);
         this.settings = settings;
         this.profile = profile;
+        this.developmentB = developmentB;
         profile.requireSupported();
+        if (developmentB
+                && profile.featureOrderingAlgorithmVersion()
+                        != MosaicWorldProfile.FEATURE_ORDERING_TARGET_ONLY)
+            throw new IllegalArgumentException("Development B requires Ordering 2");
+    }
+
+    public boolean developmentB() {
+        return developmentB;
     }
 
     public Holder<NoiseGeneratorSettings> generatorSettings() {
@@ -91,7 +127,7 @@ public final class MosaicChunkGenerator extends ChunkGenerator {
 
     @Override
     protected MapCodec<? extends ChunkGenerator> codec() {
-        return CODEC;
+        return developmentB ? DEVELOPMENT_B_CODEC : CODEC;
     }
 
     @Override

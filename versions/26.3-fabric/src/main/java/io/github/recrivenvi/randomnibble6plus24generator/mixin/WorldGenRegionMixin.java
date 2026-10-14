@@ -16,6 +16,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.WorldGenRegion;
 import net.minecraft.util.RandomSource;
 import net.minecraft.util.StaticCache2D;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.biome.Biome;
 import net.minecraft.world.level.biome.BiomeManager;
@@ -47,6 +48,8 @@ abstract class WorldGenRegionMixin {
     @Shadow @Final private StaticCache2D<ChunkAccess> cache;
 
     @Shadow @Final private ChunkAccess center;
+
+    @Shadow @Final private ChunkStep generatingStep;
 
     @Shadow @Final @Mutable private long seed;
 
@@ -228,6 +231,57 @@ abstract class WorldGenRegionMixin {
                 || MosaicSpawnContextRegistry.find(cache).isPresent()) {
             throw new PhysicalWorldAccessException("WorldGenRegion.getChunkSource()");
         }
+    }
+
+    @Inject(method = "ensureCanWrite", at = @At("HEAD"), cancellable = true)
+    private void randomnibble6plus24generator$clipTargetOnlyWrites(
+            BlockPos pos, CallbackInfoReturnable<Boolean> callback) {
+        if (generatingStep.targetStatus()
+                != net.minecraft.world.level.chunk.status.ChunkStatus.FEATURES) return;
+        GenerationContextRegistry.find(cache)
+                .ifPresent(
+                        context -> {
+                            if (!context.featureWriteAllowed(pos)) {
+                                context.recordDiscardedFeatureWrite();
+                                callback.setReturnValue(false);
+                            }
+                        });
+    }
+
+    @Inject(
+            method =
+                    "getChunk(IILnet/minecraft/world/level/chunk/status/ChunkStatus;Z)Lnet/minecraft/world/level/chunk/ChunkAccess;",
+            at = @At("RETURN"),
+            cancellable = true)
+    private void randomnibble6plus24generator$readOnlyFeatureNeighbors(
+            int chunkX,
+            int chunkZ,
+            net.minecraft.world.level.chunk.status.ChunkStatus status,
+            boolean allowEmpty,
+            CallbackInfoReturnable<ChunkAccess> callback) {
+        if (generatingStep.targetStatus()
+                        != net.minecraft.world.level.chunk.status.ChunkStatus.FEATURES
+                || callback.getReturnValue() == null) return;
+        GenerationContextRegistry.find(cache)
+                .ifPresent(
+                        context ->
+                                callback.setReturnValue(
+                                        context.featureReadView(callback.getReturnValue())));
+    }
+
+    @Inject(method = "addFreshEntity", at = @At("HEAD"), cancellable = true)
+    private void randomnibble6plus24generator$clipTargetOnlyEntities(
+            Entity entity, CallbackInfoReturnable<Boolean> callback) {
+        if (generatingStep.targetStatus()
+                != net.minecraft.world.level.chunk.status.ChunkStatus.FEATURES) return;
+        GenerationContextRegistry.find(cache)
+                .ifPresent(
+                        context -> {
+                            if (!context.featureWriteAllowed(entity.blockPosition())) {
+                                context.recordDiscardedFeatureWrite();
+                                callback.setReturnValue(false);
+                            }
+                        });
     }
 
     @Inject(

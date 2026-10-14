@@ -1,9 +1,9 @@
 pluginManagement {
-    includeBuild("../conventions")
+    includeBuild("../../gradle/conventions")
 }
 
 plugins {
-    id("io.github.recrivenvi.component")
+    id("io.github.recrivenvi.conventions.component")
 }
 
 rootProject.name = "worldgen_contract"

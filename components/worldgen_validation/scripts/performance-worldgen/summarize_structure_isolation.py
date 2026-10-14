@@ -87,7 +87,9 @@ before_end=log.split('MOSAIC PROFILE MARKER WORKLOAD_END')[0]
 lag=[int(value) for value in re.findall(r'Running (\d+)ms or \d+ ticks behind',before_end)]
 if any(word in before_end for word in ('Disabled ring','Disabled structure','Encountered an unexpected exception','Caught exception in thread','A single server tick took')):
     raise RuntimeError('Workload failed before measurement end: '+str(root))
-exp=data['structureExperiment'];mode=conditions['structures']
+exp=data['structureExperiment'];mode=conditions.get('structures', 'baseline' if conditions.get('pipeline') in ('b', 'ordering2', 'vanilla') else None)
+if mode is None:
+    raise RuntimeError('Missing structure experiment mode')
 if mode in ('none','no-stronghold') and (exp.get('ringPreparations',0) or exp.get('ringPlacementEvaluations',0)):
     raise RuntimeError('Rings were not disabled')
 if mode in ('none','no-other') and exp.get('otherPlacementEvaluations',0):

@@ -68,6 +68,6 @@ class MosaicWorldProfileTest {
 
         assertThrows(
                 IllegalArgumentException.class,
-                () -> new MosaicWorldProfile(2, 1, 2, 1, Level.OVERWORLD).requireSupported());
+                () -> new MosaicWorldProfile(2, 1, 3, 1, Level.OVERWORLD).requireSupported());
     }
 }

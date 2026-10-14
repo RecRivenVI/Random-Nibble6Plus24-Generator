@@ -18,6 +18,10 @@ public final class RandomNibble6Plus24Generator implements ModInitializer {
                 BuiltInRegistries.CHUNK_GENERATOR,
                 MosaicChunkGenerator.CODEC_ID,
                 MosaicChunkGenerator.CODEC);
+        Registry.register(
+                BuiltInRegistries.CHUNK_GENERATOR,
+                MosaicChunkGenerator.DEVELOPMENT_B_CODEC_ID,
+                MosaicChunkGenerator.DEVELOPMENT_B_CODEC);
         if (!MosaicChunkGenerator.CODEC_ID.equals(
                 BuiltInRegistries.CHUNK_GENERATOR.getKey(MosaicChunkGenerator.CODEC))) {
             throw new IllegalStateException(

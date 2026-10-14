@@ -1,7 +1,5 @@
 pluginManagement {
-    includeBuild("components/configuration")
-    includeBuild("components/conventions")
-    includeBuild("components/compliance")
+    includeBuild("gradle/conventions")
     repositories {
         gradlePluginPortal()
         maven("https://maven.neoforged.net/releases")
@@ -10,9 +8,7 @@ pluginManagement {
 }
 
 plugins {
-    id("io.github.recrivenvi.configuration")
     id("io.github.recrivenvi.conventions")
-    id("io.github.recrivenvi.compliance")
 }
 
 rootProject.name = "RandomNibble6Plus24Generator"

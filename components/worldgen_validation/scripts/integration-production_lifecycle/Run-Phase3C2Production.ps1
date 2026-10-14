@@ -6,6 +6,9 @@ param(
     [ValidateSet('full', 'concurrent', 'patch', 'pair', 'reload')]
     [string]$Mode = 'full',
     [int]$Repeats = 16,
+    [ValidateSet(1, 2)]
+    [int]$FeatureOrderingVersion = 1,
+    [switch]$DevelopmentB,
     [switch]$VerifyReload,
     [switch]$Mutate,
     [switch]$KeepWorld
@@ -15,14 +18,23 @@ param(
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 
+if ($FeatureOrderingVersion -eq 2 -and $validationTarget -ne '26.3-fabric') {
+    throw 'Target-only FEATURES is supported only by the 26.3-fabric experiment.'
+}
+
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..\..\..')).Path
+if ($DevelopmentB -and ($validationTarget -ne '26.3-fabric' -or $FeatureOrderingVersion -ne 2)) { throw 'Development B requires explicit 26.3 Ordering 2' }
 $runRoot = (Resolve-Path (Join-Path $repositoryRoot "validations\integration-production_lifecycle\instance\${validationTarget}\server")).Path
 $propertiesPath = Join-Path $runRoot 'server.properties'
 $originalProperties = [IO.File]::ReadAllText($propertiesPath)
 $originalJavaToolOptions = $env:JAVA_TOOL_OPTIONS
 $worldName = "phase3c2-production-$MasterSeed-$($Dimension.Replace(':','-'))-$ChunkX-$ChunkZ"
+if ($FeatureOrderingVersion -ne 1) { $worldName += "-features-$FeatureOrderingVersion" }
+if ($DevelopmentB) { $worldName += '-lightweight-b' }
 $worldPath = [IO.Path]::GetFullPath((Join-Path $runRoot $worldName))
 $resultRoot = [IO.Path]::GetFullPath((Join-Path $repositoryRoot "validations\integration-production_lifecycle\result\current\${validationTarget}\phase3c2-production"))
+if ($FeatureOrderingVersion -ne 1) { $resultRoot = Join-Path $resultRoot "features-$FeatureOrderingVersion" }
+if ($DevelopmentB) { $resultRoot = Join-Path $resultRoot 'development-b' }
 $resultPath = Join-Path $resultRoot "$Mode-$ChunkX-$ChunkZ.json"
 
 function Remove-World {
@@ -50,14 +62,15 @@ function Write-HiddenPresetPack {
     [IO.File]::WriteAllText(
         (Join-Path $packRoot 'pack.mcmeta'),
         $validationPackMetadata)
-    $profile = '"mosaic_profile":{"format_version":2,"seed_derivation_algorithm_version":1,"feature_ordering_algorithm_version":1,"presentation_algorithm_version":1,"primary_dimension":"minecraft:overworld"}'
+    $profile = '"mosaic_profile":{"format_version":2,"seed_derivation_algorithm_version":1,"feature_ordering_algorithm_version":' + $FeatureOrderingVersion + ',"presentation_algorithm_version":1,"primary_dimension":"minecraft:overworld"}'
+    $generatorType = if ($DevelopmentB) { 'development_b' } else { 'mosaic' }
     $preset = @"
 {
   "dimensions": {
     "minecraft:overworld": {
       "type": "minecraft:overworld",
       "generator": {
-        "type": "randomnibble6plus24generator:mosaic",
+        "type": "randomnibble6plus24generator:$generatorType",
         "biome_source": {"type":"minecraft:multi_noise","preset":"minecraft:overworld"},
         "settings": "minecraft:overworld",
         $profile
@@ -66,7 +79,7 @@ function Write-HiddenPresetPack {
     "minecraft:the_nether": {
       "type": "minecraft:the_nether",
       "generator": {
-        "type": "randomnibble6plus24generator:mosaic",
+        "type": "randomnibble6plus24generator:$generatorType",
         "biome_source": {"type":"minecraft:multi_noise","preset":"minecraft:nether"},
         "settings": "minecraft:nether",
         $profile
@@ -75,7 +88,7 @@ function Write-HiddenPresetPack {
     "minecraft:the_end": {
       "type": "minecraft:the_end",
       "generator": {
-        "type": "randomnibble6plus24generator:mosaic",
+        "type": "randomnibble6plus24generator:$generatorType",
         "biome_source": {"type":"minecraft:the_end"},
         "settings": "minecraft:end",
         $profile
@@ -85,6 +98,9 @@ function Write-HiddenPresetPack {
 }
 "@
     [IO.File]::WriteAllText((Join-Path $presetDirectory 'phase3c2_hidden_mosaic.json'), $preset)
+    if ($DevelopmentB) {
+        [IO.File]::WriteAllText((Join-Path $worldPath 'mosaic-development-b.json'), '{"schema":1,"pipeline":"26.3-lightweight-b-1"}', [Text.UTF8Encoding]::new($false))
+    }
 }
 
 function Invoke-Production([string]$productionMode, [string]$output, [bool]$mutateBeforeStop, [bool]$expectMarker) {
@@ -99,11 +115,13 @@ function Invoke-Production([string]$productionMode, [string]$output, [bool]$muta
     )
     if ($mutateBeforeStop) { $options += '-Drandomnibble6plus24generator.phase3c2.production.mutate=true' }
     if ($expectMarker) { $options += '-Drandomnibble6plus24generator.phase3c2.production.expectMarker=true' }
+    if ($DevelopmentB) { $options += '-Drandomnibble6plus24generator.developmentB=true' }
     $env:JAVA_TOOL_OPTIONS = $options -join ' '
-    & (Join-Path $repositoryRoot 'gradlew.bat') ":version:${validationTarget}:runValidationIntegrationProductionLifecycleServer" "--args=nogui --world $worldName" | Out-Host
+    & (Join-Path $repositoryRoot 'gradlew.bat') ":version:${validationTarget}:runValidationIntegrationProductionLifecycleServer" --max-workers=1 --no-daemon --no-configuration-cache '-Dorg.gradle.jvmargs=-Xmx2G -Dfile.encoding=UTF-8 -XX:ActiveProcessorCount=4' "--args=nogui --world $worldName" | Out-Host
     if ($LASTEXITCODE -ne 0) { throw "Phase 3C2 production server failed: $LASTEXITCODE" }
     $result = Get-Content -LiteralPath $output -Raw | ConvertFrom-Json
     if ($result.status -ne 'PASS') { throw "Phase 3C2 production result failed: $result" }
+    if ($DevelopmentB -and (($productionMode -eq 'reload' -and $result.developmentB.generations -ne 0) -or ($productionMode -ne 'reload' -and $result.developmentB.generations -le 0))) { throw 'Development B dispatch/reload was not proven' }
     return $result
 }
 

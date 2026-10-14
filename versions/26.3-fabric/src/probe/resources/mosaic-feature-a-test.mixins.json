@@ -1,0 +1,16 @@
+{
+    "required": true,
+    "package": "io.github.recrivenvi.randomnibble6plus24generator.featureatest.mixin",
+    "compatibilityLevel": "JAVA_25",
+    "plugin": "io.github.recrivenvi.randomnibble6plus24generator.probe.ValidationMixinPlugin",
+    "mixins": [
+        "FeatureAServerMixin",
+        "FeatureADecorationMixin",
+        "FeatureAPlacementMixin",
+        "OreHeightOracleMixin",
+        "FeatureComparisonTerrainMixin"
+    ],
+    "injectors": {
+        "defaultRequire": 1
+    }
+}

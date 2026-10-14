@@ -12,3 +12,341 @@ val validateScripts =
 tasks.check {
     dependsOn(validateScripts)
 }
+
+tasks.register<Exec>("verifyPreFeatures") {
+    group = "verification"
+    description = "核验 26.3 独立原版装饰前矩阵的环境、进程边界和结果。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/conformance-prefeatures/Run-PreFeatures.ps1",
+        "-CheckOnly",
+    )
+}
+
+tasks.register<Exec>("verifyCompactStructures") {
+    group = "verification"
+    description = "核验 26.3 紧凑结构输入的七类正例、邻区引用和逐 bit 地形适配。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/conformance-prefeatures/Run-PreFeatures.ps1",
+        "-Suite",
+        "structures",
+        "-CheckOnly",
+    )
+}
+
+tasks.register<Exec>("verifyLightweightTerrain") {
+    group = "verification"
+    description = "核验 26.3 轻量生物群系、密度、表面和临时洞穴的独立 72 项矩阵。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/conformance-prefeatures/Run-PreFeatures.ps1",
+        "-Lightweight",
+        "-CheckOnly",
+    )
+}
+
+tasks.register<Exec>("verifyLightweightStructureTerrain") {
+    group = "verification"
+    description = "核验轻量地形入口的七类真实结构及邻区地形适配。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/conformance-prefeatures/Run-PreFeatures.ps1",
+        "-Suite",
+        "structures",
+        "-Lightweight",
+        "-CheckOnly",
+    )
+}
+
+tasks.register<Exec>("verifyFeatureB") {
+    group = "verification"
+    description = "核验 B 严格切断的完整数据、顺序、并发与副作用边界。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/conformance-feature_b/Run-FeatureB.ps1",
+        "-CheckOnly",
+    )
+}
+
+tasks.register<Exec>("verifyLightweightFeatureB") {
+    group = "verification"
+    description = "核验 B 按需局部读取与原 B 的完整数据、回退和隔离对照。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/conformance-feature_b/Run-FeatureB.ps1",
+        "-Lightweight",
+        "-CheckOnly",
+    )
+}
+
+tasks.register<Exec>("verifyFeatureA") {
+    group = "verification"
+    description = "核验 A 邻区矿脉贡献与 B 的差异、原版算法对照和隔离边界。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/conformance-feature_a/Run-FeatureA.ps1",
+        "-CheckOnly",
+    )
+}
+
+tasks.register<Exec>("verifyFeatureATrees") {
+    group = "verification"
+    description = "核验 A 代表树种的稀疏状态、原版随机语义、严格切断与副作用。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/conformance-feature_a/Run-FeatureA.ps1",
+        "-Trees",
+        "-CheckOnly",
+    )
+}
+
+tasks.register<Exec>("verifyLightweightFeatureA") {
+    group = "verification"
+    description = "核验 A 的局部 B 准备、精确高度与原 A/矿脉原版控制一致。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/conformance-feature_a/Run-FeatureA.ps1",
+        "-Lightweight",
+        "-CheckOnly",
+    )
+}
+
+tasks.register<Exec>("verifyLightweightFeatureATrees") {
+    group = "verification"
+    description = "核验局部准备 A 的白桦、附属数据、随机语义与原 A 一致。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/conformance-feature_a/Run-FeatureA.ps1",
+        "-Trees",
+        "-Lightweight",
+        "-CheckOnly",
+    )
+}
+
+tasks.register<Exec>("verifyFeatureAConifers") {
+    group = "verification"
+    description = "核验 A 的针叶树局部贡献、原版内核、严格切断和两宿主对照。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/conformance-feature_a/Run-FeatureA.ps1",
+        "-Conifers",
+        "-CheckOnly",
+    )
+}
+
+tasks.register<Exec>("verifyFeatureDesignComparison") {
+    group = "verification"
+    description = "核验 A/B/C 同输入、轮换次序的内容与成本比较，不代表生产或视觉验收。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/conformance-feature_a/Run-FeatureA.ps1",
+        "-Compare",
+        "-CheckOnly",
+    )
+}
+
+tasks.register<Exec>("verifyFeatureC") {
+    group = "verification"
+    description = "核验 C 代表树种贡献记录、确定接收和独立 JVM 重载；不代表物理接入。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/conformance-feature_c/Run-FeatureC.ps1",
+        "-CheckOnly",
+    )
+}
+
+tasks.register<Exec>("verifyFeatureCFlow") {
+    group = "verification"
+    description = "核验 C 完整目标装饰、选择性树木跨界、严格切断及随机/副作用完整对照。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/conformance-feature_c/Run-FeatureC.ps1",
+        "-Flow",
+        "-CheckOnly",
+    )
+}
+
+tasks.register<Exec>("verifyFeatureCFrontier") {
+    group = "verification"
+    description = "核验完整 C 生成与不同派生种子 C 接收基底的有限前沿、顺序和磁盘重放。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/conformance-feature_c/Run-FeatureC.ps1",
+        "-Frontier",
+        "-CheckOnly",
+    )
+}
+
+tasks.register<Exec>("verifyFeatureCReplay") {
+    group = "verification"
+    description = "仅核验固定完整 C 输入的独立接收、保护与跨 JVM 重放，不替代生成等价门禁。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/conformance-feature_c/Run-FeatureC.ps1",
+        "-Replay",
+        "-CheckOnly",
+    )
+}
+
+tasks.register<Exec>("verifyFeatureCNativeRepeat") {
+    group = "verification"
+    description = "核验独立原版实体不确定性证据，不替代 C 完整生成等价门禁。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/conformance-feature_c/Run-FeatureC.ps1",
+        "-NativeRepeat",
+        "-CheckOnly",
+    )
+}
+
+tasks.register<Exec>("verifyFeatureCPhysical") {
+    group = "verification"
+    description = "核验封闭 C 贡献批次的真实物理接收和正常停服重载，不代表完整 C 世界。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/conformance-feature_c/Run-FeatureC.ps1",
+        "-Physical",
+        "-CheckOnly",
+    )
+}
+
+tasks.register<Exec>("verifyFeatureCNativeShulker") {
+    group = "verification"
+    description = "核验独立原版末地城潜影贝随机朝向，不改变 canonical 哈希。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/conformance-feature_c/Run-FeatureC.ps1",
+        "-NativeShulker",
+        "-CheckOnly",
+    )
+}
+
+tasks.register<Exec>("verifyFeatureCPhysicalHives") {
+    group = "verification"
+    description = "核验真实树木蜂巢贡献的封闭物理接收与重载，不代表动态 C 世界。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/conformance-feature_c/Run-FeatureC.ps1",
+        "-PhysicalHives",
+        "-CheckOnly",
+    )
+}
+
+tasks.register<Exec>("verifyFeatureCEditProtection") {
+    group = "verification"
+    description = "核验原生物理修改自动记录、延迟树木接收与独立 JVM 重载。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/conformance-feature_c/Run-FeatureC.ps1",
+        "-EditProtection",
+        "-CheckOnly",
+    )
+}
+
+tasks.register<Exec>("verifyFeatureCAppend") {
+    group = "verification"
+    description = "核验 FULL 区块的增量树木接收、冲突拒绝与独立 JVM 重载。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/conformance-feature_c/Run-FeatureC.ps1",
+        "-Append",
+        "-CheckOnly",
+    )
+}
+
+tasks.register<Exec>("verifyFeatureCRecovery") {
+    group = "verification"
+    description = "核验 C 激活前写盘中断、未提交 LIGHT 恢复与已提交重载。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/conformance-feature_c/Run-FeatureC.ps1",
+        "-Recovery",
+        "-CheckOnly",
+    )
+}
+
+tasks.register<Exec>("verifyFeatureCPreLight") {
+    group = "verification"
+    description = "核验完整 C 有限补丁的原版物理加载、POI、LIGHT 与独立 JVM 重载。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/conformance-feature_c/Run-FeatureC.ps1",
+        "-PreLight",
+        "-CheckOnly",
+    )
+}
+
+tasks.register<Exec>("verifyFeatureCAcceptedShulker") {
+    group = "verification"
+    description = "按独立原版限定字段验收末地城的原 B、按需 B 与完整 C。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/conformance-feature_c/Run-FeatureC.ps1",
+        "-AcceptedShulker",
+        "-CheckOnly",
+    )
+}
+
+tasks.register<Exec>("verifyFeatureCAcceptedFrontier") {
+    group = "verification"
+    description = "按独立原版证据限定实体字段验收 C 前沿，保留原始 NBT 与严格哈希。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/conformance-feature_c/Run-FeatureC.ps1",
+        "-AcceptedFrontier",
+        "-CheckOnly",
+    )
+}

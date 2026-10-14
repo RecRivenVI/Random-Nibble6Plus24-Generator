@@ -82,11 +82,22 @@ class MosaicWorldProfileCodecTest {
     @Test
     void unsupportedFeatureOrderingAlgorithmFailsDuringDecode() {
         JsonObject encoded = encodedProfile();
-        encoded.addProperty("feature_ordering_algorithm_version", 2);
+        encoded.addProperty("feature_ordering_algorithm_version", 3);
 
         assertThrows(
                 IllegalStateException.class,
                 () -> MosaicWorldProfile.CODEC.parse(JsonOps.INSTANCE, encoded).getOrThrow());
+    }
+
+    @Test
+    void targetOnlyIsExplicitAndDoesNotChangeDefaultWorlds() {
+        MosaicWorldProfile profile = MosaicWorldProfile.targetOnly();
+        JsonElement encoded =
+                MosaicWorldProfile.CODEC.encodeStart(JsonOps.INSTANCE, profile).getOrThrow();
+        assertEquals(2, profile.featureOrderingAlgorithmVersion());
+        assertEquals(
+                profile, MosaicWorldProfile.CODEC.parse(JsonOps.INSTANCE, encoded).getOrThrow());
+        assertEquals(1, MosaicWorldProfile.current().featureOrderingAlgorithmVersion());
     }
 
     @Test

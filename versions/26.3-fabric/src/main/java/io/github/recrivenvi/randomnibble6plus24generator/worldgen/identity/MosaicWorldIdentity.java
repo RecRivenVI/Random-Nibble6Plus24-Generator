@@ -87,6 +87,13 @@ public final class MosaicWorldIdentity {
                             }
                             return readProfileEvidence(server);
                         });
+        try {
+            io.github.recrivenvi.randomnibble6plus24generator.worldgen.features.BDevelopmentWorld
+                    .validate(server, runtimeContext(server));
+        } catch (RuntimeException failure) {
+            state(server).invalidate();
+            throw failure;
+        }
     }
 
     /** Explicitly rereads the profile from disk; never called by Chunk/status queries. */
@@ -119,6 +126,8 @@ public final class MosaicWorldIdentity {
 
     /** Called in finally, after the normal save/close path has finished or failed. */
     public static void closeServerIdentity(MinecraftServer server) {
+        io.github.recrivenvi.randomnibble6plus24generator.worldgen.features.BDevelopmentWorld.close(
+                server);
         state(server).close();
         ((MosaicProfileChangeSource) server.getDataStorage())
                 .randomnibble6plus24generator$onIdentityReplacement(null);

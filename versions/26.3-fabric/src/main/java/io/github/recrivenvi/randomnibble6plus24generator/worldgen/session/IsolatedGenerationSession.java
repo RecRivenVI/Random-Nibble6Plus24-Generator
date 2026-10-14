@@ -53,7 +53,8 @@ public final class IsolatedGenerationSession {
                         IsolatedGenerationMode.ISOLATED_MOSAIC,
                         hostLevel,
                         localWorldSeed,
-                        target)) {
+                        target,
+                        profile)) {
             return context.generateFeaturesStable();
         }
     }

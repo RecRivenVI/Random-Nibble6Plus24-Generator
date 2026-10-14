@@ -243,6 +243,17 @@ public final class FeatureStageSnapshot {
         }
     }
 
+    /** Read-only decoding of the captured native heightmap, for column-query verification. */
+    public int heightmapFirstAvailable(String type, int x, int z) {
+        long[] raw = heightmaps.get(type);
+        if (raw == null)
+            throw new IllegalArgumentException("Snapshot lacks native heightmap " + type);
+        return new net.minecraft.util.SimpleBitStorage(
+                                net.minecraft.util.Mth.ceillog2(height + 1), 256, raw)
+                        .get((x & 15) + (z & 15) * 16)
+                + minY;
+    }
+
     public static FeatureStageSnapshot read(Path path) {
         try (DataInputStream input =
                 new DataInputStream(
@@ -327,6 +338,22 @@ public final class FeatureStageSnapshot {
 
     public ChunkPos chunkPos() {
         return chunkPos;
+    }
+
+    public int minY() {
+        return minY;
+    }
+
+    public int height() {
+        return height;
+    }
+
+    public String blockStateAt(BlockPos pos) {
+        if (!ChunkPos.containing(pos).equals(chunkPos)
+                || pos.getY() < minY
+                || pos.getY() >= minY + height)
+            throw new IllegalArgumentException("Outside captured block " + pos);
+        return blocks[((pos.getY() - minY) * 16 + (pos.getZ() & 15)) * 16 + (pos.getX() & 15)];
     }
 
     public int blockEntityCount() {

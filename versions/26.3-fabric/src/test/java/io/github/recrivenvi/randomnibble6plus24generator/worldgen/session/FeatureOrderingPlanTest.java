@@ -10,6 +10,20 @@ import org.junit.jupiter.api.Test;
 
 class FeatureOrderingPlanTest {
 
+    @Test
+    void targetOnlyPlanHasExactlyOneWriter() {
+        ChunkPos target = new ChunkPos(-125, 37);
+        FeatureOrderingPlan plan =
+                FeatureOrderingPlan.forProfile(
+                        target,
+                        io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile
+                                .MosaicWorldProfile.targetOnly());
+        assertEquals(2, plan.algorithmVersion());
+        assertEquals(0, plan.blockStateWriteRadius());
+        assertEquals(List.of(target), plan.writers());
+        assertEquals(1, plan.packedWriterSet().size());
+    }
+
     @BeforeAll
     static void bootstrapMinecraft() {
         MinecraftTestBootstrap.ensureBootstrapped();
