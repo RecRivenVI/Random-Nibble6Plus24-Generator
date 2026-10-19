@@ -34,7 +34,19 @@ public final class PerfWorkload {
 
     public static void tick(MinecraftServer server) {
         if (!cli() || finished) return;
-        ServerLevel level = server.overworld();
+        ServerLevel level =
+                Objects.requireNonNull(
+                        server.getLevel(
+                                switch (System.getProperty(
+                                        "mosaic.profile.dimension", "minecraft:overworld")) {
+                                    case "minecraft:overworld" -> Level.OVERWORLD;
+                                    case "minecraft:the_nether" -> Level.NETHER;
+                                    case "minecraft:the_end" -> Level.END;
+                                    default ->
+                                            throw new IllegalArgumentException(
+                                                    "Unsupported performance dimension");
+                                }),
+                        "Performance dimension is unavailable");
         String mode = System.getProperty("mosaic.profile.workload");
         if (!started) {
             started = true;

@@ -1,0 +1,15 @@
+{
+    "required": true,
+    "package": "io.github.recrivenvi.randomnibble6plus24generator.productiontest.mixin",
+    "compatibilityLevel": "JAVA_25",
+    "mixins": [
+        "PhysicalPersistenceMixin",
+        "NativeRequestEvidenceMixin",
+        "RuntimeTickEvidenceMixin",
+        "RuntimeFurnaceEvidenceMixin"
+    ],
+    "injectors": {
+        "defaultRequire": 1
+    },
+    "plugin": "io.github.recrivenvi.randomnibble6plus24generator.probe.ValidationMixinPlugin"
+}

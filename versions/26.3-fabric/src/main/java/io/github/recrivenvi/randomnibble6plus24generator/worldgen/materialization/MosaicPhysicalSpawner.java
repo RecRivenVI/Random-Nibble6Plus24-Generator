@@ -8,6 +8,7 @@ import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.Isolat
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.MosaicSpawnContextRegistry;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.MosaicSpawnGenerationContext;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.PhysicalWorldAccessException;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.SeedLocalNoiseGenerator;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.SpawnBiomeSnapshot;
 import java.util.Map;
 import java.util.Set;
@@ -43,8 +44,7 @@ public final class MosaicPhysicalSpawner {
             throw new IllegalArgumentException(
                     "Physical Mosaic SPAWN bridge received " + step.targetStatus());
         }
-        if (!(level.getChunkSource().getGenerator()
-                instanceof MosaicChunkGenerator mosaicGenerator)) {
+        if (!(level.getChunkSource().getGenerator() instanceof MosaicChunkGenerator)) {
             throw new IllegalStateException(
                     "Mosaic SPAWN bridge requires MosaicChunkGenerator identity");
         }
@@ -56,15 +56,13 @@ public final class MosaicPhysicalSpawner {
                                                 "Missing Mosaic runtime context during SPAWN"));
         ChunkPos target = chunk.getPos();
         long localSeed = runtime.resolveLocalWorldSeed(level.dimension(), target);
+        NoiseBasedChunkGenerator generator = SeedLocalNoiseGenerator.copy(level, localSeed);
         RandomState randomState =
                 RandomState.create(
                         level.registryAccess()
                                 .lookupOrThrow(net.minecraft.core.registries.Registries.NOISE),
                         localSeed,
-                        mosaicGenerator.generatorSettings().value());
-        NoiseBasedChunkGenerator generator =
-                new NoiseBasedChunkGenerator(
-                        mosaicGenerator.getBiomeSource(), mosaicGenerator.generatorSettings());
+                        generator.generatorSettings().value());
         ChunkHolder physicalTargetHolder =
                 level.getChunkSource()
                         .chunkMap

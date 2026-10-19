@@ -6,6 +6,12 @@
 
 装饰前以同版本 Minecraft 26.3 为 Oracle：真实绝对坐标、目标的 local seed、原版缓存 climate sampler 与 stored biome palette、紧凑结构输入，以及精确密度、表面和洞穴。邻区读取只使用明确的同种子输入，不借用 physical master seed。
 
+安装 TerraBlender 时，隔离上下文不能复用宿主已经按其它种子初始化的 biome 参数表或末地群系区域。根上下文复制原生参数条目或末地来源配置，独立持有表面规则配置，通过 TerraBlender 的原生初始化入口绑定本地种子；不重置宿主对象，也不在缺少该模组时加载可选接口。同一目标的邻区子上下文仅复用这份同种子配置，RandomState、结构状态与会话资源仍独立。stored palette 仍是已生成生物群系权威，不以诊断采样替代。
+
+SPAWN 的备用 uncached resolver 也使用该本地种子配置，不重建地形或替换已经携带的 stored palette。未审计的 TerraBlender 来源类型或初始化接口明确失败；未证明的表面规则继续完整精确回退，不尝试把第三方规则当成已审计原版节点。
+
+BOP 兼容对照保留完整方块判等门槛。当前 TerraBlender 的末地 possible-biome 无序集合可使原版 feature index 跨 JVM 改变；独立原生 `end_reef` 重复已产生不同方块。不能通过新增方块忽略规则或擅自重排装饰把此限制标为通过，见 [BOP 验证](../../validations/compatibility-bop/validation.md)。
+
 FEATURES 消费者使用原版入口、注册配置、feature step/index、placement modifier 和随机派生。替换表示方法或查询实现不授权修改随机调用次序。完整地形回退只用于无法证明的装饰前读取，不允许借回退真实执行八个邻区的完整 FEATURES。
 
 新 B 开发世界通过独立隐藏 `development_b` codec、固定 marker 与显式运行 opt-in 区分既有 `mosaic` Ordering 1/2 世界。只在世界加载边界验证文件，运行期纯内存分流；缺失或混合身份拒绝加载，不回退旧实现。profile 格式、Seed V1 与既有世界语义不变，未公开 WorldPreset。
@@ -34,6 +40,8 @@ B detached 交接携带已生成的八份 stored SPAWN palette 和紧凑输入�
 
 B 出生区域村庄猫另用三个全新普通原版 JVM/save 核验属性列表的容器换序：仅对这个已证明的猫案例按唯一属性 `id` 对齐整项。所有值、modifiers 次序、缺失/重复 ID、变种、位置、朝向和其它成员仍严格；默认实体验收未放宽，B 交接探针在核验独立原版证据后显式使用此规则。原始列表、UUID 和 strict hash 保留，不能把列表换序误报为宿主种子改变生成结果。
 
+堡垒 nether-chests 的猪灵采用使用者另行批准的 `26.3-native-bastion-piglin-attribute-order-1`。只有显式选择的这一诊断 fixture 开启；仅 `minecraft:piglin` 的 attributes 列表可按唯一 id 对齐，成员集合必须恰为 `minecraft:follow_range` 与 `minecraft:movement_speed`。两个属性的全部内容、数值、modifier 成员和次序、其它实体字段及 brute 仍严格；未知、缺失或重复成员拒绝。四份独立原版自然捕获及有效双向干预证明合法身份哈希遍历能产生两种次序，重放完整 UUID-only 快照；验收前只读复核原生因果证据。默认比较、生产序列化、原始 NBT 和 canonical hash 不改变，不推广到其它实体、Target、模组或任意猪灵属性集。
+
 输入的原始实体必须能重新对应其 UUID-only 快照，不能配一份空实体列表绕过比较。所有非实体快照字段、feature seed/随机位序列、槽返回值和跨界贡献仍要求一致。每处原始差异与严格哈希都保留，有限验收不是新的 canonical hash。
 
 末地城另有三个 fresh 普通物理原版世界的证据：seed 0、End `(-77,-79)`，相同九 writer 顺序、486 次 feature-seed 调用，目标内各有三只潜影贝。重复只在 UUID 和 `Rotation[0]` 不同，方块、非实体 metadata 与其它实体字段一致。原版 `EndCityPiece.handleDataMarker` 对 Sentry 只执行 `EntityType.create → setPos → addFreshEntity`，不调用会重置朝向的 `Shulker.finalizeSpawn`；`LivingEntity` 构造器留下 `entity.random.nextFloat() * 6.2831855f` 的水平朝向。
@@ -57,6 +65,10 @@ A 的真值是固定 procedure 的支持子集控制，不是所有合法 Vanill
 ## B：只保留目标装饰
 
 目标 writer 只执行一次原版 FEATURES。外部读取使用 S(C) 的纯 TERRAIN，优先局部列和 stored palette，未证明能力明确精确回退。边界外保持只读，拒绝发生在实际副作用之前，覆盖 region、直接 ChunkAccess、sections、BE/NBT、entities、ticks 和后处理能力。
+
+邻区密度按实际读取位置请求原版小体积批次，默认输出为 4×32×4；更大的已审计插值周期相应扩大高度。保持原版沿 Y 累加的浮点路径，不以 `sampleValue` 替代批次。当前查询内复用原版插值输入的稀疏整高度角点列，避免细分后重复计算相同角点；这些不是完整邻区地形。高度与表面梯度只计算实际需要的列，表面规则也限定到局部批次，含水层仍保留原版完整边界。密度查询使用独立 sampler context，含水层/表面上下文仅还原原版真正共享的二维输入及其缓存网格，避免局部批次改变随后标量读取的缓存命中语义。未证明的三维缓存耦合、不同网格共享缓存、嵌套插值、未知节点、未对齐网格、冰山/荒地反馈和洞穴表面修复继续精确回退。角点复用只绑定当前密度上下文；采样线程绑定在正常返回和异常时清理，缓存与 buffer pool 在查询关闭时释放。目标地形与普通原版不启用该局部采样钩子。
+
+B 的只读生物群系输入由单个目标作用域持有，覆盖 Vanilla 元数据要求的 TERRAIN 邻区及其 BIOMES halo。原版 `createBiomes` 对同一位置最多执行一次；已完成的 palette 按完整容器复制到精确回退的 ProtoChunk，保留未使用的 palette entry，不以 uncached sampling 重建。每个邻区的 possible-biome 集合、有限 stored-biome manager 与只读高度范围准备可复用；噪声、含水层、表面 sampler 和可变结构会话不借用。作用域绑定宿主实例、local seed、生成器与有限坐标范围，完成或异常时清空，不写入存档，也不成为重载 authority。完整回退后的直接读取仍使用已冻结的完整数据。
 
 26.3 B 的结构来源复用入口不以服务器模板管理器锁覆盖整轮结构生成。模板管理器自身用 ConcurrentHashMap 发布加载完的模板；Palette 的普通 HashMap 过滤缓存与 Jigsaw 缓存按 palette 同步，模板池的 maxSize 缓存按 pool 同步。所有共享缓存消费者使用同样的短锁，包括原版生成与重载；不修改缓存结果、列表顺序或随机消费。旋转、候选拼装、局部高度和碰撞求值留在锁外。
 

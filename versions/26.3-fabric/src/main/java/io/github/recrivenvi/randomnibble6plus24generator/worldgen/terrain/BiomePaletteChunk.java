@@ -20,6 +20,7 @@ import net.minecraft.world.level.chunk.ChunkAccess;
 import net.minecraft.world.level.chunk.LevelChunkSection;
 import net.minecraft.world.level.chunk.PalettedContainer;
 import net.minecraft.world.level.chunk.PalettedContainerFactory;
+import net.minecraft.world.level.chunk.ProtoChunk;
 import net.minecraft.world.level.chunk.UpgradeData;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.level.material.Fluid;
@@ -38,6 +39,38 @@ public final class BiomePaletteChunk extends ChunkAccess {
         this.height = height;
         for (int section = 0; section < height.getSectionsCount(); section++)
             palettes.add(factory.createForBiomes());
+    }
+
+    /** Copies the stored container, including unused palette entries; never samples climate. */
+    public static BiomePaletteChunk snapshot(ChunkAccess source, PalettedContainerFactory factory) {
+        if (!source.getPersistedStatus().isOrAfter(ChunkStatus.BIOMES))
+            throw new IllegalArgumentException("Cannot retain ungenerated biomes");
+        var copy =
+                new BiomePaletteChunk(
+                        source.getPos(),
+                        LevelHeightAccessor.create(source.getMinY(), source.getHeight()),
+                        factory);
+        for (int i = 0; i < copy.palettes.size(); i++)
+            copy.palettes.set(
+                    i,
+                    source instanceof BiomePaletteChunk b
+                            ? b.palettes.get(i).copy()
+                            : source.getSection(i).getBiomes().copy());
+        copy.ready = true;
+        return copy;
+    }
+
+    /** Installs independent stored palettes only at the pre-BIOMES boundary. */
+    public void copyTo(ProtoChunk target) {
+        requireReady();
+        if (!target.getPos().equals(getPos())
+                || target.getMinY() != getMinY()
+                || target.getHeight() != getHeight()
+                || target.getPersistedStatus() != ChunkStatus.STRUCTURE_REFERENCES)
+            throw new IllegalArgumentException("Wrong biome copy owner/range/stage");
+        var sections = target.getSections();
+        for (int i = 0; i < palettes.size(); i++)
+            sections[i] = new LevelChunkSection(sections[i].getStates(), palettes.get(i).copy());
     }
 
     @Override

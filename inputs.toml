@@ -1,0 +1,42 @@
+[biomesoplenty]
+version = "26.3.0.0.15"
+description = "26.3 Fabric BOP 兼容验证输入，不随产品发布"
+source = "https://modrinth.com/mod/biomes-o-plenty/version/MAQI6dsY"
+sha256 = ["6d1af24fdf4e9dd2b3fd72354fbfcf092002a4d7203915f0a9768d68918733e1"]
+
+[terrablender]
+version = "26.3.0.0.9"
+description = "26.3 Fabric TerraBlender 兼容验证输入，不随产品发布"
+source = "https://modrinth.com/mod/terrablender/version/xirJYe1V"
+sha256 = ["209840138dad43f7beb0c7ea199ed0fdb8bf4cf59d3ce4f479da434097d0307e"]
+
+[glitchcore]
+version = "26.3.0.0.5"
+description = "26.3 Fabric BOP 前置验证输入，不随产品发布"
+source = "https://modrinth.com/mod/glitchcore/version/kfFeDnrp"
+sha256 = ["960fe29b20e2ac54333fa91712eb7be25638765febf38dd36c9234845e45f1b9"]
+
+[fabric-api]
+version = "0.163.0+26.3"
+description = "BOP 兼容验证使用的完整 Fabric API，不改变日常实例依赖"
+source = "https://modrinth.com/mod/fabric-api/version/bq3SsNGk"
+sha256 = ["4969f5197ebedaf681cc913e4258c8bd17ccb98029db52a29e9b48e998267a2d"]
+
+[customskinloader-bootstrap]
+version = "15.1"
+description = "人工验收客户端的 Custom Skin Loader 通用引导模组，不随产品发布"
+source = "https://modrinth.com/mod/customskinloader/version/yyYvYfZI"
+sha256 = ["c8769a38b3cc1da2a7b2f5827d1a53a24cd1ef6d0784b1eb545569f5882a2ffb"]
+
+[zume]
+version = "1.2.2"
+description = "人工验收客户端的 Zume；只用于上游声明兼容且原生开发命名空间可用的组合"
+source = "https://modrinth.com/mod/zume/version/Rh2ImJ86"
+sha256 = ["c33b99e8976dfeb0aeb1afcc2ad8e65c7310532ae5ccc38c75317d672dc95e6f"]
+
+[minecraft-protocol-alpha-fabric]
+mod-id = "minecraft_protocol_probe"
+version = "0.0.1-phase8"
+description = "固定 MCP alpha 的 26.3 Fabric 自动化验证输入，不进入产品或用户实例"
+source = "D:/Workspaces/Artifacts/MineCraftProtocol/Alpha/20261017-1504-e83283fc"
+sha256 = ["d922028c09ca1b93201af820eddd0915bdd3c68fe96630e95c7d097e51c95b03"]

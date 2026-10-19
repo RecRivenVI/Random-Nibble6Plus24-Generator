@@ -47,18 +47,26 @@ public final class FeatureBVerifier {
                     new Fixture("origin-alt", "overworld", 1, 0, 0));
 
     public static void run(MinecraftServer server) {
+        if (Boolean.getBoolean("featureb.independent")) {
+            IndependentFeatureBVerifier.run(server);
+            return;
+        }
         Path base =
                 Path.of(System.getProperty("validation.result"))
                         .resolve(
                                 Boolean.getBoolean("featureb.nativeCat")
                                         ? "native_cat"
-                                        : Boolean.getBoolean("featureb.preparation")
-                                                ? "preparation"
-                                                : Boolean.getBoolean("featureb.structureReuse")
-                                                        ? "structure_reuse"
-                                                        : Boolean.getBoolean("featureb.lightweight")
-                                                                ? "lightweight"
-                                                                : "current")
+                                        : Boolean.getBoolean("featureb.nativeMonster")
+                                                ? "native_monster"
+                                                : Boolean.getBoolean("featureb.preparation")
+                                                        ? "preparation"
+                                                        : Boolean.getBoolean(
+                                                                        "featureb.structureReuse")
+                                                                ? "structure_reuse"
+                                                                : Boolean.getBoolean(
+                                                                                "featureb.lightweight")
+                                                                        ? "lightweight"
+                                                                        : "current")
                         .resolve(System.getProperty("validation.target"));
         Path root =
                 Boolean.getBoolean("featureb.export")
@@ -69,7 +77,10 @@ public final class FeatureBVerifier {
             if (Boolean.getBoolean("featureb.export")) {
                 Map<String, Object> launch = new LinkedHashMap<>();
                 launch.put("java", ProcessHandle.current().info().command().orElseThrow());
-                if (Boolean.getBoolean("featureb.nativeCat"))
+                if (Boolean.getBoolean("featureb.nativeMonster"))
+                    launch.put("monsterFixtures", LightweightFeatureBVerifier.monsterFixtures());
+                if (Boolean.getBoolean("featureb.nativeCat")
+                        || Boolean.getBoolean("featureb.nativeMonster"))
                     launch.put("nativeFixture", NativeFeatureRepeatVerifier.fixture());
                 launch.put("directory", System.getProperty("user.dir"));
                 launch.put("classpath", System.getProperty("java.class.path"));
@@ -82,7 +93,10 @@ public final class FeatureBVerifier {
                 launch.put("main", command[0]);
                 launch.put("gameArguments", Arrays.copyOfRange(command, 1, command.length));
                 write(root.resolve("launcher.json"), launch);
-            } else if (Boolean.getBoolean("featureb.nativeCat")) {
+            } else if (Boolean.getBoolean("featureb.monsterOnly")) {
+                LightweightFeatureBVerifier.runMonsterRooms(server, root);
+            } else if (Boolean.getBoolean("featureb.nativeCat")
+                    || Boolean.getBoolean("featureb.nativeMonster")) {
                 NativeFeatureRepeatVerifier.run(server, root);
             } else if (Boolean.getBoolean("featureb.preparation")) {
                 BPreparationVerifier.run(server, root);
@@ -427,6 +441,10 @@ public final class FeatureBVerifier {
     public static void observeWriter(
             net.minecraft.world.level.WorldGenLevel level,
             net.minecraft.world.level.chunk.ChunkAccess chunk) {
+        if (Boolean.getBoolean("featureb.independent")) {
+            IndependentFeatureBVerifier.observeWriter(level, chunk);
+            return;
+        }
         if (Boolean.getBoolean("featureb.preparation")) {
             BPreparationVerifier.observeWriter(level, chunk);
             return;

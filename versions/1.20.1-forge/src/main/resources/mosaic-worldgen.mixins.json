@@ -1,0 +1,38 @@
+{
+    "required": true,
+    "package": "io.github.recrivenvi.randomnibble6plus24generator.mixin",
+    "compatibilityLevel": "JAVA_17",
+    "refmap": "mosaic-worldgen.refmap.json",
+    "plugin": "io.github.recrivenvi.randomnibble6plus24generator.mixin.plugin.StructureFastpathPlugin",
+    "mixins": [
+        "ChunkSerializerAccess",
+        "WorldGenRegionSeedMixin",
+        "FeatureLocalSeedMixin",
+        "FeatureCatStructuresMixin",
+        "FeaturePoiIsolationMixin",
+        "PlacementCarvingMaskMixin",
+        "MosaicServerIdentityMixin",
+        "MosaicLevelIdentityMixin",
+        "DimensionDataIdentityMixin",
+        "PalettedStateBitsAccess",
+        "ChunkMapQueues",
+        "MosaicChunkMapMixin",
+        "MosaicChunkStatusMixin",
+        "MosaicStructureLoadMixin",
+        "StructurePlacementAccessor",
+        "ChunkGeneratorStructureStateMixin",
+        "ConcentricBiomeSearchMixin",
+        "MultiNoiseParametersAccess",
+        "ClimateFitnessAccess",
+        "ConcentricRingsStructurePlacementMixin",
+        "StructurePoolAccess",
+        "StructurePoolListAccess",
+        "StructurePoolSizeMixin",
+        "StructurePaletteCacheMixin",
+        "StructureGenerationMixin",
+        "StructureRotationCacheMixin"
+    ],
+    "injectors": {
+        "defaultRequire": 1
+    }
+}

@@ -1,7 +1,8 @@
 tool = "worldgen_validation"
-targets = ["26.2-fabric", "26.3-fabric"]
+targets = ["26.2-fabric", "26.3-fabric", "26.3-neoforge", "26.1.2-neoforge", "1.21.1-neoforge"]
 
 [instances.server]
+port = 25592
 memory-max = "3G"
 memory-min = "256M"
 jvm-args = ["-XX:ActiveProcessorCount=4"]

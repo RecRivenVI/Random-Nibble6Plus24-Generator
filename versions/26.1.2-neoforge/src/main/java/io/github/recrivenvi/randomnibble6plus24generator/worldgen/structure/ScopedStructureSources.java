@@ -1,0 +1,186 @@
+package io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure;
+
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.IsolatedGenerationContext;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.IsolatedGenerationMode;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Supplier;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.LevelHeightAccessor;
+import net.minecraft.world.level.chunk.status.ChunkPyramid;
+import net.minecraft.world.level.chunk.status.ChunkStatus;
+
+/** One B preparation's native source metadata, including evaluated empty sources. */
+public final class ScopedStructureSources implements AutoCloseable {
+    private LevelHeightAccessor world;
+    private final long seed;
+    private final ChunkPos target;
+    private final int queryRadius;
+    private final Thread thread = Thread.currentThread();
+    private final Map<Long, StructureInputChunk> sources = new HashMap<>();
+    private final Set<Long> evaluated = new java.util.HashSet<>();
+    private Object settings;
+    private boolean structuresEnabled;
+    private boolean handedOff, closed;
+    private long queries, hits, evaluations, evaluationNanos;
+    private int peakResident, transferred, uniqueSources;
+
+    public ScopedStructureSources(IsolatedGenerationContext context) {
+        this(context, featureReadRadius());
+    }
+
+    /** Native B reads one CARVERS halo; its surface biomes extend that by one more owner. */
+    public static ScopedStructureSources forFeatureFrontier(IsolatedGenerationContext context) {
+        int surfaceBiomes =
+                ChunkPyramid.GENERATION_PYRAMID
+                        .getStepTo(ChunkStatus.SURFACE)
+                        .directDependencies()
+                        .getRadiusOf(ChunkStatus.BIOMES);
+        if (surfaceBiomes != 1) throw new IllegalStateException("Unaudited surface biome frontier");
+        return new ScopedStructureSources(context, featureReadRadius() + surfaceBiomes);
+    }
+
+    private ScopedStructureSources(IsolatedGenerationContext context, int queryRadius) {
+        this(context.hostLevel(), context.worldSeed(), context.target(), queryRadius);
+        requireMode(context);
+        settings = context.generator().generatorSettings().value();
+        structuresEnabled = context.structureManager().shouldGenerateStructures();
+    }
+
+    ScopedStructureSources(LevelHeightAccessor world, long seed, ChunkPos target, int queryRadius) {
+        this.world = Objects.requireNonNull(world);
+        this.seed = seed;
+        this.target = Objects.requireNonNull(target);
+        if (queryRadius < 0 || queryRadius > 2)
+            throw new IllegalArgumentException("Unaudited B structure query radius");
+        this.queryRadius = queryRadius;
+    }
+
+    private static int featureReadRadius() {
+        int radius =
+                ChunkPyramid.GENERATION_PYRAMID
+                        .getStepTo(ChunkStatus.FEATURES)
+                        .directDependencies()
+                        .getRadiusOf(ChunkStatus.CARVERS);
+        if (radius != 1) throw new IllegalStateException("Unaudited B FEATURES read radius");
+        return radius;
+    }
+
+    private static void requireMode(IsolatedGenerationContext context) {
+        if (context.mode() != IsolatedGenerationMode.ISOLATED_MOSAIC)
+            throw new IllegalArgumentException(
+                    "Structure reuse requires isolated seed-local state");
+    }
+
+    void requireCompatible(IsolatedGenerationContext context) {
+        requireMode(context);
+        open();
+        if (world != context.hostLevel()
+                || seed != context.worldSeed()
+                || settings != context.generator().generatorSettings().value()
+                || structuresEnabled != context.structureManager().shouldGenerateStructures())
+            throw new IllegalArgumentException(
+                    "Structure source scope belongs to another world/configuration/seed");
+        requireWithin(context.target(), target, queryRadius);
+    }
+
+    StructureInputChunk source(
+            IsolatedGenerationContext context,
+            ChunkPos source,
+            Supplier<StructureInputChunk> evaluate) {
+        requireCompatible(context);
+        return source(context.hostLevel(), context.worldSeed(), context.target(), source, evaluate);
+    }
+
+    StructureInputChunk source(
+            LevelHeightAccessor world,
+            long seed,
+            ChunkPos query,
+            ChunkPos source,
+            Supplier<StructureInputChunk> evaluate) {
+        open();
+        if (this.world != world || this.seed != seed)
+            throw new IllegalArgumentException("Wrong structure source world/seed");
+        requireWithin(query, target, queryRadius);
+        requireWithin(source, query, CompactStructureInputs.referenceRadius());
+        queries++;
+        var existing = sources.get(source.pack());
+        if (existing != null) {
+            hits++;
+            return existing;
+        }
+        long began = System.nanoTime();
+        var result = Objects.requireNonNull(evaluate.get());
+        if (!source.equals(result.getPos()) || !result.getAllReferences().isEmpty())
+            throw new IllegalArgumentException(
+                    "Source evaluation must return raw native starts only");
+        evaluationNanos += System.nanoTime() - began;
+        evaluations++;
+        if (evaluated.add(source.pack())) uniqueSources++;
+        sources.put(source.pack(), result);
+        peakResident = Math.max(peakResident, sources.size());
+        return result;
+    }
+
+    /** Native placement mutates pieces. Transfer the target graph, never share it with reads. */
+    void handoffForDecoration(ChunkPos owner, Set<Long> retainedSources) {
+        open();
+        if (handedOff || !target.equals(owner))
+            throw new IllegalStateException(
+                    "Target structure graph already handed off/wrong owner");
+        for (long position : retainedSources) {
+            requireWithin(
+                    ChunkPos.unpack(position), target, CompactStructureInputs.referenceRadius());
+            if (sources.remove(position) != null) transferred++;
+        }
+        handedOff = true;
+    }
+
+    private static void requireWithin(ChunkPos p, ChunkPos center, int radius) {
+        if (Math.abs((long) p.x() - center.x()) > radius
+                || Math.abs((long) p.z() - center.z()) > radius)
+            throw new IllegalArgumentException("Outside bounded structure source scope " + p);
+    }
+
+    private void open() {
+        if (closed || Thread.currentThread() != thread)
+            throw new IllegalStateException("Closed/wrong-thread structure source scope");
+    }
+
+    public record Metrics(
+            long queries,
+            long hits,
+            long evaluations,
+            int uniqueSources,
+            int peakResident,
+            int resident,
+            int transferred,
+            long evaluationNanos,
+            boolean closed) {}
+
+    public Metrics metrics() {
+        return new Metrics(
+                queries,
+                hits,
+                evaluations,
+                uniqueSources,
+                peakResident,
+                sources.size(),
+                transferred,
+                evaluationNanos,
+                closed);
+    }
+
+    @Override
+    public void close() {
+        if (Thread.currentThread() != thread)
+            throw new IllegalStateException("Wrong-thread structure source close");
+        sources.clear();
+        evaluated.clear();
+        world = null;
+        settings = null;
+        closed = true;
+    }
+}

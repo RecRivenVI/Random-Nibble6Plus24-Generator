@@ -1,0 +1,6 @@
+{
+    "pack": {
+        "description": "${mod_name} development probes",
+        "pack_format": 15
+    }
+}

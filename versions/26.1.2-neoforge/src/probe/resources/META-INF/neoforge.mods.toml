@@ -1,0 +1,24 @@
+license = "${mod_license}"
+
+[[mods]]
+modId = "${mod_id}_probe"
+version = "${mod_version}"
+displayName = "${mod_name} development probes"
+authors = "${mod_authors}"
+description = "Explicit native generation and physical lifecycle validation only"
+
+[[dependencies.${mod_id}_probe]]
+modId = "${mod_id}"
+type = "required"
+versionRange = "[${mod_version}]"
+ordering = "AFTER"
+side = "BOTH"
+
+[[mixins]]
+config = "mosaic-prefeatures-test.mixins.json"
+
+[[mixins]]
+config = "mosaic-feature-b-test.mixins.json"
+
+[[mixins]]
+config = "mosaic-production-test.mixins.json"

@@ -16,6 +16,7 @@ import net.minecraft.world.level.biome.BiomeResolver;
 import net.minecraft.world.level.biome.Biomes;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.chunk.PalettedContainer;
 import net.minecraft.world.level.chunk.PalettedContainerFactory;
 import net.minecraft.world.level.chunk.ProtoChunk;
 import net.minecraft.world.level.chunk.Strategy;
@@ -96,5 +97,51 @@ class BiomePaletteChunkTest {
         assertThrows(
                 UnsupportedOperationException.class,
                 () -> compact.markPosForPostProcessing(BlockPos.ZERO));
+    }
+
+    @Test
+    void retainedPaletteCopiesAreIndependentAndKeepUnusedEntries() {
+        var height = LevelHeightAccessor.create(-64, 384);
+        var original =
+                new ProtoChunk(new ChunkPos(-1, 2), UpgradeData.EMPTY, height, factory, null);
+        original.fillBiomesFromNoise((x, y, z) -> plains);
+        original.setPersistedStatus(ChunkStatus.BIOMES);
+        // A palette entry may survive after its final cell is replaced. Native enumeration sees it.
+        ((PalettedContainer<Holder<Biome>>) original.getSection(0).getBiomes())
+                .getAndSetUnchecked(0, 0, 0, desert);
+        ((PalettedContainer<Holder<Biome>>) original.getSection(0).getBiomes())
+                .getAndSetUnchecked(0, 0, 0, plains);
+        var retained = BiomePaletteChunk.snapshot(original, factory);
+        var target = new ProtoChunk(original.getPos(), UpgradeData.EMPTY, height, factory, null);
+        target.setPersistedStatus(ChunkStatus.STRUCTURE_REFERENCES);
+        var block = new BlockPos(-15, -60, 33);
+        target.setBlockState(block, Blocks.STONE.defaultBlockState(), 0);
+        retained.copyTo(target);
+        target.setPersistedStatus(ChunkStatus.BIOMES);
+        assertEquals(Blocks.STONE.defaultBlockState(), target.getBlockState(block));
+        var nativePalette = new HashSet<Holder<Biome>>();
+        var copiedPalette = new HashSet<Holder<Biome>>();
+        original.collectBiomesInPalette(nativePalette);
+        retained.collectBiomesInPalette(copiedPalette);
+        assertEquals(nativePalette, copiedPalette);
+        assertTrue(copiedPalette.contains(desert));
+        ((PalettedContainer<Holder<Biome>>) target.getSection(1).getBiomes())
+                .getAndSetUnchecked(0, 0, 0, desert);
+        ((PalettedContainer<Holder<Biome>>) original.getSection(2).getBiomes())
+                .getAndSetUnchecked(0, 0, 0, desert);
+        assertSame(plains, retained.getNoiseBiome(-4, -12, 8));
+        assertSame(plains, retained.getNoiseBiome(-4, -8, 8));
+        assertSame(plains, target.getNoiseBiome(-4, -8, 8));
+        target.setPersistedStatus(ChunkStatus.TERRAIN);
+        assertThrows(IllegalArgumentException.class, () -> retained.copyTo(target));
+        var foreign = new ProtoChunk(ChunkPos.ZERO, UpgradeData.EMPTY, height, factory, null);
+        foreign.setPersistedStatus(ChunkStatus.STRUCTURE_REFERENCES);
+        assertThrows(IllegalArgumentException.class, () -> retained.copyTo(foreign));
+        assertThrows(
+                IllegalArgumentException.class, () -> BiomePaletteChunk.snapshot(foreign, factory));
+        var second = BiomePaletteChunk.snapshot(retained, factory);
+        var secondPalette = new HashSet<Holder<Biome>>();
+        second.collectBiomesInPalette(secondPalette);
+        assertEquals(nativePalette, secondPalette);
     }
 }

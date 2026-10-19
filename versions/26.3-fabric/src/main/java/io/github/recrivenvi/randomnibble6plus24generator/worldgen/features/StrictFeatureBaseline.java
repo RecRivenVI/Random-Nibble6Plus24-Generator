@@ -2,7 +2,6 @@ package io.github.recrivenvi.randomnibble6plus24generator.worldgen.features;
 
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.GenerationContextRegistry;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.IsolatedGenerationContext;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.IsolatedGenerationMode;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.CompactStructureInputs;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.terrain.LightweightTerrainGenerator;
 import java.util.HashMap;
@@ -57,12 +56,7 @@ public final class StrictFeatureBaseline {
             for (int x = context.target().x() - radius; x <= context.target().x() + radius; x++) {
                 ChunkPos position = new ChunkPos(x, z);
                 if (position.equals(context.target())) continue;
-                try (var neighbor =
-                        IsolatedGenerationContext.create(
-                                IsolatedGenerationMode.ISOLATED_MOSAIC,
-                                context.hostLevel(),
-                                context.worldSeed(),
-                                position)) {
+                try (var neighbor = context.createRelated(position)) {
                     var structures = CompactStructureInputs.resolve(neighbor);
                     ProtoChunk chunk =
                             LightweightTerrainGenerator.generate(neighbor, structures, (s, c) -> {})

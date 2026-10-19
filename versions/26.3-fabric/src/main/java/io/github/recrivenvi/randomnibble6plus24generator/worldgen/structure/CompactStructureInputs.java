@@ -329,6 +329,25 @@ public final class CompactStructureInputs {
         chunk.setAllReferences(copy);
     }
 
+    /** Native partial-stage data must preserve the reference iterator, not only membership. */
+    public void copyNativeReferencesTo(ChunkAccess chunk) {
+        requireOwner(chunk);
+        Map<Structure, it.unimi.dsi.fastutil.longs.LongSet> copy = new HashMap<>();
+        owner.getAllReferences()
+                .forEach(
+                        (structure, positions) ->
+                                copy.put(structure, copyNativeReferenceSet(positions)));
+        chunk.setAllReferences(copy);
+    }
+
+    static LongOpenHashSet copyNativeReferenceSet(it.unimi.dsi.fastutil.longs.LongSet positions) {
+        // Re-insertion can shrink the table and reorder starts consumed by native decoration.
+        if (positions.getClass() == LongOpenHashSet.class)
+            return ((LongOpenHashSet) positions).clone();
+        throw new UnsupportedOperationException(
+                "Unaudited native partial-stage reference set " + positions.getClass());
+    }
+
     private void requireOwner(ChunkAccess chunk) {
         if (!target.equals(chunk.getPos()))
             throw new IllegalArgumentException("Wrong compact input owner " + chunk.getPos());

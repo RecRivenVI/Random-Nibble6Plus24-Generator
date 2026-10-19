@@ -383,9 +383,22 @@ public final class PerfTrace {
             root.addProperty("integrated", server != null && !server.isDedicatedServer());
             root.addProperty("final", finalDump);
             root.addProperty("processId", ProcessHandle.current().pid());
+            root.addProperty("javaRuntime", System.getProperty("java.runtime.version"));
+            root.addProperty("javaVendor", System.getProperty("java.vendor"));
+            root.addProperty("availableProcessors", Runtime.getRuntime().availableProcessors());
+            root.add(
+                    "jvmArguments",
+                    new Gson()
+                            .toJsonTree(ManagementFactory.getRuntimeMXBean().getInputArguments()));
             root.addProperty("uptimeNanos", System.nanoTime() - ORIGIN);
             root.add("samples", new Gson().toJsonTree(SAMPLES));
             root.add("structureExperiment", new Gson().toJsonTree(StructureIsolation.snapshot()));
+            root.add(
+                    "physicalBiomes",
+                    new Gson()
+                            .toJsonTree(
+                                    io.github.recrivenvi.randomnibble6plus24generator.worldgen
+                                            .materialization.PhysicalBiomePreparation.metrics()));
             JsonObject totals = new JsonObject();
             AGGREGATES.forEach((k, v) -> totals.addProperty(k, v.sum()));
             root.add("aggregates", totals);

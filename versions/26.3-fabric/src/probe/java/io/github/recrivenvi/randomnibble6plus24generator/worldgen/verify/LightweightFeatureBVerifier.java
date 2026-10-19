@@ -9,6 +9,7 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.*;
 import net.minecraft.core.*;
 import net.minecraft.core.registries.Registries;
+import net.minecraft.nbt.*;
 import net.minecraft.resources.*;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.level.ChunkPos;
@@ -21,6 +22,8 @@ final class LightweightFeatureBVerifier {
     private static final AtomicInteger ACTIVE = new AtomicInteger(), PEAK = new AtomicInteger();
 
     private LightweightFeatureBVerifier() {}
+
+    private record Observation(FeatureStableSnapshot snapshot, ListTag raw) {}
 
     private static LightweightFeatureBaseline.Result generateLocal(
             IsolatedGenerationContext context,
@@ -49,7 +52,7 @@ final class LightweightFeatureBVerifier {
                         -195955039870900853L,
                         -20000,
                         30000));
-        var serial = new HashMap<String, FeatureStableSnapshot>();
+        var serial = new HashMap<String, Observation>();
         for (var f : fixtures) serial.put(f.id(), generate(server, root, f, "serial", evidence));
         var representative =
                 List.of(
@@ -67,7 +70,11 @@ final class LightweightFeatureBVerifier {
                         fixtures.get(17));
         for (int i = representative.size() - 1; i >= 0; i--) {
             var f = representative.get(i);
-            equal(serial.get(f.id()), generate(server, root, f, "reverse", evidence), f.id());
+            equal(
+                    serial.get(f.id()),
+                    generate(server, root, f, "reverse", evidence),
+                    f.id(),
+                    root.resolve("reverse-" + f.id()).resolve("repeat-comparison.json"));
         }
         var executor = Executors.newFixedThreadPool(5);
         try {
@@ -85,7 +92,13 @@ final class LightweightFeatureBVerifier {
                                                                             f,
                                                                             "parallel",
                                                                             evidence),
-                                                                    f.id()),
+                                                                    f.id(),
+                                                                    root.resolve(
+                                                                                    "parallel-"
+                                                                                            + f
+                                                                                                    .id())
+                                                                            .resolve(
+                                                                                    "repeat-comparison.json")),
                                                     executor))
                             .toList();
             CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new)).join();
@@ -107,7 +120,11 @@ final class LightweightFeatureBVerifier {
                     FeatureStageSnapshot.capture(
                                     "minecraft:overworld", physical, server.registryAccess())
                             .hash();
-            equal(serial.get(f.id()), generate(server, root, f, mode, evidence), mode);
+            equal(
+                    serial.get(f.id()),
+                    generate(server, root, f, mode, evidence),
+                    f.id(),
+                    root.resolve(mode + "-" + f.id()).resolve("repeat-comparison.json"));
             if (!before.equals(
                     FeatureStageSnapshot.capture(
                                     "minecraft:overworld", physical, server.registryAccess())
@@ -141,31 +158,167 @@ final class LightweightFeatureBVerifier {
             var reuse = failedInput.get().structureReuseMetrics().orElseThrow();
             if (!reuse.closed() || reuse.resident() != 0)
                 throw new IllegalStateException("Failed B source graph retained");
+            var biomes = failedInput.get().biomeReuseCounters().orElseThrow();
+            if (!biomes.closed() || biomes.resident() != 0)
+                throw new IllegalStateException("Failed B biome input scope retained");
         }
         verifyCapabilities(server);
+        if (Boolean.getBoolean("featureb.structureReuse")) verifyBiomeReuseCapabilities(server);
+        runMonsterRooms(server, root);
         if (GenerationContextRegistry.bindingCount() != 0 || ACTIVE.get() != 0 || PEAK.get() < 5)
             throw new IllegalStateException("B cleanup/concurrent coverage missing");
+        if (root.getFileName().toString().equals("host_1")) {
+            for (var name : new TreeSet<>(evidence.keySet())) {
+                var first = root.resolveSibling("host_0").resolve(name);
+                var second = root.resolve(name);
+                equal(
+                        read(first),
+                        read(second),
+                        name.endsWith("-end-city") ? "end-city" : name,
+                        second.resolve("cross-host.json"));
+            }
+        }
+        var summary =
+                new LinkedHashMap<String, Object>(
+                        Map.of(
+                                "status",
+                                "PASS",
+                                "fixtures",
+                                fixtures.size(),
+                                "repeatComparisons",
+                                representative.size() * 2,
+                                "bindings",
+                                0,
+                                "peakTargets",
+                                PEAK.get(),
+                                "evidence",
+                                evidence,
+                                "pid",
+                                ProcessHandle.current().pid(),
+                                "proofVersion",
+                                1,
+                                "exceptionCleanup",
+                                true));
+        summary.put("entityAcceptanceVersion", 1);
+        summary.put("inputHash", System.getProperty("featureb.inputHash", "UNBOUND"));
+        summary.put(
+                "save",
+                server.getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT)
+                        .toAbsolutePath()
+                        .normalize()
+                        .toString());
+        summary.put("hostSeed", Long.toString(server.overworld().getSeed()));
+        write(root.resolve("summary.json"), summary);
+    }
+
+    private static void verifyBiomeReuseCapabilities(MinecraftServer server) {
+        var position = ChunkPos.ZERO;
+        try (var owner =
+                IsolatedGenerationContext.create(
+                        IsolatedGenerationMode.ISOLATED_MOSAIC, server.overworld(), 0, position)) {
+            var inputs =
+                    new io.github.recrivenvi.randomnibble6plus24generator.worldgen.terrain
+                            .TerrainBiomeInputs(owner);
+            var prepared = inputs.prepare(owner, position);
+            try (var foreignSeed =
+                            IsolatedGenerationContext.create(
+                                    IsolatedGenerationMode.ISOLATED_MOSAIC,
+                                    server.overworld(),
+                                    1,
+                                    position);
+                    var foreignDimension =
+                            IsolatedGenerationContext.create(
+                                    IsolatedGenerationMode.ISOLATED_MOSAIC,
+                                    server.getLevel(net.minecraft.world.level.Level.NETHER),
+                                    0,
+                                    position)) {
+                denied(() -> inputs.requireCompatible(foreignSeed));
+                denied(() -> inputs.requireCompatible(foreignDimension));
+                denied(() -> inputs.palette(new ChunkPos(3, 0)));
+            }
+            inputs.close();
+            if (!inputs.counters().closed() || inputs.counters().resident() != 0)
+                throw new IllegalStateException("Stored biome scope retained after close");
+            denied(() -> inputs.palette(position));
+            denied(() -> prepared.manager().getNoiseBiomeAtQuart(0, 0, 0));
+        }
+    }
+
+    private static void denied(Runnable action) {
+        try {
+            action.run();
+        } catch (IllegalArgumentException | IllegalStateException expected) {
+            return;
+        }
+        throw new IllegalStateException("Foreign/closed stored biome input was accepted");
+    }
+
+    static void runMonsterRooms(MinecraftServer server, Path root) throws Exception {
+        var evidence = new LinkedHashMap<String, Object>();
+        for (var f : monsterFixtures()) generate(server, root, f, "monster-room", evidence);
+        var events = MonsterRoomProbe.drain();
+        for (var f : monsterFixtures()) {
+            var matching =
+                    events.stream()
+                            .filter(
+                                    e ->
+                                            e.get("writer")
+                                                            .equals(
+                                                                    new ChunkPos(f.x(), f.z())
+                                                                            .toString())
+                                                    && e.get("seed")
+                                                            .equals(Long.toString(f.seed())))
+                            .toList();
+            if (matching.size() != 2
+                    || matching.stream()
+                            .anyMatch(
+                                    e ->
+                                            !Boolean.TRUE.equals(e.get("insideWriter"))
+                                                    || !Boolean.TRUE.equals(e.get("protected"))
+                                                    || !e.get("state")
+                                                            .toString()
+                                                            .startsWith("Block{minecraft:chest}")
+                                                    || !e.get("entity")
+                                                            .equals(
+                                                                    "net.minecraft.world.level.block.entity.ChestBlockEntity")))
+                throw new IllegalStateException(
+                        "Monster-room warning changed or a target BlockEntity was lost: "
+                                + f.id()
+                                + matching);
+        }
         write(
-                root.resolve("summary.json"),
+                root.resolve("monster-rooms.json"),
                 Map.of(
-                        "status",
-                        "PASS",
                         "fixtures",
-                        fixtures.size(),
-                        "repeatComparisons",
-                        representative.size() * 2,
-                        "bindings",
-                        0,
-                        "peakTargets",
-                        PEAK.get(),
-                        "evidence",
                         evidence,
-                        "pid",
-                        ProcessHandle.current().pid(),
-                        "proofVersion",
-                        1,
-                        "exceptionCleanup",
-                        true));
+                        "events",
+                        events,
+                        "traces",
+                        MonsterRoomProbe.drainTraces()));
+    }
+
+    static List<FeatureBVerifier.Fixture> monsterFixtures() {
+        var resolver =
+                new io.github.recrivenvi.randomnibble6plus24generator.worldgen.seed
+                        .MosaicSeedResolver(
+                        io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile
+                                .MosaicWorldProfile.current());
+        var result = new ArrayList<FeatureBVerifier.Fixture>();
+        for (var pos :
+                List.of(
+                        new ChunkPos(645, -623),
+                        new ChunkPos(621, -647),
+                        new ChunkPos(594, -603))) {
+            result.add(
+                    new FeatureBVerifier.Fixture(
+                            "monster-" + pos.x() + "_" + pos.z(),
+                            "overworld",
+                            resolver.resolveLocalWorldSeed(
+                                    246813580, net.minecraft.world.level.Level.OVERWORLD, pos),
+                            pos.x(),
+                            pos.z()));
+        }
+        return result;
     }
 
     private static void verifyCapabilities(MinecraftServer server) {
@@ -262,7 +415,7 @@ final class LightweightFeatureBVerifier {
         }
     }
 
-    private static FeatureStableSnapshot generate(
+    private static Observation generate(
             MinecraftServer server,
             Path root,
             FeatureBVerifier.Fixture f,
@@ -448,24 +601,30 @@ final class LightweightFeatureBVerifier {
                             || reuse.queries() != reuse.hits() + reuse.evaluations())
                         throw new IllegalStateException(
                                 "B structure source scope leaked/unbounded");
+                    var biomes = result.inputs().biomeReuseCounters().orElseThrow();
+                    if (!biomes.closed()
+                            || biomes.resident() != 0
+                            || biomes.palettes() > 25
+                            || biomes.nativeBuilds() != biomes.palettes()
+                            || biomes.targetCopies() != result.inputs().counters().fullNeighbors())
+                        throw new IllegalStateException("B stored biome reuse ownership/counts");
                 }
                 if (count.get() != 1 || !result.inputs().isClosed())
                     throw new IllegalStateException("B writer/resources");
                 actual =
                         FeatureStableSnapshot.capture(
                                 dimension, result.target(), host.registryAccess());
-                // End City's native Shulker Rotation has known non-worldgen randomness. Do not
-                // widen canonical normalization: retain raw evidence and report that limit.
-                if (f.id().equals("end-city")) {
-                    if (!nonEntityEvidence(oracle.target(), dimension, host.registryAccess())
-                                    .equals(
-                                            nonEntityEvidence(
-                                                    result.target(),
-                                                    dimension,
-                                                    host.registryAccess()))
-                            || expected.entityCount() != actual.entityCount())
-                        throw new IllegalStateException("End City nonentity B state differs");
-                } else equal(expected, actual, "original vs local " + f.id());
+                var output = root.resolve(run + "-" + f.id());
+                Files.createDirectories(output);
+                actual.write(output.resolve("features.bin.gz"));
+                expected.write(output.resolve("original.bin.gz"));
+                writeRaw(output.resolve("original-entities.nbt"), raw(oracle.target()));
+                writeRaw(output.resolve("entities.nbt"), raw(result.target()));
+                equal(
+                        new Observation(expected, raw(oracle.target())),
+                        new Observation(actual, raw(result.target())),
+                        f.id(),
+                        output.resolve("comparison.json"));
                 newTrace =
                         new LinkedHashMap<>(
                                 trace(
@@ -511,8 +670,6 @@ final class LightweightFeatureBVerifier {
                 throw new IllegalStateException("B physical pollution");
             Path output = root.resolve(run + "-" + f.id());
             Files.createDirectories(output);
-            actual.write(output.resolve("features.bin.gz"));
-            expected.write(output.resolve("original.bin.gz"));
             write(
                     output.resolve("entities-raw.json"),
                     Map.of("original", expected.rawEntityNbt(), "local", actual.rawEntityNbt()));
@@ -538,6 +695,9 @@ final class LightweightFeatureBVerifier {
             result.inputs()
                     .structureReuseMetrics()
                     .ifPresent(metrics -> entry.put("structureReuse", metrics));
+            result.inputs()
+                    .biomeReuseCounters()
+                    .ifPresent(metrics -> entry.put("biomeReuse", metrics));
             entry.put("hash", actual.hash());
             entry.put("worldgenHash", actual.worldgenDataHash());
             entry.put(
@@ -571,7 +731,7 @@ final class LightweightFeatureBVerifier {
             entry.put("postProcessing", actual.postProcessingCount());
             evidence.put(run + "-" + f.id(), entry);
             System.out.println("LIGHTWEIGHT B PASS " + run + " " + f.id() + " " + entry);
-            return actual;
+            return new Observation(actual, raw(result.target()));
         } catch (Exception e) {
             throw new IllegalStateException("Local B " + run + " " + f.id(), e);
         } finally {
@@ -679,15 +839,36 @@ final class LightweightFeatureBVerifier {
         }
     }
 
-    private static void equal(FeatureStableSnapshot a, FeatureStableSnapshot b, String id) {
-        if (!a.hash().equals(b.hash()))
-            throw new IllegalStateException(
-                    "B mismatch "
-                            + id
-                            + " "
-                            + a.diff(b)
-                            + " "
-                            + a.deterministicMetadataDifference(b));
+    private static ListTag raw(ProtoChunk chunk) {
+        var result = new ListTag();
+        chunk.getEntities().forEach(entity -> result.add(entity.copy()));
+        return result;
+    }
+
+    private static void writeRaw(Path path, ListTag raw) throws java.io.IOException {
+        var root = new CompoundTag();
+        root.put("entities", raw);
+        NbtIo.writeCompressed(root, path);
+    }
+
+    private static Observation read(Path root) throws java.io.IOException {
+        return new Observation(
+                FeatureStableSnapshot.read(root.resolve("features.bin.gz")),
+                NbtIo.readCompressed(root.resolve("entities.nbt"), NbtAccounter.unlimitedHeap())
+                        .getListOrEmpty("entities"));
+    }
+
+    private static void equal(Observation a, Observation b, String id, Path path) {
+        var comparison =
+                NativeEntityAcceptance.compare(
+                        a.snapshot(), a.raw(), b.snapshot(), b.raw(), id.equals("end-city"));
+        try {
+            write(path, comparison);
+        } catch (java.io.IOException failure) {
+            throw new IllegalStateException("Cannot preserve B comparison " + id, failure);
+        }
+        if (!comparison.accepted())
+            throw new IllegalStateException("B mismatch " + id + " " + comparison);
     }
 
     private static void write(Path p, Object value) throws java.io.IOException {

@@ -1,0 +1,17 @@
+{
+    "required": true,
+    "package": "io.github.recrivenvi.randomnibble6plus24generator.bopcausaltest.mixin",
+    "compatibilityLevel": "JAVA_25",
+    "plugin": "io.github.recrivenvi.randomnibble6plus24generator.probe.ValidationMixinPlugin",
+    "mixins": [
+        "BopCausalDecorationMixin",
+        "BopCausalRandomMixin",
+        "BopCausalBitRandomMixin",
+        "BopCausalRegionMixin",
+        "BopCausalChunkMixin",
+        "BopCausalBiomeMixin"
+    ],
+    "injectors": {
+        "defaultRequire": 1
+    }
+}

@@ -100,7 +100,8 @@ public final class MosaicPhysicalMaterializer {
                 REQUESTED_PHYSICAL_STATUSES.merge(
                         key, targetStatus, (left, right) -> right.isAfter(left) ? right : left);
         MosaicPhysicalGenerationPlan plan =
-                MosaicPhysicalGenerationPlan.derive(pos, effectiveStatus);
+                MosaicPhysicalGenerationPlan.derive(
+                        pos, effectiveStatus, PhysicalBiomePreparation.supported(level));
         PLAN_COUNT.incrementAndGet();
         plan.materializationObligations()
                 .forEach(
@@ -175,6 +176,16 @@ public final class MosaicPhysicalMaterializer {
                     if (!loaded.getPersistedStatus().isBefore(ChunkStatus.FEATURES)) {
                         MATERIALIZATION_OBLIGATIONS.remove(key);
                         return CompletableFuture.completedFuture(loaded);
+                    }
+                    if (MATERIALIZATION_OBLIGATIONS.get(key) == ChunkStatus.BIOMES
+                            && PhysicalBiomePreparation.supported(level)) {
+                        if (loaded.getPersistedStatus().isOrAfter(ChunkStatus.BIOMES)) {
+                            // Remove only the fulfilled obligation, never a concurrent upgrade.
+                            MATERIALIZATION_OBLIGATIONS.remove(key, ChunkStatus.BIOMES);
+                            return CompletableFuture.completedFuture(loaded);
+                        }
+                        return PhysicalBiomePreparation.request(level, key)
+                                .thenApply(chunk -> PhysicalBiomePreparation.awaiting(key, chunk));
                     }
                     return requestPrepared(level, holder.getPos())
                             .thenApply(
@@ -422,6 +433,12 @@ public final class MosaicPhysicalMaterializer {
     /** Called from GenerationChunkHolder.completeFuture, the scheduler-owned publication point. */
     public static void onHolderFutureCompleted(
             GenerationChunkHolder holder, ChunkStatus status, ChunkAccess chunk) {
+        var partial = PhysicalBiomePreparation.published(chunk);
+        if (partial != null) {
+            if (!holder.getPos().equals(partial.pos()))
+                throw new IllegalStateException("Partial BIOMES published to another holder");
+            MATERIALIZATION_OBLIGATIONS.remove(partial, ChunkStatus.BIOMES);
+        }
         if (status.isOrBefore(ChunkStatus.FEATURES)) {
             GenerationKey key = AWAITING_PUBLISH.remove(chunk);
             if (key != null) {
@@ -522,6 +539,7 @@ public final class MosaicPhysicalMaterializer {
     }
 
     private static void clearClosedServer(MinecraftServer server) {
+        PhysicalBiomePreparation.clear(key -> key.server() == server);
         IN_FLIGHT.keySet().removeIf(key -> key.server() == server);
         REQUESTED_PHYSICAL_STATUSES.keySet().removeIf(key -> key.server() == server);
         MATERIALIZATION_OBLIGATIONS.keySet().removeIf(key -> key.server() == server);
@@ -551,6 +569,7 @@ public final class MosaicPhysicalMaterializer {
                 key ->
                         key.server() == level.getServer()
                                 && key.dimension().equals(level.dimension());
+        PhysicalBiomePreparation.clear(belongs);
         IN_FLIGHT.keySet().removeIf(belongs);
         REQUESTED_PHYSICAL_STATUSES.keySet().removeIf(belongs);
         MATERIALIZATION_OBLIGATIONS.keySet().removeIf(belongs);
@@ -607,6 +626,7 @@ public final class MosaicPhysicalMaterializer {
     }
 
     public static void resetVerificationState() {
+        PhysicalBiomePreparation.resetVerificationState();
         if (!IN_FLIGHT.isEmpty() || !AWAITING_PUBLISH.isEmpty()) {
             throw new IllegalStateException(
                     "Cannot reset Phase 3A metrics while materialization is in flight");
@@ -742,7 +762,7 @@ public final class MosaicPhysicalMaterializer {
                 System.nanoTime() - totalStarted);
     }
 
-    private static GenerationKey key(ServerLevel level, ChunkPos pos) {
+    static GenerationKey key(ServerLevel level, ChunkPos pos) {
         MosaicRuntimeContext runtime =
                 MosaicWorldIdentity.runtimeContext(level)
                         .orElseThrow(

@@ -103,6 +103,33 @@ class MosaicPhysicalGenerationPlanTest {
     }
 
     @Test
+    void partialBiomeCapabilityDoesNotPrunePhysicalDependenciesOrTerrain() {
+        var center = new ChunkPos(125, -37);
+        for (var status :
+                java.util.List.of(
+                        ChunkStatus.STRUCTURE_STARTS,
+                        ChunkStatus.BIOMES,
+                        ChunkStatus.TERRAIN,
+                        ChunkStatus.FEATURES,
+                        ChunkStatus.INITIALIZE_LIGHT,
+                        ChunkStatus.LIGHT,
+                        ChunkStatus.SPAWN,
+                        ChunkStatus.FULL)) {
+            var legacy = MosaicPhysicalGenerationPlan.derive(center, status);
+            var partial = MosaicPhysicalGenerationPlan.derive(center, status, true);
+            assertEquals(legacy.physicalStatusRequirements(), partial.physicalStatusRequirements());
+            assertEquals(legacy.accumulatedRadius(), partial.accumulatedRadius());
+            if (status == ChunkStatus.BIOMES)
+                assertEquals(
+                        java.util.Map.of(center, ChunkStatus.BIOMES),
+                        partial.materializationObligations());
+            else
+                assertEquals(
+                        legacy.materializationObligations(), partial.materializationObligations());
+        }
+    }
+
+    @Test
     void spawnAndFullRequestsRetainCanonicalArtifactObligations() {
         ChunkPos center = new ChunkPos(12, -14);
         for (ChunkStatus status : java.util.List.of(ChunkStatus.SPAWN, ChunkStatus.FULL)) {

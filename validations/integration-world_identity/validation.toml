@@ -1,0 +1,9 @@
+tool = "worldgen_validation"
+targets = ["1.21.1-neoforge"]
+
+[instances.server]
+port = 25591
+memory-max = "3G"
+memory-min = "256M"
+jvm-args = ["-XX:ActiveProcessorCount=4"]
+game-args = ["--mixin", "mosaic-structure-input-test.mixins.json"]

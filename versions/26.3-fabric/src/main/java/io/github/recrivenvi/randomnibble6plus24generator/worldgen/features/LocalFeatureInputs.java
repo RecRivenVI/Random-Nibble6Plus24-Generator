@@ -47,6 +47,7 @@ public final class LocalFeatureInputs implements AutoCloseable {
     private final Map<Long, String> fallbackReasons = new TreeMap<>();
     private final LocalTerrainColumns columns;
     private final ScopedStructureSources structureSources;
+    private final TerrainBiomeInputs retained;
     private int blockReads, heightReads, sectionReads;
     private long fallbackNanos;
     private boolean closed;
@@ -75,13 +76,27 @@ public final class LocalFeatureInputs implements AutoCloseable {
             Observer observer,
             ScopedStructureSources structureSources,
             boolean captureProofs) {
+        this(context, target, rejected, observer, structureSources, captureProofs, null);
+    }
+
+    LocalFeatureInputs(
+            IsolatedGenerationContext context,
+            ProtoChunk target,
+            Consumer<String> rejected,
+            Observer observer,
+            ScopedStructureSources structureSources,
+            boolean captureProofs,
+            TerrainBiomeInputs retained) {
         this.context = context;
         this.rejected = rejected;
         this.observer = observer;
         this.structureSources = structureSources;
+        this.retained = retained;
         terrain.put(target.getPos().pack(), target);
         palettes.put(target.getPos().pack(), target);
-        columns = new LocalTerrainColumns(context, this::palette, structureSources, captureProofs);
+        columns =
+                new LocalTerrainColumns(
+                        context, this::palette, structureSources, captureProofs, retained);
         for (int z = context.target().z() - 1; z <= context.target().z() + 1; z++)
             for (int x = context.target().x() - 1; x <= context.target().x() + 1; x++) {
                 var p = new ChunkPos(x, z);
@@ -167,6 +182,10 @@ public final class LocalFeatureInputs implements AutoCloseable {
                 : Optional.of(structureSources.metrics());
     }
 
+    public Optional<TerrainBiomeInputs.Counters> biomeReuseCounters() {
+        return retained == null ? Optional.empty() : Optional.of(retained.counters());
+    }
+
     private void open() {
         if (closed
                 || GenerationContextRegistry.find(context.worldGenContext()).orElse(null)
@@ -182,6 +201,7 @@ public final class LocalFeatureInputs implements AutoCloseable {
         return palettes.computeIfAbsent(
                 p.pack(),
                 k -> {
+                    if (retained != null) return retained.palette(p);
                     var c =
                             new BiomePaletteChunk(
                                     p,
@@ -205,18 +225,14 @@ public final class LocalFeatureInputs implements AutoCloseable {
                 k -> {
                     long start = System.nanoTime();
                     ProtoChunk c;
-                    try (var child =
-                            IsolatedGenerationContext.create(
-                                    IsolatedGenerationMode.ISOLATED_MOSAIC,
-                                    context.hostLevel(),
-                                    context.worldSeed(),
-                                    p)) {
+                    try (var child = context.createRelated(p)) {
                         c =
                                 LightweightTerrainGenerator.generate(
                                                 child,
                                                 CompactStructureInputs.resolve(
                                                         child, structureSources),
-                                                (s, chunk) -> {})
+                                                (s, chunk) -> {},
+                                                retained)
                                         .target();
                     }
                     fallbackNanos += System.nanoTime() - start;
@@ -235,6 +251,7 @@ public final class LocalFeatureInputs implements AutoCloseable {
     @Override
     public void close() {
         columns.close();
+        if (retained != null) retained.close();
         closed = true;
     }
 

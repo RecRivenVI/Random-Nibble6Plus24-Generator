@@ -1,0 +1,36 @@
+{
+    "required": true,
+    "package": "io.github.recrivenvi.randomnibble6plus24generator.mixin",
+    "compatibilityLevel": "JAVA_21",
+    "mixins": [
+        "ChunkGeneratorStructureStateMixin",
+        "ConcentricRingsStructurePlacementMixin",
+        "StructurePlacementAccessor",
+        "StructurePoolAccess",
+        "StructurePoolListAccess",
+        "StructurePoolSizeMixin",
+        "StructureGenerationMixin",
+        "MultiNoiseSearchAccess",
+        "ClimateIndexAccess",
+        "PalettedStateBitsAccess",
+        "ClimateSearchAccess",
+        "MosaicServerIdentityMixin",
+        "MosaicLevelLifecycleMixin",
+        "DimensionDataIdentityMixin",
+        "ChunkSerializerAccess",
+        "ChunkMapQueues",
+        "MosaicChunkMapMixin",
+        "MosaicHolderMixin",
+        "MosaicPopulationMixin",
+        "MosaicStructureReloadMixin",
+        "StructureManagerMixin",
+        "WorldGenRegionSeedMixin",
+        "FeatureLocalSeedMixin",
+        "FeatureCatStructuresMixin",
+        "FeaturePoiIsolationMixin",
+        "PlacementCarvingMaskMixin"
+    ],
+    "injectors": {
+        "defaultRequire": 1
+    }
+}

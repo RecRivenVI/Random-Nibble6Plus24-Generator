@@ -38,9 +38,25 @@ abstract class PerfBPreparationMixin {
             PerfTrace.count("b.localMaterialBatches", columns.materialBatches());
             PerfTrace.count("b.localColumns", columns.columns());
             PerfTrace.count("b.localRawSamples", columns.rawSamples());
+            PerfTrace.count("b.localDensitySamples", columns.densitySamples());
+            PerfTrace.count("b.localDensityTiles", columns.densityTiles());
+            PerfTrace.count("b.localDensitySourceSamples", columns.densitySourceSamples());
             PerfTrace.count("b.heightOnlyQueries", columns.heightOnlyQueries());
             PerfTrace.count("b.heightCacheHits", columns.heightCacheHits());
+            if (result.biomeReuse() != null) {
+                var biomes = result.biomeReuse();
+                PerfTrace.count("b.biomeRequests", biomes.requests());
+                PerfTrace.count("b.biomeReuseHits", biomes.hits());
+                PerfTrace.count("b.biomeNativeBuilds", biomes.nativeBuilds());
+                PerfTrace.count("b.biomeTargetCopies", biomes.targetCopies());
+                PerfTrace.count("b.biomePreparationHits", biomes.preparationHits());
+            }
             if (result.structureReuse() != null) {
+                PerfTrace.count(
+                        "b.structureStateMismatches", result.structureReuse().stateMismatches());
+                PerfTrace.count("b.structureStateReplays", result.structureReuse().stateReplays());
+                PerfTrace.count(
+                        "b.structureUniqueSources", result.structureReuse().uniqueSources());
                 PerfTrace.count("b.structureSourceQueries", result.structureReuse().queries());
                 PerfTrace.count("b.structureSourceHits", result.structureReuse().hits());
                 PerfTrace.count(

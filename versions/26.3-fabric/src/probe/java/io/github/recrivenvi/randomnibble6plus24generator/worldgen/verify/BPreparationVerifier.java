@@ -26,8 +26,7 @@ final class BPreparationVerifier {
 
     private BPreparationVerifier() {}
 
-    static void run(MinecraftServer server, Path root) throws Exception {
-        verifyNativeCats(root);
+    static List<FeatureBVerifier.Fixture> fixtures() {
         var fixtures = new ArrayList<>(FeatureBVerifier.FIXTURES);
         var profile = MosaicWorldProfile.targetOnly();
         long catSeed =
@@ -53,6 +52,13 @@ final class BPreparationVerifier {
                         -195955039870900853L,
                         -20000,
                         30000));
+        return List.copyOf(fixtures);
+    }
+
+    static void run(MinecraftServer server, Path root) throws Exception {
+        verifyNativeCats(root);
+        var fixtures = fixtures();
+        var profile = MosaicWorldProfile.targetOnly();
         var rows = new ArrayList<Object>();
         for (var f : fixtures) {
             var dimension =

@@ -1,0 +1,12 @@
+{
+    "required": true,
+    "package": "io.github.recrivenvi.randomnibble6plus24generator.probe.structure.mixin",
+    "compatibilityLevel": "JAVA_17",
+    "refmap": "mosaic-structure-input-test.refmap.json",
+    "mixins": [
+        "NativePlanDependencyAccess"
+    ],
+    "injectors": {
+        "defaultRequire": 1
+    }
+}

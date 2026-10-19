@@ -9,6 +9,7 @@ public final class NativeEntityAcceptance {
 
     public static final String RULE = "26.3-native-drowned-fields-1";
     public static final String SHULKER_RULE = "26.3-native-end-city-shulker-yaw-1";
+    public static final String PIGLIN_ORDER_RULE = "26.3-native-bastion-piglin-attribute-order-1";
 
     public record Entities(
             boolean accepted,
@@ -31,8 +32,17 @@ public final class NativeEntityAcceptance {
 
     static Entities compare(
             ListTag before, ListTag after, boolean endCity, boolean catAttributeOrder) {
-        var left = view(before, endCity, catAttributeOrder);
-        var right = view(after, endCity, catAttributeOrder);
+        return compare(before, after, endCity, catAttributeOrder, false);
+    }
+
+    static Entities compare(
+            ListTag before,
+            ListTag after,
+            boolean endCity,
+            boolean catAttributeOrder,
+            boolean piglinAttributeOrder) {
+        var left = view(before, endCity, catAttributeOrder, piglinAttributeOrder);
+        var right = view(after, endCity, catAttributeOrder, piglinAttributeOrder);
         var unexpected = NativeFeatureRepeatVerifier.differences(left, right);
         return new Entities(
                 unexpected.isEmpty(),
@@ -64,6 +74,17 @@ public final class NativeEntityAcceptance {
             ListTag afterRaw,
             boolean endCity,
             boolean catAttributeOrder) {
+        return compare(before, beforeRaw, after, afterRaw, endCity, catAttributeOrder, false);
+    }
+
+    static Snapshot compare(
+            FeatureStableSnapshot before,
+            ListTag beforeRaw,
+            FeatureStableSnapshot after,
+            ListTag afterRaw,
+            boolean endCity,
+            boolean catAttributeOrder,
+            boolean piglinAttributeOrder) {
         requireMatches(before, beforeRaw);
         requireMatches(after, afterRaw);
         var diff = before.diff(after);
@@ -74,12 +95,17 @@ public final class NativeEntityAcceptance {
                         : metadata == null || metadata.equals("ProtoChunk entities differ")
                                 ? null
                                 : metadata;
-        var entities = compare(beforeRaw, afterRaw, endCity, catAttributeOrder);
+        var entities =
+                compare(beforeRaw, afterRaw, endCity, catAttributeOrder, piglinAttributeOrder);
         return new Snapshot(
                 other == null && entities.accepted(), diff.equivalent(), other, entities);
     }
 
-    private static ListTag view(ListTag entities, boolean endCity, boolean catAttributeOrder) {
+    private static ListTag view(
+            ListTag entities,
+            boolean endCity,
+            boolean catAttributeOrder,
+            boolean piglinAttributeOrder) {
         var result = new ListTag();
         for (var tag : entities) {
             if (!(tag instanceof CompoundTag original))
@@ -105,6 +131,18 @@ public final class NativeEntityAcceptance {
                 if (!(entity.get("attributes") instanceof ListTag))
                     throw new IllegalArgumentException("Malformed cat attributes");
                 var byId = NativeFeatureRepeatVerifier.attributesById(entity);
+                var sorted = new ListTag();
+                for (var id : new TreeSet<>(byId.keySet())) sorted.add(byId.get(id));
+                entity.put("attributes", sorted);
+            }
+            if (piglinAttributeOrder && entity.getStringOr("id", "").equals("minecraft:piglin")) {
+                if (!(entity.get("attributes") instanceof ListTag))
+                    throw new IllegalArgumentException("Malformed evidenced piglin attributes");
+                var byId = NativeFeatureRepeatVerifier.attributesById(entity);
+                if (!byId.keySet()
+                        .equals(Set.of("minecraft:follow_range", "minecraft:movement_speed")))
+                    throw new IllegalArgumentException(
+                            "Outside evidenced piglin attribute members");
                 var sorted = new ListTag();
                 for (var id : new TreeSet<>(byId.keySet())) sorted.add(byId.get(id));
                 entity.put("attributes", sorted);

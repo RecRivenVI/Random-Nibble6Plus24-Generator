@@ -1,0 +1,12 @@
+tool = "worldgen_validation"
+targets = ["26.3-fabric"]
+
+[alpha]
+input = "minecraft-protocol-alpha-fabric"
+storage-limit-bytes = 536870912
+
+[instances.client]
+width = 1920
+height = 1080
+memory-max = "4G"
+jvm-args = ["-XX:ActiveProcessorCount=4"]

@@ -316,6 +316,7 @@ public final class FeatureATreeVerifier {
                         .resolve("validations/conformance-prefeatures/result");
         int fixtures = 0, columns = 0, fallbacks = 0, fallbackChunks = 0, densityColumns = 0;
         long heightOnlyQueries = 0, heightCacheHits = 0, rawSamples = 0;
+        long densitySamples = 0, densityTiles = 0, fullDensitySamples = 0;
         long cells = 0;
         var details = new ArrayList<Map<String, Object>>();
         for (String suite : List.of("terrain_matrix", "terrain_structures")) {
@@ -520,6 +521,17 @@ public final class FeatureATreeVerifier {
                         heightOnlyQueries += query.counters().heightOnlyQueries();
                         heightCacheHits += query.counters().heightCacheHits();
                         rawSamples += query.counters().rawSamples();
+                        densitySamples += query.counters().densitySamples();
+                        densityTiles += query.counters().densityTiles();
+                        fullDensitySamples +=
+                                (long) query.counters().noiseBatches()
+                                        * 256
+                                        * c.generator()
+                                                .generatorSettings()
+                                                .value()
+                                                .noiseSettings()
+                                                .clampToHeightAccessor(host)
+                                                .height();
                         details.add(
                                 Map.of(
                                         "fixture",
@@ -569,8 +581,27 @@ public final class FeatureATreeVerifier {
                 || cells == 0
                 || densityColumns != columns
                 || heightOnlyQueries == 0
-                || heightCacheHits == 0)
-            throw new IllegalStateException("Insufficient independent local column proof");
+                || heightCacheHits == 0) {
+            write(
+                    root.resolve("independent-columns-failure.json"),
+                    Map.of(
+                            "fixtures",
+                            fixtures,
+                            "columns",
+                            columns,
+                            "fallbacks",
+                            fallbacks,
+                            "details",
+                            details));
+            throw new IllegalStateException(
+                    "Insufficient independent local column proof: "
+                            + fixtures
+                            + " fixtures, "
+                            + columns
+                            + " columns, "
+                            + fallbacks
+                            + " fallbacks");
+        }
         var result =
                 Map.<String, Object>of(
                         "status",
@@ -596,7 +627,13 @@ public final class FeatureATreeVerifier {
                         "heightCacheHits",
                         heightCacheHits,
                         "rawSamples",
-                        rawSamples);
+                        rawSamples,
+                        "densitySamples",
+                        densitySamples,
+                        "densityTiles",
+                        densityTiles,
+                        "fullDensitySamples",
+                        fullDensitySamples);
         write(root.resolve("independent-column-work.json"), queryWork);
         write(root.resolve("independent-columns.json"), result);
         return result;

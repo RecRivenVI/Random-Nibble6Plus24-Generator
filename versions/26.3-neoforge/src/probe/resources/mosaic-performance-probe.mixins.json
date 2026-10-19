@@ -1,0 +1,37 @@
+{
+    "required": true,
+    "package": "io.github.recrivenvi.randomnibble6plus24generator.performance.mixin",
+    "compatibilityLevel": "JAVA_25",
+    "mixins": [
+        "PerfServerMixin",
+        "PerfChunkMapMixin",
+        "PerfChunkHolderMixin",
+        "PerfTicketStorageMixin",
+        "PerfMaterializerMixin",
+        "PerfContextMixin",
+        "PerfBPreparationMixin",
+        "PerfBiomeReuseMixin",
+        "PerfNativeBiomeStateAccessor",
+        "PerfStructureReuseAuditMixin",
+        "PerfBiomeCallsMixin",
+        "PerfSpawnerMixin",
+        "PerfPoiMixin",
+        "PerfSenderMixin",
+        "PerfCacheMixin",
+        "PerfPlayerTicketsMixin",
+        "PerfPlanMixin",
+        "PerfArtifactMixin",
+        "PerfIdentityMixin",
+        "PerfProfileDataMixin",
+        "PerfVirtualStageMixin",
+        "StructureIsolationStateMixin",
+        "StructureIsolationPlacementMixin",
+        "StructureIsolationGeneratorMixin",
+        "RepairCOracleMixin",
+        "CandidateOracleMixin"
+    ],
+    "injectors": {
+        "defaultRequire": 1
+    },
+    "plugin": "io.github.recrivenvi.randomnibble6plus24generator.probe.ValidationMixinPlugin"
+}

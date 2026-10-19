@@ -32,6 +32,13 @@ public final class NativeFeatureRepeatVerifier {
     }
 
     public static Map<String, Object> fixture() {
+        if (Boolean.getBoolean("featureb.nativeMonster")) {
+            var f =
+                    LightweightFeatureBVerifier.monsterFixtures()
+                            .get(Integer.getInteger("featureb.monsterIndex", 0));
+            return Map.of(
+                    "seed", f.seed(), "dimension", "minecraft:overworld", "x", f.x(), "z", f.z());
+        }
         if (Boolean.getBoolean("featureb.nativeCat"))
             return Map.of(
                     "seed",
@@ -94,7 +101,9 @@ public final class NativeFeatureRepeatVerifier {
         require(GenerationContextRegistry.bindingCount() == 0, "Unexpected isolated context");
         long generationCalls = FeatureCFlowVerifier.generationCount();
         var plan = FeatureOrderingPlan.targetLocalZxRowMajorV1(target);
-        NativeFeatureExecutionTrace.begin(plan.writers());
+        boolean monster = Boolean.getBoolean("featureb.nativeMonster");
+        var writers = monster ? List.of(target) : plan.writers();
+        NativeFeatureExecutionTrace.begin(writers);
         STAGES.clear();
         observing = true;
         long started = System.nanoTime();
@@ -102,7 +111,7 @@ public final class NativeFeatureRepeatVerifier {
         CompoundTag raw = new CompoundTag();
         NativeFeatureExecutionTrace.Result trace;
         try {
-            for (var pos : plan.writers()) {
+            for (var pos : writers) {
                 var chunk = level.getChunk(pos.x(), pos.z(), ChunkStatus.FEATURES, true);
                 require(
                         chunk instanceof ProtoChunk
@@ -126,18 +135,22 @@ public final class NativeFeatureRepeatVerifier {
         snapshot.write(root.resolve("target.bin.gz"));
         NbtIo.writeCompressed(raw, root.resolve("entities-raw.nbt"));
         write(root.resolve("entities-raw.json"), snapshot.rawEntityNbt());
-        require(
-                shulker || cat ? snapshot.entityCount() > 0 : snapshot.entityCount() == 1,
-                "Native entity positive count changed: " + snapshot.entityCount());
-        for (var tag : raw.getListOrEmpty("entities"))
+        if (!monster)
             require(
-                    tag instanceof CompoundTag entity
-                            && entity.getStringOr("id", "")
-                                    .equals(
-                                            shulker
-                                                    ? "minecraft:shulker"
-                                                    : cat ? "minecraft:cat" : "minecraft:drowned"),
-                    "Native entity positive was not reached");
+                    shulker || cat ? snapshot.entityCount() > 0 : snapshot.entityCount() == 1,
+                    "Native entity positive count changed: " + snapshot.entityCount());
+        if (!monster)
+            for (var tag : raw.getListOrEmpty("entities"))
+                require(
+                        tag instanceof CompoundTag entity
+                                && entity.getStringOr("id", "")
+                                        .equals(
+                                                shulker
+                                                        ? "minecraft:shulker"
+                                                        : cat
+                                                                ? "minecraft:cat"
+                                                                : "minecraft:drowned"),
+                        "Native entity positive was not reached");
         require(
                 FeatureCFlowVerifier.generationCount() == generationCalls
                         && GenerationContextRegistry.bindingCount() == 0,
@@ -157,6 +170,12 @@ public final class NativeFeatureRepeatVerifier {
         evidence.put("entities", snapshot.entityCount());
         evidence.put("rawEntities", snapshot.rawEntityNbt());
         evidence.put("trace", trace);
+        if (monster) {
+            var events = MonsterRoomProbe.drain();
+            evidence.put("monsterRooms", events);
+            evidence.put("monsterRoomTraces", MonsterRoomProbe.drainTraces());
+            require(!events.isEmpty(), "Native monster-room diagnostic did not reach a spawner");
+        }
         var stages = new TreeMap<String, Integer>();
         STAGES.forEach((key, count) -> stages.put(key, count.get()));
         evidence.put("stages", stages);
@@ -165,7 +184,7 @@ public final class NativeFeatureRepeatVerifier {
                 FeatureCFlowVerifier.generationCount() - generationCalls);
         evidence.put("bindings", GenerationContextRegistry.bindingCount());
         evidence.put("runtimeMs", (System.nanoTime() - started) / 1_000_000);
-        if (!root.getFileName().toString().equals("host_0")) {
+        if (!monster && !root.getFileName().toString().equals("host_0")) {
             Path first = root.resolveSibling("host_0");
             var previous = FeatureStableSnapshot.read(first.resolve("target.bin.gz"));
             var diff = previous.diff(snapshot);

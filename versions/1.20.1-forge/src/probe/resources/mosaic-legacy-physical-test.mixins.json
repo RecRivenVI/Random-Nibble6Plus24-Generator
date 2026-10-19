@@ -1,0 +1,24 @@
+{
+    "required": true,
+    "package": "io.github.recrivenvi.randomnibble6plus24generator.probe.production.mixin",
+    "compatibilityLevel": "JAVA_17",
+    "refmap": "mosaic-structure-input-test.refmap.json",
+    "mixins": [
+        "PhysicalServerMixin",
+        "PhysicalFailureMixin",
+        "PhysicalHolderAccess",
+        "PhysicalStateAccess",
+        "PhysicalContextLifetimeMixin",
+        "RuntimeIdleAccess",
+        "RuntimeTickMixin",
+        "RuntimeFurnaceMixin",
+        "PartialPopulationMixin",
+        "PartialColdBiomesMixin",
+        "PartialIncomingWriteMixin",
+        "PartialDecorationMixin",
+        "PartialDiskInputMixin"
+    ],
+    "injectors": {
+        "defaultRequire": 1
+    }
+}

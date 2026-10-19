@@ -6,6 +6,77 @@ import net.minecraft.nbt.*;
 import org.junit.jupiter.api.Test;
 
 class NativeEntityAcceptanceTest {
+    private static final String PIGLIN =
+            """
+            {id:'minecraft:piglin',Health:16.0f,attributes:[
+              {id:'minecraft:follow_range',base:16.0d,modifiers:[
+                {id:'minecraft:random_spawn_bonus',amount:0.005d,operation:'add_multiplied_base'}]},
+              {id:'minecraft:movement_speed',base:0.3499999940395355d}]}
+            """;
+
+    @Test
+    void piglinRuleOnlyReordersTheTwoEvidencedAttributes() throws Exception {
+        var a = entities(PIGLIN);
+        var b = a.copy();
+        var list = b.getCompoundOrEmpty(0).getListOrEmpty("attributes");
+        list.add(list.remove(0));
+        var raw = b.copy();
+        assertFalse(NativeEntityAcceptance.compare(a, b).accepted());
+        assertFalse(NativeEntityAcceptance.compare(a, b, false, true).accepted());
+        assertTrue(NativeEntityAcceptance.compare(a, b, false, false, true).accepted());
+        assertEquals(raw, b);
+        b.getCompoundOrEmpty(0)
+                .getListOrEmpty("attributes")
+                .getCompoundOrEmpty(1)
+                .getListOrEmpty("modifiers")
+                .getCompoundOrEmpty(0)
+                .putDouble("amount", 0.006);
+        assertFalse(NativeEntityAcceptance.compare(a, b, false, false, true).accepted());
+    }
+
+    @Test
+    void piglinValuesAndUnrelatedEntityFieldsRemainExact() throws Exception {
+        var a = entities(PIGLIN);
+        for (var key : java.util.List.of("base", "Health")) {
+            var b = a.copy();
+            if (key.equals("base"))
+                b.getCompoundOrEmpty(0)
+                        .getListOrEmpty("attributes")
+                        .getCompoundOrEmpty(0)
+                        .putDouble(key, 17);
+            else b.getCompoundOrEmpty(0).putFloat(key, 15);
+            assertFalse(NativeEntityAcceptance.compare(a, b, false, false, true).accepted());
+        }
+        var brute = entities(PIGLIN.replace("minecraft:piglin", "minecraft:piglin_brute"));
+        var swapped = brute.copy();
+        var list = swapped.getCompoundOrEmpty(0).getListOrEmpty("attributes");
+        list.add(list.remove(0));
+        assertFalse(NativeEntityAcceptance.compare(brute, swapped, false, false, true).accepted());
+    }
+
+    @Test
+    void piglinUnknownMissingAndDuplicateAttributesCannotUseTheException() throws Exception {
+        var a = entities(PIGLIN);
+        var missing = a.copy();
+        missing.getCompoundOrEmpty(0).getListOrEmpty("attributes").remove(0);
+        var extra = a.copy();
+        extra.getCompoundOrEmpty(0)
+                .getListOrEmpty("attributes")
+                .add(TagParser.parseCompoundFully("{id:'minecraft:armor',base:1.0d}"));
+        var duplicate = a.copy();
+        var attributes = duplicate.getCompoundOrEmpty(0).getListOrEmpty("attributes");
+        attributes.add(attributes.get(0).copy());
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> NativeEntityAcceptance.compare(a, missing, false, false, true));
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> NativeEntityAcceptance.compare(a, extra, false, false, true));
+        assertThrows(
+                IllegalStateException.class,
+                () -> NativeEntityAcceptance.compare(a, duplicate, false, false, true));
+    }
+
     @Test
     void catRuleOnlyReordersWholeAttributesAndKeepsAllValues() throws Exception {
         var a = entities("{id:'minecraft:cat',attributes:[{id:'a',base:1.0d},{id:'b',base:2.0d}]}");

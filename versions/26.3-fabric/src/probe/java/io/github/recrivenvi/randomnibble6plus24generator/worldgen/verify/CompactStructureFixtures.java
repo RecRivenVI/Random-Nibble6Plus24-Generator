@@ -144,7 +144,7 @@ final class CompactStructureFixtures {
                                 level.structureManager(), target);
                 for (int x = target.getMinBlockX(); x <= target.getMaxBlockX(); x++) {
                     for (int z = target.getMinBlockZ(); z <= target.getMaxBlockZ(); z++) {
-                        for (int y = level.getMinY(); y < level.getMaxY(); y++) {
+                        for (int y = level.getMinY(); y <= level.getMaxY(); y++) {
                             if (beard.sampleValue(context, x, y, z) != 0) return target;
                         }
                     }

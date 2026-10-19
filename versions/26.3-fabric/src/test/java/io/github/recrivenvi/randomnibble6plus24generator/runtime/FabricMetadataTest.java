@@ -39,12 +39,15 @@ class FabricMetadataTest {
         JsonObject mixins = resourceJson("/randomnibble6plus24generator.mixins.json");
 
         assertTrue(mixins.get("required").getAsBoolean());
-        assertEquals(41, mixins.getAsJsonArray("mixins").size());
+        assertEquals(46, mixins.getAsJsonArray("mixins").size());
         for (String hook :
                 java.util.List.of(
                         "StructureGenerationMixin",
+                        "ClimateIndexAccess",
+                        "ClimateSearchAccess",
                         "StructureTemplatePaletteMixin",
-                        "StructureTemplatePoolMixin")) {
+                        "StructureTemplatePoolMixin",
+                        "LocalDensityInterpolationMixin")) {
             assertTrue(
                     mixins.getAsJsonArray("mixins")
                             .contains(new com.google.gson.JsonPrimitive(hook)));

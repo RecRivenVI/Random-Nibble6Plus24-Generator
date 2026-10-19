@@ -1,6 +1,5 @@
 package io.github.recrivenvi.randomnibble6plus24generator.worldgen.session;
 
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.generator.MosaicChunkGenerator;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile.MosaicWorldProfile;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.ConcentricRingScope;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.ConcentricRingStateAccess;
@@ -30,7 +29,6 @@ import net.minecraft.world.level.StructureManager;
 import net.minecraft.world.level.biome.BiomeManager;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkAccess;
-import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.chunk.ChunkGeneratorStructureState;
 import net.minecraft.world.level.chunk.LightChunkGetter;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
@@ -98,6 +96,16 @@ public final class IsolatedGenerationContext implements AutoCloseable {
             long worldSeed,
             ChunkPos target,
             MosaicWorldProfile profile) {
+        this(mode, hostLevel, worldSeed, target, profile, null);
+    }
+
+    private IsolatedGenerationContext(
+            IsolatedGenerationMode mode,
+            ServerLevel hostLevel,
+            long worldSeed,
+            ChunkPos target,
+            MosaicWorldProfile profile,
+            NoiseBasedChunkGenerator related) {
         long setupStarted = System.nanoTime();
         this.mode = mode;
         this.profile = java.util.Objects.requireNonNull(profile, "profile");
@@ -106,7 +114,11 @@ public final class IsolatedGenerationContext implements AutoCloseable {
         this.dimension = hostLevel.dimension();
         this.target = target;
         this.worldSeed = worldSeed;
-        this.generator = copyNoiseGenerator(hostLevel.getChunkSource().getGenerator());
+        this.generator =
+                related == null
+                        ? SeedLocalNoiseGenerator.copy(hostLevel, worldSeed)
+                        : new NoiseBasedChunkGenerator(
+                                related.getBiomeSource(), related.generatorSettings());
 
         MinecraftServer server = hostLevel.getServer();
         RegistryAccess registryAccess = hostLevel.registryAccess();
@@ -207,6 +219,13 @@ public final class IsolatedGenerationContext implements AutoCloseable {
     public boolean clipsFeatureWrites() {
         return profile.featureOrderingAlgorithmVersion()
                 == MosaicWorldProfile.FEATURE_ORDERING_TARGET_ONLY;
+    }
+
+    /** Same seed/configuration only; descendants never borrow mutable RandomState or sessions. */
+    public IsolatedGenerationContext createRelated(ChunkPos position) {
+        if (closed) throw new IllegalStateException("Closed isolated context");
+        return new IsolatedGenerationContext(
+                mode, hostLevel, worldSeed, position, profile, generator);
     }
 
     public boolean featureWriteAllowed(BlockPos pos) {
@@ -744,20 +763,6 @@ public final class IsolatedGenerationContext implements AutoCloseable {
         if (closed) {
             throw new IllegalStateException("Isolated generation context is closed");
         }
-    }
-
-    private static NoiseBasedChunkGenerator copyNoiseGenerator(ChunkGenerator generator) {
-        if (generator instanceof NoiseBasedChunkGenerator noiseGenerator) {
-            return new NoiseBasedChunkGenerator(
-                    noiseGenerator.getBiomeSource(), noiseGenerator.generatorSettings());
-        }
-        if (generator instanceof MosaicChunkGenerator mosaicGenerator) {
-            return new NoiseBasedChunkGenerator(
-                    mosaicGenerator.getBiomeSource(), mosaicGenerator.generatorSettings());
-        }
-        throw new IllegalArgumentException(
-                "Isolated generation through FEATURES requires a noise-based generator configuration, found "
-                        + generator.getClass().getName());
     }
 
     private record GenerationResult(

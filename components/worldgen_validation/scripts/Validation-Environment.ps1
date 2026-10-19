@@ -8,14 +8,23 @@ if (-not (Test-Path -LiteralPath $localConfiguration) -or
 Add-Type -AssemblyName Microsoft.VisualBasic
 $validationCaller = (Get-PSCallStack)[1].ScriptName
 $validationProject = Split-Path -Leaf (Split-Path -Parent $validationCaller)
+if (Get-Variable validationProjectOverride -ErrorAction SilentlyContinue) {
+    if ($validationProjectOverride -notmatch '^[a-z]+-[a-z0-9_]+$') { throw 'Invalid validation project override' }
+    $validationProject = $validationProjectOverride
+}
 $validationTarget = if ($env:MOSAIC_VALIDATION_TARGET) { $env:MOSAIC_VALIDATION_TARGET } else { '26.2-fabric' }
-if ($validationTarget -notin @('26.2-fabric', '26.3-fabric')) { throw "Unregistered validation target: $validationTarget" }
+if ($validationTarget -notin @('26.2-fabric', '26.3-fabric', '26.3-neoforge', '26.1.2-neoforge', '1.21.1-neoforge', '1.20.1-forge')) { throw "Unregistered validation target: $validationTarget" }
 $registeredValidation = Get-Content -LiteralPath (Join-Path $validationRepository "validations/$validationProject/validation.toml") -Raw
 if ($registeredValidation -notmatch ('targets\s*=\s*\[[^\]]*"' + [regex]::Escape($validationTarget) + '"')) {
     throw "Validation $validationProject does not support $validationTarget"
 }
 $targetFacts = ConvertFrom-StringData (Get-Content -LiteralPath (Join-Path $validationRepository "versions/$validationTarget/target.properties") -Raw)
-$validationPackMetadata = @{ pack = @{ pack_format = [int]$targetFacts.data_pack_major; min_format = @([int]$targetFacts.data_pack_major, [int]$targetFacts.data_pack_minor); max_format = @([int]$targetFacts.data_pack_major, [int]$targetFacts.data_pack_minor); description = 'Hidden Mosaic validation world' } } | ConvertTo-Json -Depth 4 -Compress
+$pack = @{ pack_format = [int]$targetFacts.data_pack_major; description = 'Hidden Mosaic validation world' }
+if (!$validationTarget.StartsWith('1.')) {
+    $pack.min_format = @([int]$targetFacts.data_pack_major, [int]$targetFacts.data_pack_minor)
+    $pack.max_format = @([int]$targetFacts.data_pack_major, [int]$targetFacts.data_pack_minor)
+}
+$validationPackMetadata = @{ pack = $pack } | ConvertTo-Json -Depth 4 -Compress
 $validationServer = Join-Path $validationRepository "validations/$validationProject/instance/$validationTarget/server"
 New-Item -ItemType Directory -Path $validationServer -Force | Out-Null
 $validationProperties = Join-Path $validationServer 'server.properties'

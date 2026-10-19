@@ -78,6 +78,10 @@ public final class Phase3C2ProductionVerification {
                     "Phase 3C2 production observer requires a Mosaic world");
         }
         ServerLevel level = level(server);
+        if (mode.startsWith("biomes-")) {
+            verifyPartialBiomes(server, level, mode);
+            return;
+        }
         MosaicPhysicalMaterializer.Metrics baselineMetrics = MosaicPhysicalMaterializer.metrics();
         MosaicPhysicalPoiReconciler.Metrics baselinePoi = MosaicPhysicalPoiReconciler.metrics();
         PhysicalMosaicTrace.Snapshot baselineTrace = PhysicalMosaicTrace.snapshot();
@@ -91,7 +95,16 @@ public final class Phase3C2ProductionVerification {
         } else {
             for (ChunkPos pos : positions) futures.add(request(level, pos));
         }
-        server.managedBlock(() -> futures.stream().allMatch(CompletableFuture::isDone));
+        boolean requestProof = Boolean.getBoolean(PREFIX + "requestProof");
+        long requestDeadline =
+                System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(300);
+        server.managedBlock(
+                () ->
+                        futures.stream().allMatch(CompletableFuture::isDone)
+                                || (requestProof && System.nanoTime() >= requestDeadline));
+        if (requestProof && futures.stream().anyMatch(future -> !future.isDone()))
+            throw new IllegalStateException(
+                    "Ordinary request proof exceeded its 300-second observation bound");
 
         List<LevelChunk> chunks = new ArrayList<>();
         for (CompletableFuture<ChunkResult<ChunkAccess>> future : futures) {
@@ -266,6 +279,8 @@ public final class Phase3C2ProductionVerification {
                 "lifecycleDuplicates",
                 map(delta(baselineTrace.lifecycleDuplicates(), trace.lifecycleDuplicates())));
         result.add("runtimeTicks", map(delta(baselineTrace.runtimeTicks(), trace.runtimeTicks())));
+        if (Boolean.getBoolean(PREFIX + "requestProof"))
+            result.add("requestProof", requestProof(level, mode, positions, chunks));
         write(result);
         RandomNibble6Plus24Generator.LOGGER.info(
                 "Phase 3C2 ordinary production request PASS mode={} target={}", mode, target());
@@ -273,9 +288,221 @@ public final class Phase3C2ProductionVerification {
             server.halt(false);
     }
 
+    private static void verifyPartialBiomes(
+            MinecraftServer server, ServerLevel level, String mode) {
+        boolean reload = mode.equals("biomes-reload");
+        if (!reload && !mode.equals("biomes-first"))
+            throw new IllegalArgumentException("Unknown partial biome lifecycle mode");
+        var pos = target();
+        io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization
+                .PhysicalBiomePreparation.observeForVerification(level, pos);
+        long artifactsBefore = MosaicPhysicalMaterializer.artifactCaptures(level, pos);
+        List<CompletableFuture<ChunkResult<ChunkAccess>>> requests = new ArrayList<>();
+        for (int i = 0; i < 16; i++)
+            requests.add(
+                    level.getChunkSource()
+                            .getChunkFuture(pos.x(), pos.z(), ChunkStatus.BIOMES, true));
+        server.managedBlock(() -> requests.stream().allMatch(CompletableFuture::isDone));
+        var chunk =
+                requests.getFirst()
+                        .join()
+                        .orElseThrow(() -> new IllegalStateException("No physical BIOMES"));
+        for (var request : requests)
+            if (request.join()
+                            .orElseThrow(
+                                    () -> new IllegalStateException("Missing duplicate BIOMES"))
+                    != chunk)
+                throw new IllegalStateException(
+                        "Concurrent BIOMES requests published different chunks");
+        if (chunk.getPersistedStatus() != ChunkStatus.BIOMES
+                || MosaicPhysicalMaterializer.artifactCaptures(level, pos) != artifactsBefore)
+            throw new IllegalStateException("BIOMES-only request generated full canonical terrain");
+        long local =
+                MosaicWorldIdentity.runtimeContext(level)
+                        .orElseThrow()
+                        .resolveLocalWorldSeed(level.dimension(), pos);
+        var capture =
+                FeatureStableSnapshot.capture(
+                        level.dimension().identifier().toString(), chunk, level.registryAccess());
+        Path baseline = Path.of(System.getProperty(PREFIX + "biomeBaseline"));
+        try {
+            var raw =
+                    net.minecraft.world.level.chunk.storage.SerializableChunkData.copyOf(
+                                    level, chunk)
+                            .write();
+            net.minecraft.nbt.NbtIo.writeCompressed(
+                    raw, Path.of(System.getProperty(PREFIX + "output") + ".nbt.gz"));
+            if (reload) {
+                var expected = FeatureStableSnapshot.read(baseline);
+                if (!expected.diff(capture).equivalent())
+                    throw new IllegalStateException(
+                            "Reloaded BIOMES differs from native-load control: "
+                                    + expected.diff(capture));
+                if (io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization
+                                .PhysicalBiomePreparation.builds(level, pos)
+                        != 0L)
+                    throw new IllegalStateException("Partial reload rebuilt BIOMES inputs");
+            } else {
+                // Native read also primes status-required heightmaps missing from a partial
+                // save. Compare against that real load boundary, not only a starts-only decode.
+                var serialized =
+                        net.minecraft.world.level.chunk.storage.SerializableChunkData.parse(
+                                level, level.palettedContainerFactory(), raw.copy());
+                if (serialized == null)
+                    throw new IllegalStateException("Native partial NBT parser rejected data");
+                var loadControl =
+                        serialized.read(
+                                level,
+                                level.getPoiManager(),
+                                new net.minecraft.world.level.chunk.storage.RegionStorageInfo(
+                                        "partial-biome-control", level.dimension(), "chunk"),
+                                pos);
+                // Explicit local seed keeps the control independent of the physical reload hook.
+                loadControl.setAllStarts(
+                        io.github.recrivenvi.randomnibble6plus24generator.mixin
+                                .SerializableChunkDataInvoker
+                                .randomnibble6plus24generator$unpackStructureStarts(
+                                        net.minecraft.world.level.levelgen.structure.pieces
+                                                .StructurePieceSerializationContext.fromLevel(
+                                                level),
+                                        raw.getCompoundOrEmpty("structures"),
+                                        local));
+                FeatureStableSnapshot.capture(
+                                level.dimension().identifier().toString(),
+                                loadControl,
+                                level.registryAccess())
+                        .write(baseline);
+                net.minecraft.nbt.NbtIo.writeCompressed(
+                        net.minecraft.world.level.chunk.storage.SerializableChunkData.copyOf(
+                                        level, loadControl)
+                                .write(),
+                        Path.of(
+                                System.getProperty(PREFIX + "output")
+                                        + ".native-load-control.nbt.gz"));
+                if (io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization
+                                .PhysicalBiomePreparation.builds(level, pos)
+                        != 1L)
+                    throw new IllegalStateException("Native partial preparation was not exercised");
+            }
+        } catch (IOException failure) {
+            throw new IllegalStateException(
+                    "Cannot retain partial BIOMES lifecycle evidence", failure);
+        }
+        JsonObject result = new JsonObject();
+        result.addProperty("status", "PASS");
+        result.addProperty("mode", mode);
+        result.addProperty("dimension", level.dimension().identifier().toString());
+        result.addProperty("target", pos.toString());
+        result.addProperty("chunkStatus", chunk.getPersistedStatus().getName());
+        result.addProperty("localWorldSeed", Long.toString(local));
+        result.addProperty(
+                "artifactGenerations",
+                MosaicPhysicalMaterializer.artifactCaptures(level, pos) - artifactsBefore);
+        result.addProperty("canonicalHash", capture.hash());
+        result.addProperty("sameChunkFor16Requests", true);
+        if (!reload) {
+            // Separate frontier: it cannot promote the BIOMES-only target being saved above.
+            var racePos = new ChunkPos(pos.x() + 32, pos.z());
+            var initial =
+                    level.getChunkSource()
+                            .getChunkFuture(racePos.x(), racePos.z(), ChunkStatus.BIOMES, true);
+            List<CompletableFuture<ChunkResult<ChunkAccess>>> upgrades = new ArrayList<>();
+            for (int i = 0; i < 16; i++) upgrades.add(request(level, racePos));
+            server.managedBlock(
+                    () ->
+                            initial.isDone()
+                                    && upgrades.stream().allMatch(CompletableFuture::isDone));
+            var complete =
+                    upgrades.getFirst()
+                            .join()
+                            .orElseThrow(() -> new IllegalStateException("Upgrade race lost FULL"));
+            if (!(complete instanceof LevelChunk)
+                    || complete.getPersistedStatus() != ChunkStatus.FULL
+                    || !complete.isLightCorrect()
+                    || MosaicPhysicalMaterializer.artifactCaptures(level, racePos) != 1L)
+                throw new IllegalStateException(
+                        "BIOMES/FULL upgrade did not materialize exactly one canonical Artifact");
+            for (var upgrade : upgrades)
+                if (upgrade.join()
+                                .orElseThrow(
+                                        () ->
+                                                new IllegalStateException(
+                                                        "Upgrade race lost duplicate"))
+                        != complete)
+                    throw new IllegalStateException(
+                            "Upgrade race published duplicate physical FULL chunks");
+            if (initial.join()
+                    .orElseThrow(() -> new IllegalStateException("Upgrade race lost BIOMES"))
+                    .getPersistedStatus()
+                    .isBefore(ChunkStatus.BIOMES))
+                throw new IllegalStateException("Upgrade race exposed an empty palette");
+            result.addProperty("concurrentUpgradeExactlyOneArtifact", true);
+        }
+        result.add(
+                "partialBiomes",
+                map(
+                        io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization
+                                .PhysicalBiomePreparation.metrics()));
+        write(result);
+        server.halt(false);
+    }
+
     private static CompletableFuture<ChunkResult<ChunkAccess>> request(
             ServerLevel level, ChunkPos pos) {
         return level.getChunkSource().getChunkFuture(pos.x(), pos.z(), ChunkStatus.FULL, true);
+    }
+
+    private static JsonObject requestProof(
+            ServerLevel level, String mode, List<ChunkPos> positions, List<LevelChunk> chunks) {
+        String input = System.getProperty(PREFIX + "inputHash", "");
+        if (!input.matches("[A-F0-9]{64}"))
+            throw new IllegalStateException("Production request proof requires its source input");
+        var identities = new java.util.IdentityHashMap<LevelChunk, Boolean>();
+        for (int i = 0; i < chunks.size(); i++) {
+            var expected = mode.equals("concurrent") ? target() : positions.get(i);
+            var chunk = chunks.get(i);
+            if (!chunk.getPos().equals(expected))
+                throw new IllegalStateException("Production request returned another position");
+            identities.put(chunk, Boolean.TRUE);
+        }
+        if (identities.size() != positions.size())
+            throw new IllegalStateException("Repeated FULL request did not return the same Chunk");
+        var runtime = MosaicWorldIdentity.runtimeContext(level).orElseThrow();
+        var owners = new com.google.gson.JsonArray();
+        for (var position : positions) {
+            long captures = MosaicPhysicalMaterializer.artifactCaptures(level, position);
+            long publications = MosaicPhysicalMaterializer.publishes(level, position);
+            if (captures != 1 || publications != 1)
+                throw new IllegalStateException(
+                        "Requested physical owner was not materialized once: " + position);
+            var owner = new JsonObject();
+            owner.addProperty("x", position.x());
+            owner.addProperty("z", position.z());
+            owner.addProperty(
+                    "localSeed",
+                    Long.toString(runtime.resolveLocalWorldSeed(level.dimension(), position)));
+            owner.addProperty("artifactCaptures", captures);
+            owner.addProperty("publications", publications);
+            owners.add(owner);
+        }
+        var result = new JsonObject();
+        result.addProperty("schema", 1);
+        result.addProperty("scope", "ORDINARY_FULL_REQUESTS_NOT_TICKING_OR_PLAYER_ENTRY");
+        result.addProperty("inputHash", input);
+        result.addProperty("pid", ProcessHandle.current().pid());
+        result.addProperty("logicalProcessors", Runtime.getRuntime().availableProcessors());
+        result.addProperty(
+                "save",
+                level.getServer()
+                        .getWorldPath(net.minecraft.world.level.storage.LevelResource.ROOT)
+                        .toAbsolutePath()
+                        .normalize()
+                        .toString());
+        result.addProperty("distinctChunkObjects", identities.size());
+        result.addProperty("bindings", GenerationContextRegistry.bindingCount());
+        result.addProperty("spawnBindings", MosaicSpawnContextRegistry.bindingCount());
+        result.add("owners", owners);
+        return result;
     }
 
     private static ServerLevel level(MinecraftServer server) {

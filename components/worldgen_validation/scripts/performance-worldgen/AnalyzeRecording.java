@@ -40,8 +40,9 @@ class AnalyzeRecording {
         Map<String,Double> syncThreads=new HashMap<>(),serverParkStacks=new HashMap<>();Map<String,Long> syncCounts=new HashMap<>();
         Map<String,List<long[]>> spanPoints=new HashMap<>();
         List<Map<String,Object>> pauses=new ArrayList<>(),slowCalls=new ArrayList<>();
+        List<Long> afterGcHeap=new ArrayList<>();
         Map<String,String> prepared=new TreeMap<>();long sampleCount=0;double gcMs=0,maxGcMs=0;
-        Map<String,Long> cpuBuckets=new TreeMap<>();
+        Map<String,Long> cpuBuckets=new TreeMap<>();boolean jfrMarkerTimestamps=false;
         try(RecordingFile file=new RecordingFile(input);var events=Files.newBufferedWriter(Path.of(args[1]+".events.tsv"))){
             events.write("nanos\tkey\tphase\tdetail\tthread\n");
             while(file.hasMoreEvents()){
@@ -79,6 +80,8 @@ class AnalyzeRecording {
                     allocationSites.merge(gameSite,bytes,Double::sum);
                 }else if(type.equals("jdk.GCPhasePause")){
                     gcMs+=ms;maxGcMs=Math.max(maxGcMs,ms);pauses.add(Map.of("milliseconds",ms,"at",e.getStartTime().toString()));
+                }else if(type.equals("jdk.GCHeapSummary") && e.getString("when").equals("After GC")){
+                    afterGcHeap.add(e.getLong("heapUsed"));
                 }else if(type.equals("jdk.FileRead")||type.equals("jdk.FileWrite")){
                     files.merge(type+" | "+e.getString("path"),ms,Double::sum);
                 }else if(type.equals("mosaic.SyncSpan")){
@@ -89,7 +92,10 @@ class AnalyzeRecording {
                     if(ms>=50)slowCalls.add(Map.of("phase",phase,"key",e.getString("key"),"ms",ms,"thread",e.getThread().getJavaName(),"start",e.getStartTime().toString()));
                 }else if(type.equals("mosaic.ChunkPhase")){
                     if(e.getString("phase").equals("PREPARED_METRICS"))prepared.put(e.getString("key"),e.getString("detail"));
-                    events.write(e.getLong("elapsedNanos")+"\t"+e.getString("key")+"\t"+e.getString("phase")+"\t"+
+                    long markerNanos;
+                    if(e.hasField("elapsedNanos"))markerNanos=e.getLong("elapsedNanos");
+                    else {markerNanos=Duration.between(start,e.getStartTime()).toNanos();jfrMarkerTimestamps=true;}
+                    events.write(markerNanos+"\t"+e.getString("key")+"\t"+e.getString("phase")+"\t"+
                             Objects.toString(e.getString("detail"),"").replace('\t',' ').replace('\n',' ')+"\t"+
                             (e.getThread()==null?"?":e.getThread().getJavaName())+"\n");
                 }
@@ -97,13 +103,22 @@ class AnalyzeRecording {
         }
         Map<String,Object> out=new LinkedHashMap<>();out.put("windowStart",start.toString());out.put("windowEnd",end.toString());
         out.put("wallSeconds",Duration.between(start,end).toNanos()/1e9);out.put("eventCounts",types);out.put("cpuSamples",sampleCount);
+        out.put("missingElapsedNanosUsesJfrWindowTimestamps",jfrMarkerTimestamps);
         out.put("cpuLeafTop",top(cpu,35));out.put("cpuInclusiveTop",top(cpuAll,50));out.put("cpuThreads",top(cpuThreads,25));
+        Map<String,Long> focused=new TreeMap<>();
+        cpuAll.forEach((key,value)->{if(key.contains("StructureGenerationLocks.supports")
+                || key.contains("LocalDensityTiles$Audit.") || key.contains("LocalTerrainColumns$Batch.")
+                || key.contains("ScopedStructureSources.source") || key.contains("DetachedBiomeInputs.generate"))focused.put(key,value);});
+        out.put("focusedCpuSamples",focused);
         out.put("exclusiveCpuBuckets",cpuBuckets);
         out.put("nativeWallSamplesNotCpu",top(nativeSamples,20));
         out.put("monitorBlockedMsTop",top(monitors,30));out.put("threadParkMsTop",top(parks,30));
         out.put("serverParkStacksMs",top(serverParkStacks,8));
         out.put("allocationWeightedBytesTop",top(allocation,25));out.put("allocationSitesWeightedBytesTop",top(allocationSites,30));
         out.put("allocationWeightedBytesTotal",allocation.values().stream().mapToDouble(Double::doubleValue).sum());
+        var sortedHeap=afterGcHeap.stream().sorted().toList();
+        out.put("afterGcHeapUsed",sortedHeap.isEmpty()?null:Map.of("samples",sortedHeap.size(),
+                "median",sortedHeap.get(sortedHeap.size()/2),"maximum",sortedHeap.getLast()));
         out.put("gcPauseMs",gcMs);out.put("maxGcPauseMs",maxGcMs);out.put("gcPauses",pauses);out.put("fileIoMsTop",top(files,20));
         out.put("syncSpanTotalMs",sync);out.put("preparedTimingNs",prepared);
         out.put("syncSpanCount",syncCounts);out.put("syncSpanThreadsMs",syncThreads);

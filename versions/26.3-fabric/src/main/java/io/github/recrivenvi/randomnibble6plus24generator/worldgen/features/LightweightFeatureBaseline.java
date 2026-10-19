@@ -4,6 +4,7 @@ import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.*;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.CompactStructureInputs;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.ScopedStructureSources;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.terrain.LightweightTerrainGenerator;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.terrain.TerrainBiomeInputs;
 import java.util.*;
 import java.util.function.BiConsumer;
 import net.minecraft.server.level.GenerationChunkHolder;
@@ -27,7 +28,7 @@ public final class LightweightFeatureBaseline {
             IsolatedGenerationContext context,
             LocalFeatureInputs.Observer observer,
             BiConsumer<StrictFeatureRegion, LocalFeatureInputs> beforeDecoration) {
-        try (var reuse = new ScopedStructureSources(context)) {
+        try (var reuse = ScopedStructureSources.create(context)) {
             return generate(context, observer, beforeDecoration, reuse, true);
         }
     }
@@ -39,7 +40,7 @@ public final class LightweightFeatureBaseline {
             BiConsumer<StrictFeatureRegion, LocalFeatureInputs> beforeDecoration,
             boolean reuseStructures) {
         if (!reuseStructures) return generate(context, observer, beforeDecoration, null, false);
-        try (var reuse = new ScopedStructureSources(context)) {
+        try (var reuse = ScopedStructureSources.create(context)) {
             return generate(context, observer, beforeDecoration, reuse, false);
         }
     }
@@ -50,6 +51,18 @@ public final class LightweightFeatureBaseline {
             BiConsumer<StrictFeatureRegion, LocalFeatureInputs> beforeDecoration,
             ScopedStructureSources reuse,
             boolean captureProofs) {
+        try (var biomes = reuse == null ? null : new TerrainBiomeInputs(context)) {
+            return generate(context, observer, beforeDecoration, reuse, captureProofs, biomes);
+        }
+    }
+
+    private static Result generate(
+            IsolatedGenerationContext context,
+            LocalFeatureInputs.Observer observer,
+            BiConsumer<StrictFeatureRegion, LocalFeatureInputs> beforeDecoration,
+            ScopedStructureSources reuse,
+            boolean captureProofs,
+            TerrainBiomeInputs biomes) {
         long begin = System.nanoTime();
         var step = ChunkPyramid.GENERATION_PYRAMID.getStepTo(ChunkStatus.FEATURES);
         if (step.directDependencies().getRadiusOf(ChunkStatus.TERRAIN) != 1
@@ -57,12 +70,14 @@ public final class LightweightFeatureBaseline {
             throw new IllegalStateException("Unaudited B FEATURES metadata");
         var structures = CompactStructureInputs.resolve(context, reuse);
         var target =
-                LightweightTerrainGenerator.generate(context, structures, (s, c) -> {}).target();
+                LightweightTerrainGenerator.generate(context, structures, (s, c) -> {}, biomes)
+                        .target();
         Map<String, Long> rejected = new HashMap<>();
         java.util.function.Consumer<String> drop = api -> rejected.merge(api, 1L, Long::sum);
         if (reuse != null) structures.handoffForDecoration(reuse);
         try (var inputs =
-                new LocalFeatureInputs(context, target, drop, observer, reuse, captureProofs)) {
+                new LocalFeatureInputs(
+                        context, target, drop, observer, reuse, captureProofs, biomes)) {
             StaticCache2D<GenerationChunkHolder> cache =
                     StaticCache2D.create(
                             context.target().x(),

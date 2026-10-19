@@ -1,0 +1,8 @@
+tool = "worldgen_validation"
+targets = ["26.3-fabric"]
+
+[instances.server]
+memory-max = "3G"
+memory-min = "256M"
+jvm-args = ["-XX:ActiveProcessorCount=4"]
+mods = ["biomesoplenty", "terrablender", "glitchcore", "fabric-api"]

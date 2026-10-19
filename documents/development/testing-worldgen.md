@@ -6,11 +6,26 @@
 
 各验证的 `validation.md` 提供仓库根目录命令。服务端首次执行前由使用者在本机 `local.toml` 声明 EULA 同意，不从日常实例复制授权文件。
 
+26.3 Fabric 的第三方群系验证见 [BOP 本地种子隔离](../../validations/compatibility-bop/validation.md)。其模组输入只在专用实例中加载；独立普通原生世界与无关种子宿主分别启动，不将原版矩阵的历史结果当作 BOP 兼容证据。
+
+客户端启动前使用下列准备工具；它调整窗口尺寸和音量，保留视距、模拟距离和存档，并拒绝在本仓库客户端运行时修改设置。自动客户端的分辨率在对应 validation.toml 声明为 1920×1080；人工客户端的 2560×1440、玩家名 RecRivenVI 与附加模组放在本机 local.toml，不改变服务端验证或产品依赖。
+
+```powershell
+python components/worldgen_validation/scripts/development/prepare_client.py --target 26.3-fabric --mode automatic --validation performance-worldgen
+python components/worldgen_validation/scripts/development/prepare_client.py --target 26.3-fabric --mode acceptance
+```
+
+自动测试全局声音关闭；人工验收全局声音 50%、音乐关闭。两类实例互不借用；Custom Skin Loader 与 Zume 只在人工实例按上游声明的 Minecraft/Loader 兼容范围安装，不污染独立原版控制。
+
+人工附加模组尚不能替代无附加模组的性能基线：若触发未证明模组组合的精确兼容回退，记录实际回退与模组清单，不放宽能力守卫来维持快路径。
+
 ```powershell
 .\gradlew.bat check verifyRelease
 ```
 
 ## 数据
+
+根目录格式配置保持模板的文本输入集合，但在文件树遍历前排除实例、结果和其它不属于根格式的目录，避免检查输入时枚举大量本地运行数据。范围一致性由工具组件的布局回归核对，模板文件与证据均不改写；Windows 脚本仍由组件的 CRLF 格式器处理。
 
 验证只使用各自的 `instance/<target>/`。脚本默认仍选择 26.2；验证配置登记了 26.3 时，可以显式选择：
 
@@ -32,6 +47,8 @@ $env:MOSAIC_VALIDATION_TARGET = '26.3-fabric'
 完整矩阵为 72 项；`-Suite smoke` 只测四项，不替代完整验收。工具先用模板验证任务准备运行环境并导出真实 JVM 启动配置，再串行启动每项的独立进程，避免为每个 fixture 重复启动 Gradle；仍使用原版 physical scheduler，没有第二套原版生成实现。
 
 ## 紧凑结构输入
+
+1.21.1 NeoForge 与 1.20.1 Forge 的初次适配由[独立原生结构输入](../../validations/conformance-structure_inputs/validation.md)单独验证，仅证明元数据和地形适配，不借用较新版本的完整地形结果。1.20.1 的[原生种子与存档合同](../../validations/conformance-seed/validation.md)在真实 Forge 生命周期执行，避免普通 JUnit 缺少加载器注册表变换；不把其通过当作生成流水线已可用。
 
 同一验证的结构套件另写固定 `result/compact/26.3-fabric/`，不覆盖普通矩阵。它主动寻找七类真实 start、邻区投影和纯地形适配 halo，使用全新普通世界独立复算；consumer 关闭创建上下文后，以新的紧凑结构输入替换目标的原版结构消费者。
 
@@ -251,7 +268,7 @@ python components/worldgen_validation/scripts/development/prepare_target_only_wo
 
 ## 按需 B 里程碑验收
 
-完整 detached 交接与物理流程分开运行，均不迁移旧世界。实验客户端使用产品、不加载 probe；只有新 `development_b` 地图需要显式 opt-in。游戏内操作由使用者完成。
+完整 detached 交接与物理流程分开运行，均不迁移旧世界。实验客户端使用产品、不加载 probe；只有新 `development_b` 地图需要显式 opt-in。后续验收不再要求使用者手动游玩：使用验证实例中的游戏内探针自动创建专用世界、加载真实区块并采样；不能自动覆盖的玩家或渲染行为仍标记未验证，不用 CLI 数据冒充。禁止 GUI 自动化；只有核实命令行、实例目录及启动记录属于本线程的游戏进程，才可直接正常关闭并重启，无须再次询问。
 
 26.3 的物理计划使用反向依赖与分状态引用计数。专项单元测试以全扫描测试 Oracle 逐操作对照最高状态与 owner 集合，覆盖重复替换、失败清理、并发访问、跨世界关闭与无关计划不参与完成查询；不改变 Vanilla 依赖形状。运行验证继续使用下面的真实生产请求、修改后重载和既有关闭取消验证，不把单元测试等同于客户端体验通过。
 
@@ -261,7 +278,7 @@ B 准备中的结构来源复用只属于一个目标生成，包含原版求值
 
 日常 B 交接使用独立的轻量读取计数，不构造整列方块字符串证明或计算证明专用密度 hash。完整 `metrics()` 证据只用于明确启用证明采集的验证查询；未采集时请求完整证明立即失败，不能以空列表冒充通过。`-StructureReuse` 检查轻量计数与完整证据中的数值一致；`-Preparation` 继续比较原 B 的完整结果与真实交接，并断言交接的证明列计数为零。地形查询、精确回退、Artifact 完整性检查和旧存档分流不变。
 
-局部查询先用实际 stored palette 审计表面规则；无法证明时直接精确回退，不先重复构建密度。支持的批次保留原版完整密度体积与最高 section 语义，高度扫描找到水面和海床后停止。只问高度时，必须证明规则保持对应高度且洞穴掩码没有触及最高有效格或其上方，才复用精确噪声高度；否则按需构建完整精确列。表面规则只在实际列需要时编译，完成列的高度按需记忆。计数记录原始状态采样、高度快速回答、高度复用与 material 批次，不记录新的存档权威。
+局部查询先用实际 stored palette 审计表面规则；无法证明时直接精确回退，不先重复构建密度。支持的输入按读取位置请求原版小体积密度批次，复用查询内稀疏整高度角点列，保留插值的原版 Y 前缀；密度与含水层/表面分别持有采样上下文，只恢复已证明共享的二维缓存。未证明的缓存耦合、节点与网格继续完整回退，不使用标量近似。高度扫描找到水面和海床后停止，表面规则按局部体积编译，邻近梯度高度按需计算。只问高度时，必须证明规则保持对应高度且洞穴掩码没有触及最高有效格或其上方，才复用精确噪声高度；否则构建完整精确列。计数记录实际密度输出格、角点输入、批次数、原始状态采样与高度复用，不记录新的存档权威。
 
 `Run-FeatureA.ps1 -Trees -Lightweight` 对既有 90 项独立原版输入先查四种高度、重复查询，再逐格读取整列并重新比较高度和密度 raw bits；无法证明的列执行真实完整回退。这个输入来源与本轮新建原版世界分别报告，不把重算查询称为重新生成了 90 个控制世界。
 
@@ -280,10 +297,14 @@ $env:JAVA_TOOL_OPTIONS = '-XX:ActiveProcessorCount=4 -Drandomnibble6plus24genera
 
 端到端受控测量的命令与边界见[性能验证](../../validations/performance-worldgen/validation.md)。CLI 前沿没有实际玩家出生或客户端发送，不能据此宣称首次进入、渲染或视觉 PASS；同条件普通世界与保留的 scheduler Ordering 2 路径分别对照。
 
-## 工程检查的已知限制
+## 工程检查
 
-Windows 上根 `spotlessMisc` 曾因遍历运行数据超过五分钟未完成；未修改模板来绕过。独立模块的检查沿用下列排除，Target/组件格式、Markdown、单元测试与严格合规仍执行；不宣称默认全量格式任务通过。
+1.20.1 的独立六阶段地形入口使用[旧版地形验证](../../validations/conformance-legacy_terrain/validation.md)，与 1.21.1 的实际密度切片同样逐 bit 对照。运行脚本按 Target 选择模板验证任务，不在 Target 构建脚本中硬编码验证启动配置；本版的 15 项结构输入 PASS 不自动提升完整地形或 B 状态。
+
+1.20.1 的[B 独立 smoke](../../validations/conformance-legacy_b/validation.md)使用另外的验证实例，目标为两个 Native 重复与两个无关宿主的四项对照。保留完整原始 NBT、严格 UUID-only 视图、feature seed 序列和实际可见群系；当前源码、完整套件和有限原生例外的结论见[里程碑矩阵](../project/milestone-features.md)，不借用其它 Target 的结果。
+
+根 `spotlessMisc` 使用上述项目级提前排除规则，格式检查范围不变，不遍历本地实例和结果。模板文件不修改、不跳过任务；[输入扫描调查](../research/investigation-format_input_scan.md)记录了边界与回归。完整检查使用以下命令；单元测试、发行检查、Markdown 和严格合规均须通过。
 
 ```powershell
-.\gradlew.bat spotlessApply check verifyRelease verifyCompliance --strict --max-workers=2 --no-daemon --no-configuration-cache -x :spotlessMisc -x :spotlessMiscApply -x :spotlessMiscCheck '-Dorg.gradle.jvmargs=-Xmx2G -Dfile.encoding=UTF-8 -XX:ActiveProcessorCount=4'
+.\gradlew.bat spotlessApply check verifyRelease verifyCompliance --strict --max-workers=2 --no-daemon --no-configuration-cache '-Dorg.gradle.jvmargs=-Xmx2G -Dfile.encoding=UTF-8 -XX:ActiveProcessorCount=4'
 ```

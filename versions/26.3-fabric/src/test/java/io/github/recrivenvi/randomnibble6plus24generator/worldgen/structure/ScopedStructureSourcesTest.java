@@ -18,6 +18,115 @@ class ScopedStructureSourcesTest {
     }
 
     @Test
+    void nativeEntryIsPartOfTheCacheKeyAndHitReplaysExactExit() {
+        var world = LevelHeightAccessor.create(-64, 384);
+        var cursor = new ThreadLocal<Object>();
+        Object entry = new Object(), exit = new Object(), foreign = new Object();
+        cursor.set(entry);
+        try (var scope =
+                new ScopedStructureSources(
+                        world, 17, ChunkPos.ZERO, 1, new NativeBiomeSearchState(cursor))) {
+            var first =
+                    scope.source(
+                            world,
+                            17,
+                            ChunkPos.ZERO,
+                            ChunkPos.ZERO,
+                            () -> {
+                                cursor.set(exit);
+                                return new StructureInputChunk(ChunkPos.ZERO, world);
+                            });
+            cursor.set(entry);
+            assertSame(
+                    first,
+                    scope.source(
+                            world,
+                            17,
+                            new ChunkPos(1, 0),
+                            ChunkPos.ZERO,
+                            () -> {
+                                throw new AssertionError("Compatible input reevaluated");
+                            }));
+            assertSame(exit, cursor.get());
+            assertEquals(1, scope.metrics().stateReplays());
+            cursor.set(foreign);
+            var changed =
+                    scope.source(
+                            world,
+                            17,
+                            new ChunkPos(0, 1),
+                            ChunkPos.ZERO,
+                            () -> {
+                                cursor.set(foreign);
+                                return new StructureInputChunk(ChunkPos.ZERO, world);
+                            });
+            assertNotSame(first, changed);
+            assertEquals(1, scope.metrics().stateMismatches());
+            assertEquals(2, scope.metrics().evaluations());
+            assertTrue(scope.metrics().climateState());
+        } finally {
+            cursor.remove();
+        }
+    }
+
+    @Test
+    void climateFailureIsNotCachedAndThreadLocalContinuationIsOwnedByTheCallerThread() {
+        var world = LevelHeightAccessor.create(-64, 384);
+        var cursor = new ThreadLocal<Object>();
+        Object entered = new Object(), partial = new Object();
+        cursor.set(entered);
+        try (var scope =
+                new ScopedStructureSources(
+                        world, 17, ChunkPos.ZERO, 1, new NativeBiomeSearchState(cursor))) {
+            var error = new IllegalArgumentException("Native structure failed");
+            assertSame(
+                    error,
+                    assertThrows(
+                            IllegalArgumentException.class,
+                            () ->
+                                    scope.source(
+                                            world,
+                                            17,
+                                            ChunkPos.ZERO,
+                                            ChunkPos.ZERO,
+                                            () -> {
+                                                cursor.set(partial);
+                                                throw error;
+                                            })));
+            assertSame(partial, cursor.get());
+            assertEquals(0, scope.metrics().resident());
+            CompletableFuture.runAsync(
+                            () -> {
+                                assertNull(cursor.get());
+                                assertThrows(
+                                        IllegalStateException.class,
+                                        () ->
+                                                scope.source(
+                                                        world,
+                                                        17,
+                                                        ChunkPos.ZERO,
+                                                        ChunkPos.ZERO,
+                                                        () -> null));
+                            })
+                    .join();
+            assertSame(partial, cursor.get());
+        } finally {
+            cursor.remove();
+        }
+    }
+
+    @Test
+    void unprovedModsCannotEnableSourceReuse() {
+        assertTrue(
+                ScopedStructureSources.auditedEnvironment(
+                        Set.of("minecraft", "fabricloader", "fabric-registry-sync-v0")));
+        assertFalse(ScopedStructureSources.auditedEnvironment(Set.of("minecraft", "terrablender")));
+        assertFalse(
+                ScopedStructureSources.auditedEnvironment(
+                        Set.of("minecraft", "unproved_worldgen")));
+    }
+
+    @Test
     void emptyNativeResultsAreReusedAcrossOverlappingQueries() {
         var world = LevelHeightAccessor.create(-64, 384);
         try (var scope = new ScopedStructureSources(world, 17, ChunkPos.ZERO, 1)) {

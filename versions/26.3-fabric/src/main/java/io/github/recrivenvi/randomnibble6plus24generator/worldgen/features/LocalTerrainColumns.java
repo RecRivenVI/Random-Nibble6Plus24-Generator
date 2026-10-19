@@ -4,6 +4,10 @@ import io.github.recrivenvi.randomnibble6plus24generator.mixin.*;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.*;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.CompactStructureInputs;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.ScopedStructureSources;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.terrain.TerrainBiomeInputs;
+import java.nio.ByteBuffer;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.function.Function;
 import net.minecraft.SharedConstants;
@@ -31,6 +35,7 @@ public final class LocalTerrainColumns implements AutoCloseable {
     private final IsolatedGenerationContext context;
     private final Function<ChunkPos, ChunkAccess> palettes;
     private final ScopedStructureSources structureSources;
+    private final TerrainBiomeInputs retained;
     private final BiomeManager biomes;
     private final Map<Long, Batch> batches = new HashMap<>();
     private final Map<Long, Column> columns = new HashMap<>();
@@ -44,6 +49,8 @@ public final class LocalTerrainColumns implements AutoCloseable {
     private final boolean captureProofs;
     private long nanos;
     private boolean closed;
+    private boolean densityInputsResolved;
+    private LocalDensityInputs densityInputs;
 
     public LocalTerrainColumns(
             IsolatedGenerationContext context, Function<ChunkPos, ChunkAccess> palettes) {
@@ -62,9 +69,19 @@ public final class LocalTerrainColumns implements AutoCloseable {
             Function<ChunkPos, ChunkAccess> palettes,
             ScopedStructureSources structureSources,
             boolean captureProofs) {
+        this(context, palettes, structureSources, captureProofs, null);
+    }
+
+    LocalTerrainColumns(
+            IsolatedGenerationContext context,
+            Function<ChunkPos, ChunkAccess> palettes,
+            ScopedStructureSources structureSources,
+            boolean captureProofs,
+            TerrainBiomeInputs retained) {
         this.context = context;
         this.palettes = palettes;
         this.structureSources = structureSources;
+        this.retained = retained;
         this.captureProofs = captureProofs;
         biomes =
                 new BiomeManager(
@@ -108,7 +125,10 @@ public final class LocalTerrainColumns implements AutoCloseable {
             long rawSamples,
             int heightOnlyQueries,
             int heightCacheHits,
-            int materialBatches) {}
+            int materialBatches,
+            long densitySamples,
+            int densityTiles,
+            long densitySourceSamples) {}
 
     public Counters counters() {
         return new Counters(
@@ -122,7 +142,19 @@ public final class LocalTerrainColumns implements AutoCloseable {
                 rawSamples,
                 heightOnlyQueries,
                 heightCacheHits,
-                (int) batches.values().stream().filter(b -> b.material != null).count());
+                batches.values().stream().mapToInt(b -> b.materials.size()).sum(),
+                batches.values().stream()
+                        .filter(b -> b.densities != null)
+                        .mapToLong(b -> b.densities.samples())
+                        .sum(),
+                batches.values().stream()
+                        .filter(b -> b.densities != null)
+                        .mapToInt(b -> b.densities.tiles())
+                        .sum(),
+                batches.values().stream()
+                        .filter(b -> b.densities != null)
+                        .mapToLong(b -> b.densities.sourceSamples())
+                        .sum());
     }
 
     /** Explicit validation evidence; the physical handoff uses counters instead. */
@@ -196,6 +228,7 @@ public final class LocalTerrainColumns implements AutoCloseable {
                 boolean surfaceHeight =
                         type == Heightmap.Types.WORLD_SURFACE_WG
                                 || type == Heightmap.Types.WORLD_SURFACE;
+                batch.height(x & 15, z & 15);
                 int height =
                         (surfaceHeight ? batch.surface : batch.floor)[(x & 15) + (z & 15) * 16] - 1;
                 // Audited material outputs preserve non-air height. A mask at/above that cell
@@ -419,6 +452,55 @@ public final class LocalTerrainColumns implements AutoCloseable {
                 : "unaudited material condition " + c.getClass().getName();
     }
 
+    private static boolean supportsMaterialTiles(
+            MaterialRule r, Set<Holder<Biome>> possible, int minY, int height) {
+        if (r instanceof MaterialRule.HolderHolder h)
+            return supportsMaterialTiles(h.holder().value(), possible, minY, height);
+        if (r instanceof SequenceRule s)
+            return s.sequence().stream()
+                    .allMatch(c -> supportsMaterialTiles(c, possible, minY, height));
+        if (r instanceof ConditionRule c) {
+            MaterialCondition condition = c.ifTrue();
+            while (condition instanceof MaterialCondition.HolderHolder h)
+                condition = h.holder().value();
+            if (condition instanceof BiomeCondition b
+                    && possible.stream().noneMatch(b.biomes()::contains)) return true;
+            return supportsMaterialTiles(c.thenRun(), possible, minY, height);
+        }
+        if (r instanceof OreVeinRule o)
+            return LocalDensityTiles.tileHeight(o.density(), minY, height) > 0
+                    && LocalDensityTiles.tileHeight(o.richness(), minY, height) > 0
+                    && LocalDensityTiles.tileHeight(o.fillerGap(), minY, height) > 0;
+        return r instanceof BlockRule || r instanceof BandlandsRule;
+    }
+
+    private static void materialDensities(
+            MaterialRule r, List<DensityFunction> output, List<DensityFunction> scalar) {
+        if (r instanceof MaterialRule.HolderHolder h)
+            materialDensities(h.holder().value(), output, scalar);
+        else if (r instanceof SequenceRule s)
+            s.sequence().forEach(c -> materialDensities(c, output, scalar));
+        else if (r instanceof ConditionRule c) materialDensities(c.thenRun(), output, scalar);
+        else if (r instanceof OreVeinRule o) {
+            output.add(o.density());
+            output.add(o.richness());
+            output.add(o.fillerGap());
+            scalar.add(o.fillerGap());
+        }
+    }
+
+    private static String densityHash(Batch batch, int x, int z) {
+        var bytes = ByteBuffer.allocate(batch.volume.sizeY() * Integer.BYTES);
+        for (int y = 0; y < batch.volume.sizeY(); y++)
+            bytes.putInt(Float.floatToRawIntBits(batch.densities.get(x & 15, y, z & 15)));
+        try {
+            return HexFormat.of()
+                    .formatHex(MessageDigest.getInstance("SHA-256").digest(bytes.array()));
+        } catch (NoSuchAlgorithmException impossible) {
+            throw new AssertionError(impossible);
+        }
+    }
+
     @Override
     public void close() {
         if (closed) return;
@@ -429,14 +511,13 @@ public final class LocalTerrainColumns implements AutoCloseable {
     private final class Batch implements AutoCloseable {
         final ChunkPos pos;
         final NoiseChunk noise;
-        final ScopedDensityBuffer densities;
+        final LocalDensityTiles densities;
         final DensityVolume volume;
         final int[] surface = new int[256], floor = new int[256];
         final WorldGenerationContext generation;
         final MaterialRule rule;
         final Set<Holder<Biome>> possible = new HashSet<>();
-        MaterialRuleContext material;
-        RuleEvaluator evaluator;
+        final Map<Long, Material> materials = new HashMap<>();
         final String unsupported;
         final boolean floorStable;
         CarvingMask mask;
@@ -446,12 +527,17 @@ public final class LocalTerrainColumns implements AutoCloseable {
             this.pos = pos;
             var settings = context.generator().generatorSettings().value();
             var range = settings.noiseSettings().clampToHeightAccessor(context.hostLevel());
-            generation = new WorldGenerationContext(context.generator(), context.hostLevel());
+            generation =
+                    retained == null
+                            ? new WorldGenerationContext(context.generator(), context.hostLevel())
+                            : retained.generation(context);
             rule = settings.materialRule().value();
-            for (int z = pos.z() - 1; z <= pos.z() + 1; z++)
-                for (int x = pos.x() - 1; x <= pos.x() + 1; x++)
-                    palettes.apply(new ChunkPos(x, z)).collectBiomesInPalette(possible);
-            unsupported =
+            if (retained != null) possible.addAll(retained.prepare(context, pos).possible());
+            else
+                for (int z = pos.z() - 1; z <= pos.z() + 1; z++)
+                    for (int x = pos.x() - 1; x <= pos.x() + 1; x++)
+                        palettes.apply(new ChunkPos(x, z)).collectBiomesInPalette(possible);
+            String materialUnsupported =
                     possible.stream()
                                     .anyMatch(
                                             b ->
@@ -460,6 +546,82 @@ public final class LocalTerrainColumns implements AutoCloseable {
                                                             || b.is(Biomes.DEEP_FROZEN_OCEAN))
                             ? "badlands/iceberg extension needs earlier-column WG feedback"
                             : unsupportedRule(rule, 0, possible);
+            int tileHeight =
+                    LocalDensityTiles.tileHeight(
+                            settings.noiseRouter().finalDensity(), range.minY(), range.height());
+            var preliminary = context.randomState().surfaceSystem().preliminarySurfaceFunction();
+            var scalarConsumers = new ArrayList<DensityFunction>();
+            scalarConsumers.add(preliminary);
+            boolean ancillarySupported =
+                    LocalDensityTiles.tileHeight(preliminary, range.minY(), range.height()) > 0;
+            if (settings.aquifers().isPresent()) {
+                var a = settings.aquifers().orElseThrow();
+                scalarConsumers.addAll(
+                        List.of(
+                                a.barrierNoise(),
+                                a.fluidLevelFloodednessNoise(),
+                                a.fluidLevelSpreadNoise(),
+                                a.lavaNoise(),
+                                a.exclusion(),
+                                a.surfaceLevel()));
+                ancillarySupported &=
+                        scalarConsumers.stream()
+                                .allMatch(
+                                        f ->
+                                                LocalDensityTiles.tileHeight(
+                                                                f, range.minY(), range.height())
+                                                        > 0);
+            }
+            var materialInputs = new ArrayList<DensityFunction>();
+            if (materialUnsupported == null)
+                materialDensities(rule, materialInputs, scalarConsumers);
+            ancillarySupported &=
+                    materialInputs.stream()
+                            .allMatch(
+                                    f ->
+                                            LocalDensityTiles.tileHeight(
+                                                            f, range.minY(), range.height())
+                                                    > 0);
+            var nativeVolume =
+                    new DensityVolume(
+                            16,
+                            range.height(),
+                            16,
+                            pos.getMinBlockX(),
+                            range.minY(),
+                            pos.getMinBlockZ());
+            if (!densityInputsResolved
+                    && materialUnsupported == null
+                    && tileHeight > 0
+                    && ancillarySupported) {
+                densityInputs =
+                        LocalDensityInputs.resolve(
+                                settings.noiseRouter().finalDensity(),
+                                nativeVolume,
+                                scalarConsumers,
+                                materialInputs,
+                                preliminary);
+                densityInputsResolved = true;
+            }
+            var cacheInputs = densityInputs;
+            unsupported =
+                    materialUnsupported != null
+                            ? materialUnsupported
+                            : tileHeight == 0
+                                    ? LocalDensityTiles.unsupported(
+                                            settings.noiseRouter().finalDensity(),
+                                            range.minY(),
+                                            range.height())
+                                    : !ancillarySupported
+                                                    || !supportsMaterialTiles(
+                                                            rule,
+                                                            possible,
+                                                            range.minY(),
+                                                            range.height())
+                                            ? "unaudited/unaligned material density graph"
+                                            : cacheInputs == null
+                                                    ? "unproven density/scalar cache dependency"
+                                                    : null;
             floorStable = unsupported == null && preservesFloor(rule, possible, 0);
             if (unsupported != null) {
                 volume = null;
@@ -468,25 +630,13 @@ public final class LocalTerrainColumns implements AutoCloseable {
                 return;
             }
             Beardifier beard;
-            try (var child =
-                    IsolatedGenerationContext.create(
-                            IsolatedGenerationMode.ISOLATED_MOSAIC,
-                            context.hostLevel(),
-                            context.worldSeed(),
-                            pos)) {
+            try (var child = context.createRelated(pos)) {
                 beard =
                         Beardifier.forStructuresInChunk(
                                 CompactStructureInputs.resolve(child, structureSources).manager(),
                                 pos);
             }
-            volume =
-                    new DensityVolume(
-                            16,
-                            range.height(),
-                            16,
-                            pos.getMinBlockX(),
-                            range.minY(),
-                            pos.getMinBlockZ());
+            volume = nativeVolume;
             noise =
                     new NoiseChunk(
                             context.randomState(),
@@ -497,58 +647,43 @@ public final class LocalTerrainColumns implements AutoCloseable {
                                     .get(),
                             Blender.empty(),
                             volume);
-            ScopedDensityBuffer opened = null;
             try {
+                cacheInputs.prepare(
+                        noise.cachingSamplers(), pos.getMinBlockX(), pos.getMinBlockZ());
                 densities =
-                        noise.cachingSamplers()
-                                .get(settings.noiseRouter().finalDensity())
-                                .sampleVolume(volume);
-                opened = densities;
-                Arrays.fill(surface, context.hostLevel().getMinY());
-                Arrays.fill(floor, context.hostLevel().getMinY());
-                for (int z = 0; z < 16; z++)
-                    for (int x = 0; x < 16; x++)
-                        for (int y = volume.sizeY() - 1; y >= 0; y--) {
-                            var state = raw(x, y, z);
-                            int i = x + z * 16, wy = volume.blockY(y);
-                            if (!state.isAir() && surface[i] == context.hostLevel().getMinY())
-                                surface[i] = wy + 1;
-                            if (Heightmap.Types.OCEAN_FLOOR_WG.isOpaque().test(state)
-                                    && floor[i] == context.hostLevel().getMinY()) floor[i] = wy + 1;
-                            if (surface[i] != context.hostLevel().getMinY()
-                                    && floor[i] != context.hostLevel().getMinY()) break;
-                        }
-            } catch (RuntimeException | Error e) {
-                if (opened != null) opened.close();
+                        LocalDensityTiles.open(
+                                volume,
+                                context.randomState(),
+                                beard,
+                                settings.noiseRouter().finalDensity(),
+                                tileHeight);
+            } catch (RuntimeException | Error failure) {
                 noise.close();
-                throw e;
+                throw failure;
             }
+            Arrays.fill(surface, Integer.MIN_VALUE);
+            Arrays.fill(floor, Integer.MIN_VALUE);
         }
 
-        void prepareMaterial() {
-            if (material != null) return;
-            int highest = Arrays.stream(surface).max().orElseThrow() - 1;
-            // Native highest-filled index is -1 for an entirely empty chunk; its narrowed
-            // material volume has depth 1, not the minimum physical section's depth 16.
-            int maxBlockY = Math.floorDiv(highest, 16) * 16 + 15;
-            var narrowed =
-                    new DensityVolume(
-                            16,
-                            Math.max(maxBlockY - volume.minBlockY() + 1, 1),
-                            16,
-                            volume.minBlockX(),
-                            volume.minBlockY(),
-                            volume.minBlockZ());
-            material =
-                    MaterialRuleContextInvoker.randomnibble6plus24generator$create(
-                            context.randomState().surfaceSystem(),
-                            context.randomState(),
-                            narrowed,
-                            noise.cachingSamplers(),
-                            biomes::getBiome,
-                            generation,
-                            possible);
-            evaluator = rule.compile(material);
+        void height(int x, int z) {
+            int i = x + z * 16;
+            if (surface[i] != Integer.MIN_VALUE) return;
+            int top = context.hostLevel().getMinY(), bottom = top;
+            boolean foundTop = false, foundBottom = false;
+            for (int y = volume.sizeY() - 1; y >= 0; y--) {
+                var state = raw(x, y, z);
+                if (!foundTop && !state.isAir()) {
+                    top = volume.blockY(y) + 1;
+                    foundTop = true;
+                }
+                if (!foundBottom && Heightmap.Types.OCEAN_FLOOR_WG.isOpaque().test(state)) {
+                    bottom = volume.blockY(y) + 1;
+                    foundBottom = true;
+                }
+                if (foundTop && foundBottom) break;
+            }
+            surface[i] = top;
+            floor[i] = bottom;
         }
 
         BlockState raw(int x, int y, int z) {
@@ -559,13 +694,40 @@ public final class LocalTerrainColumns implements AutoCloseable {
                                     volume.blockX(x),
                                     volume.blockY(y),
                                     volume.blockZ(z),
-                                    densities.get(volume.indexUnchecked(x, y, z)));
+                                    densities.get(x, y, z));
             return s == null ? context.generator().generatorSettings().value().defaultBlock() : s;
         }
 
         void surface(Column c) {
-            prepareMaterial();
             int x = c.x & 15, z = c.z & 15;
+            // Audited rules are projective over this native volume. Its original lower Y bound
+            // keeps interpolation prefixes; a foreign column or a guessed chunk maximum is not
+            // used.
+            var materialVolume = LocalDensityTiles.materialVolume(volume, x, z);
+            var prepared =
+                    materials.computeIfAbsent(
+                            BlockPos.asLong(
+                                    materialVolume.minBlockX(), 0, materialVolume.minBlockZ()),
+                            ignored -> {
+                                var m =
+                                        MaterialRuleContextInvoker
+                                                .randomnibble6plus24generator$create(
+                                                        context.randomState().surfaceSystem(),
+                                                        context.randomState(),
+                                                        materialVolume,
+                                                        noise.cachingSamplers(),
+                                                        biomes::getBiome,
+                                                        generation,
+                                                        possible);
+                                return new Material(m, rule.compile(m));
+                            });
+            var material = prepared.context();
+            var evaluator = prepared.evaluator();
+            height(x, z);
+            height(Math.min(x + 1, 15), z);
+            height(Math.max(x - 1, 0), z);
+            height(x, Math.min(z + 1, 15));
+            height(x, Math.max(z - 1, 0));
             var access = (MaterialRuleContextInvoker) (Object) material;
             access.randomnibble6plus24generator$updateXZ(
                     c.x,
@@ -645,6 +807,8 @@ public final class LocalTerrainColumns implements AutoCloseable {
             if (densities != null) densities.close();
             if (noise != null) noise.close();
         }
+
+        private record Material(MaterialRuleContext context, RuleEvaluator evaluator) {}
     }
 
     /** One full-depth column, no block sections, holders, tasks, or neighboring TERRAIN status. */
@@ -667,10 +831,8 @@ public final class LocalTerrainColumns implements AutoCloseable {
             this.batch = batch;
             this.x = x;
             this.z = z;
-            densityHash =
-                    captureProofs
-                            ? OreHeightQuery.densityHash(batch.volume, batch.densities, x, z)
-                            : null;
+            batch.height(x & 15, z & 15);
+            densityHash = captureProofs ? densityHash(batch, x, z) : null;
             if (captureProofs) proofColumns++;
             states = new BlockState[context.hostLevel().getHeight()];
             Arrays.fill(states, Blocks.AIR.defaultBlockState());

@@ -2,13 +2,17 @@
 
 Minecraft Java Fabric 的 Random Chunk Mosaic 实验项目：每个物理 Chunk 使用独立派生的 local world seed，通过隔离生成、数据提取及物化进入真实 Minecraft 生命周期。
 
-已登记的 Target 如下；参考 Target 为 26.3，构建、原生对照与人工进入、探索、保存退出和重进验收通过。26.2 Target、实例与历史证据继续保留。开发按里程碑组织，当前里程碑为完成 B 模式、人工体验与性能评估。
+已登记的 Target 如下；参考 Target 为 26.3 Fabric。现有 Fabric 世界与 26.2 历史语义继续保留；新增的 NeoForge/Forge 正在移植，登记或编译通过不代表已经能生成 Mosaic。当前里程碑依次完成五 Target 的原版 B、BOP 和已有世界功能，使用自动化游戏探针验收。
 
 ## Target
 
 | Target | 加载器版本 | Java |
 | --- | --- | --- |
+| `1.20.1-forge` | 47.4.28 | 17 |
+| `1.21.1-neoforge` | 21.1.262 | 21 |
+| `26.1.2-neoforge` | 26.1.2.121 | 25 |
 | `26.2-fabric` | 0.19.5 | 25 |
+| `26.3-neoforge` | 26.3.0.83 | 25 |
 | `26.3-fabric` | 0.19.5 | 25 |
 
 ## 快速开始

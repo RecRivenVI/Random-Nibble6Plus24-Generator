@@ -3,6 +3,7 @@ package io.github.recrivenvi.randomnibble6plus24generator.worldgen.features;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile.MosaicWorldProfile;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.*;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.ScopedStructureSources;
+import io.github.recrivenvi.randomnibble6plus24generator.worldgen.terrain.TerrainBiomeInputs;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicReference;
 import net.minecraft.nbt.CompoundTag;
@@ -19,6 +20,7 @@ public final class BFeaturePreparation {
             List<CompoundTag> externalStarts,
             LocalFeatureInputs.Counters reads,
             ScopedStructureSources.Metrics structureReuse,
+            TerrainBiomeInputs.Counters biomeReuse,
             Map<String, Long> levelEscapes,
             long preparationNanos,
             long decorationNanos) {}
@@ -112,6 +114,7 @@ public final class BFeaturePreparation {
                                 StructurePieceSerializationContext.fromLevel(context.hostLevel())),
                 reads,
                 result.inputs().structureReuseMetrics().orElse(null),
+                result.inputs().biomeReuseCounters().orElse(null),
                 result.region().levelEscapeCounts(),
                 result.preparationNanos(),
                 result.decorationNanos());

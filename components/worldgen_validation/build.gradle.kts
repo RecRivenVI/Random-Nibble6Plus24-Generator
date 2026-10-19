@@ -2,6 +2,100 @@ plugins {
     base
 }
 
+val testMcpAlpha =
+    tasks.register<Exec>("testMcpAlpha") {
+        group = "verification"
+        environment("PYTHONDONTWRITEBYTECODE", "1")
+        commandLine(
+            "python",
+            "-m",
+            "unittest",
+            "discover",
+            "-s",
+            "src/test/python",
+            "-p",
+            "test_mcp_alpha.py",
+        )
+    }
+
+tasks.check { dependsOn(testMcpAlpha) }
+
+tasks.register<Exec>("verifyMcpAlpha") {
+    group = "verification"
+    description = "只读核对固定 MCP alpha 的纯净 READ 与真实 B 客户端闭环。"
+    commandLine("python", "scripts/integration-mcp_alpha/mcp_alpha.py", "check")
+}
+
+tasks.register<Exec>("verifyWorldIdentity") {
+    group = "verification"
+    description = "核验 1.21.1 原生身份生命周期接线与严格 B 交接。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/conformance-feature_b/Run-LegacyB.ps1",
+        "-Target",
+        "1.21.1-neoforge",
+        "-ValidationName",
+        "integration-world_identity",
+        "-Preparation",
+        "shared",
+        "-Handoff",
+        "-IdentityLifecycle",
+        "-CheckOnly",
+    )
+}
+
+tasks.register<Exec>("verifyLegacyB") {
+    group = "verification"
+    description = "核验旧版严格 B 的独立原生 smoke 与宿主隔离。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/conformance-feature_b/Run-LegacyB.ps1",
+        "-CheckOnly",
+    )
+}
+
+tasks.register<Exec>("verifyLegacyTerrain") {
+    group = "verification"
+    description = "核验旧版轻量六阶段地形与独立原生 Oracle。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/conformance-prefeatures/Run-LegacyTerrain.ps1",
+        "-Target",
+        "1.20.1-forge",
+        "-CheckOnly",
+    )
+}
+
+tasks.register<Exec>("verifyNativeStructureInputs") {
+    group = "verification"
+    description = "核验 1.21.1 原生七类结构、完整紧凑输入与地形适配。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/conformance-structure_inputs/Run-StructureInputs.ps1",
+        "-CheckOnly",
+    )
+}
+
+tasks.register<Exec>("verifyNativeSeed") {
+    group = "verification"
+    description = "核验真实 Forge 生命周期中的冻结种子与存档格式合同。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/conformance-seed/Run-NativeSeed.ps1",
+        "-CheckOnly",
+    )
+}
+
 val validateScripts =
     tasks.register<Exec>("validateScripts") {
         group = "verification"
@@ -11,6 +105,102 @@ val validateScripts =
 
 tasks.check {
     dependsOn(validateScripts)
+}
+
+val testBopCausalChecks =
+    tasks.register<Exec>("testBopCausalChecks") {
+        group = "verification"
+        environment("PYTHONDONTWRITEBYTECODE", "1")
+        commandLine(
+            "python",
+            "-m",
+            "unittest",
+            "discover",
+            "-s",
+            "src/test/python",
+            "-p",
+            "test_bop_causal.py",
+        )
+    }
+
+tasks.check { dependsOn(testBopCausalChecks) }
+
+val testPerformanceSummary =
+    tasks.register<Exec>("testPerformanceSummary") {
+        group = "verification"
+        environment("PYTHONDONTWRITEBYTECODE", "1")
+        commandLine(
+            "python",
+            "-m",
+            "unittest",
+            "discover",
+            "-s",
+            "src/test/python",
+            "-p",
+            "test_*performance*.py",
+        )
+    }
+
+tasks.check { dependsOn(testPerformanceSummary) }
+
+val testTargetLayout =
+    tasks.register<Exec>("testTargetLayout") {
+        group = "verification"
+        environment("PYTHONDONTWRITEBYTECODE", "1")
+        commandLine(
+            "python",
+            "-m",
+            "unittest",
+            "discover",
+            "-s",
+            "src/test/python",
+            "-p",
+            "test_target_layout.py",
+        )
+    }
+
+tasks.check { dependsOn(testTargetLayout) }
+
+val testClientPreferences =
+    tasks.register<Exec>("testClientPreferences") {
+        group = "verification"
+        environment("PYTHONDONTWRITEBYTECODE", "1")
+        commandLine(
+            "python",
+            "-m",
+            "unittest",
+            "discover",
+            "-s",
+            "src/test/python",
+            "-p",
+            "test_client_preferences.py",
+        )
+    }
+
+tasks.check { dependsOn(testClientPreferences) }
+
+tasks.register<Exec>("verifyBopCausal") {
+    group = "verification"
+    description = "核验 TerraBlender 末地自然顺序的双向条件重现；不豁免原严格 B 门槛。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/compatibility-bop/Run-BopCausal.ps1",
+        "-CheckOnly",
+    )
+}
+
+tasks.register<Exec>("verifyBopFeatures") {
+    group = "verification"
+    description = "核验 BOP 三维度独立原生 B 与两个无关宿主的严格切断结果。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/compatibility-bop/Run-BopFeatures.ps1",
+        "-CheckOnly",
+    )
 }
 
 tasks.register<Exec>("verifyPreFeatures") {

@@ -1,5 +1,6 @@
 package io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure;
 
+import io.github.recrivenvi.randomnibble6plus24generator.ModConstants;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.IsolatedGenerationContext;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.IsolatedGenerationMode;
 import java.util.HashMap;
@@ -7,6 +8,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.LevelHeightAccessor;
 import net.minecraft.world.level.chunk.status.ChunkPyramid;
@@ -19,28 +21,91 @@ public final class ScopedStructureSources implements AutoCloseable {
     private final ChunkPos target;
     private final int queryRadius;
     private final Thread thread = Thread.currentThread();
-    private final Map<Long, StructureInputChunk> sources = new HashMap<>();
+
+    private record Entry(StructureInputChunk carrier, Object input, Object output) {}
+
+    private final Map<Long, Entry> sources = new HashMap<>();
     private final Set<Long> evaluated = new java.util.HashSet<>();
     private Object settings;
+    private Object biomeSource;
+    private NativeBiomeSearchState biomeState;
+    private final boolean climateState;
     private boolean structuresEnabled;
     private boolean handedOff, closed;
     private long queries, hits, evaluations, evaluationNanos;
+    private long stateMismatches, stateReplays;
     private int peakResident, transferred, uniqueSources;
 
     public ScopedStructureSources(IsolatedGenerationContext context) {
-        this(context.hostLevel(), context.worldSeed(), context.target(), featureReadRadius());
+        this(
+                context.hostLevel(),
+                context.worldSeed(),
+                context.target(),
+                featureReadRadius(),
+                requireNativeState(context));
         requireMode(context);
         settings = context.generator().generatorSettings().value();
+        biomeSource = context.generator().getBiomeSource();
         structuresEnabled = context.structureManager().shouldGenerateStructures();
     }
 
+    /** Unproved environments take the same exact native evaluator without source memoization. */
+    public static ScopedStructureSources create(IsolatedGenerationContext context) {
+        requireMode(context);
+        if (!auditedEnvironment()
+                || NativeBiomeSearchState.from(context.generator().getBiomeSource()) == null)
+            return null;
+        return new ScopedStructureSources(context);
+    }
+
+    private static boolean auditedEnvironment() {
+        return auditedEnvironment(
+                FabricLoader.getInstance().getAllMods().stream()
+                        .map(mod -> mod.getMetadata().getId())
+                        .collect(java.util.stream.Collectors.toSet()));
+    }
+
+    static boolean auditedEnvironment(Set<String> mods) {
+        var known =
+                Set.of(
+                        "minecraft",
+                        "java",
+                        "fabricloader",
+                        "mixinextras",
+                        "fabric-api-base",
+                        "fabric-networking-api-v1",
+                        "fabric-registry-sync-v0",
+                        ModConstants.MOD_ID,
+                        ModConstants.MOD_ID + "_probe");
+        return known.containsAll(mods);
+    }
+
+    private static NativeBiomeSearchState requireNativeState(IsolatedGenerationContext context) {
+        if (!auditedEnvironment())
+            throw new IllegalArgumentException("Unaudited structure reuse environment");
+        return Objects.requireNonNull(
+                NativeBiomeSearchState.from(context.generator().getBiomeSource()),
+                "Unaudited native biome search state");
+    }
+
     ScopedStructureSources(LevelHeightAccessor world, long seed, ChunkPos target, int queryRadius) {
+        this(world, seed, target, queryRadius, new NativeBiomeSearchState(null));
+    }
+
+    ScopedStructureSources(
+            LevelHeightAccessor world,
+            long seed,
+            ChunkPos target,
+            int queryRadius,
+            NativeBiomeSearchState biomeState) {
         this.world = Objects.requireNonNull(world);
         this.seed = seed;
         this.target = Objects.requireNonNull(target);
         if (queryRadius < 0 || queryRadius > 1)
             throw new IllegalArgumentException("Unaudited B structure query radius");
         this.queryRadius = queryRadius;
+        this.biomeState = Objects.requireNonNull(biomeState);
+        this.climateState = biomeState.hasTree();
     }
 
     private static int featureReadRadius() {
@@ -65,6 +130,7 @@ public final class ScopedStructureSources implements AutoCloseable {
         if (world != context.hostLevel()
                 || seed != context.worldSeed()
                 || settings != context.generator().generatorSettings().value()
+                || biomeSource != context.generator().getBiomeSource()
                 || structuresEnabled != context.structureManager().shouldGenerateStructures())
             throw new IllegalArgumentException(
                     "Structure source scope belongs to another world/configuration/seed");
@@ -91,11 +157,15 @@ public final class ScopedStructureSources implements AutoCloseable {
         requireWithin(query, target, queryRadius);
         requireWithin(source, query, CompactStructureInputs.referenceRadius());
         queries++;
+        Object input = biomeState.capture();
         var existing = sources.get(source.pack());
-        if (existing != null) {
+        if (existing != null && existing.input() == input) {
             hits++;
-            return existing;
+            biomeState.replay(existing.output());
+            if (climateState) stateReplays++;
+            return existing.carrier();
         }
+        if (existing != null) stateMismatches++;
         long began = System.nanoTime();
         var result = Objects.requireNonNull(evaluate.get());
         if (!source.equals(result.getPos()) || !result.getAllReferences().isEmpty())
@@ -104,7 +174,7 @@ public final class ScopedStructureSources implements AutoCloseable {
         evaluationNanos += System.nanoTime() - began;
         evaluations++;
         if (evaluated.add(source.pack())) uniqueSources++;
-        sources.put(source.pack(), result);
+        sources.put(source.pack(), new Entry(result, input, biomeState.capture()));
         peakResident = Math.max(peakResident, sources.size());
         return result;
     }
@@ -143,6 +213,9 @@ public final class ScopedStructureSources implements AutoCloseable {
             int resident,
             int transferred,
             long evaluationNanos,
+            long stateMismatches,
+            long stateReplays,
+            boolean climateState,
             boolean closed) {}
 
     public Metrics metrics() {
@@ -155,6 +228,9 @@ public final class ScopedStructureSources implements AutoCloseable {
                 sources.size(),
                 transferred,
                 evaluationNanos,
+                stateMismatches,
+                stateReplays,
+                climateState,
                 closed);
     }
 
@@ -166,6 +242,8 @@ public final class ScopedStructureSources implements AutoCloseable {
         evaluated.clear();
         world = null;
         settings = null;
+        biomeSource = null;
+        biomeState = null;
         closed = true;
     }
 }

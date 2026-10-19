@@ -4,7 +4,11 @@
     "compatibilityLevel": "JAVA_25",
     "mixins": [
         "FeatureBServerMixin",
-        "FeatureBDecorationMixin"
+        "FeatureBDecorationMixin",
+        "IndependentStructurePlacementMixin",
+        "IndependentNativeStructureMixin",
+        "MonsterRoomProbeMixin",
+        "PiglinAttributeOrderMixin"
     ],
     "injectors": {
         "defaultRequire": 1

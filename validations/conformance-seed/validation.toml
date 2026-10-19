@@ -1,0 +1,9 @@
+tool = "worldgen_validation"
+targets = ["1.20.1-forge"]
+
+[instances.server]
+port = 25598
+memory-max = "2G"
+memory-min = "256M"
+jvm-args = ["-XX:ActiveProcessorCount=4"]
+game-args = ["--mixin", "mosaic-native-plan-test.mixins.json"]
