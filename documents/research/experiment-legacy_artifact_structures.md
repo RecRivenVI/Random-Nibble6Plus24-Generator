@@ -8,7 +8,7 @@
 
 ## 方法
 
-输入指纹 2B59B439AF8A15D8AF00CD57FA304317850588E9091BB0B60F71B0F485CDC5DF，运行 [structures-handoff-artifact](../../validations/conformance-legacy_b/result/structures-handoff-artifact/1.20.1-forge)。每 fixture 两个独立原生世界、两个无关宿主 17/23，共 60 个独立 JVM/save；每实例四逻辑 CPU、低优先级，与另一独立正确性队列并行，不作为性能实验。
+输入指纹 2B59B439AF8A15D8AF00CD57FA304317850588E9091BB0B60F71B0F485CDC5DF，运行 structures-handoff-artifact（本机证据：`../../validations/conformance-legacy_b/result/structures-handoff-artifact/1.20.1-forge`）。每 fixture 两个独立原生世界、两个无关宿主 17/23，共 60 个独立 JVM/save；每实例四逻辑 CPU、低优先级，与另一独立正确性队列并行，不作为性能实验。
 
 覆盖本版本实际存在的村庄、矿井、海底神殿、下界要塞、末地城、要塞及各邻区场景，再覆盖原点、非原点和末地柱。没有为 1.20.1 伪造 Trial Chambers。生成端仍独立准备原生 B 输入，没有把其它版本的轻量优化视为已经移植。完成后单独以同参数加 CheckOnly 再读证据，不启动游戏、不改写结果。
 

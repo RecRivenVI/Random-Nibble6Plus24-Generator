@@ -64,12 +64,30 @@ import net.neoforged.fml.ModList;
 public final class PreFeaturesVerifier {
     private static final String PREFIX = RandomNibble6Plus24Generator.MOD_ID + ".prefeatures.";
     private static final List<ChunkStatus> STAGES =
-            List.of(
-                    ChunkStatus.STRUCTURE_STARTS, ChunkStatus.STRUCTURE_REFERENCES,
-                    ChunkStatus.BIOMES, ChunkStatus.TERRAIN);
+            Boolean.getBoolean(PREFIX + "biomeOnly")
+                    ? List.of(
+                            ChunkStatus.STRUCTURE_STARTS,
+                            ChunkStatus.STRUCTURE_REFERENCES,
+                            ChunkStatus.BIOMES)
+                    : List.of(
+                            ChunkStatus.STRUCTURE_STARTS, ChunkStatus.STRUCTURE_REFERENCES,
+                            ChunkStatus.BIOMES, ChunkStatus.TERRAIN);
     private static volatile Run active;
 
     private PreFeaturesVerifier() {}
+
+    private static void assertDetachedBiomeData(ChunkAccess chunk) {
+        if (chunk.getClass() != net.minecraft.world.level.chunk.ProtoChunk.class
+                || chunk.getPersistedStatus() != ChunkStatus.BIOMES)
+            throw new IllegalStateException("Detached input is not a real BIOMES ProtoChunk");
+        for (Class<?> type = chunk.getClass(); type != null; type = type.getSuperclass())
+            for (var field : type.getDeclaredFields())
+                if (field.getType() == net.minecraft.world.level.levelgen.NoiseChunk.class
+                        || field.getType() == SamplerContext.class
+                        || field.getType() == IsolatedGenerationContext.class)
+                    throw new IllegalStateException(
+                            "Unaudited NeoForge detached BIOMES ownership layout");
+    }
 
     public static void run(MinecraftServer server) {
         if (!System.getProperty("validation.name", "").equals("conformance-prefeatures"))
@@ -94,6 +112,7 @@ public final class PreFeaturesVerifier {
                 Path.of(System.getProperty("validation.result"))
                         .resolve(
                                 Boolean.getBoolean(PREFIX + "lightweight")
+                                                || Boolean.getBoolean(PREFIX + "biomeOnly")
                                         ? System.getProperty(PREFIX + "variant", "terrain")
                                         : Boolean.getBoolean(PREFIX + "structures")
                                                 ? "compact"
@@ -123,7 +142,8 @@ public final class PreFeaturesVerifier {
         if (!role.equals("native")
                 && !role.equals("reference")
                 && !role.equals("compact")
-                && !role.equals("lightweight"))
+                && !role.equals("lightweight")
+                && !role.equals("biome-only"))
             throw new IllegalArgumentException("Unknown pre-FEATURES role " + role);
         String id = required("fixture");
         if (!id.matches("[a-z0-9_-]+")) throw new IllegalArgumentException("Unsafe fixture id");
@@ -177,7 +197,82 @@ public final class PreFeaturesVerifier {
                         "compactInputs",
                         new GsonBuilder().create().toJsonTree(run.compact.metrics()));
             }
-            if (role.equals("lightweight")) {
+            if (role.equals("biome-only")) {
+                NativePartialReferenceCopyCheck.verify();
+                int beforeChunks = level.getChunkSource().getLoadedChunksCount();
+                io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization
+                                .DetachedBiomeInputs.Result
+                        prepared;
+                try (var context =
+                                IsolatedGenerationContext.create(
+                                        IsolatedGenerationMode.ISOLATED_MOSAIC, level, local, pos);
+                        var sources =
+                                io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure
+                                        .ScopedStructureSources.create(context)) {
+                    run.compact = CompactStructureInputs.resolve(context, sources);
+                    result.add(
+                            "compactInputs",
+                            new GsonBuilder().create().toJsonTree(run.compact.metrics()));
+                    prepared =
+                            io.github.recrivenvi.randomnibble6plus24generator.worldgen
+                                    .materialization.DetachedBiomeInputs.generate(
+                                    context,
+                                    run.compact,
+                                    (stage, chunk) ->
+                                            capture(
+                                                    context.worldGenContext(),
+                                                    net.minecraft.world.level.chunk.status
+                                                            .ChunkPyramid.GENERATION_PYRAMID
+                                                            .getStepTo(stage),
+                                                    null,
+                                                    chunk));
+                    var field = IsolatedGenerationContext.class.getDeclaredField("chunkMap");
+                    if (!field.trySetAccessible())
+                        throw new IllegalStateException("Cannot inspect detached input ownership");
+                    var map = field.get(context);
+                    var count = map.getClass().getDeclaredMethod("virtualChunkCount");
+                    if (!count.trySetAccessible())
+                        throw new IllegalStateException("Cannot inspect detached input holders");
+                    int holders = (Integer) count.invoke(map);
+                    if (holders != 0)
+                        throw new IllegalStateException("Detached BIOMES created virtual chunks");
+                    result.addProperty("virtualChunks", holders);
+                } catch (ReflectiveOperationException failure) {
+                    throw new IllegalStateException(failure);
+                }
+                assertDetachedBiomeData(prepared.target());
+                var afterClose =
+                        FeatureStageSnapshot.capture(
+                                level.dimension().identifier().toString(),
+                                prepared.target(),
+                                level.registryAccess());
+                if (!afterClose
+                        .diff(FeatureStageSnapshot.read(run.output.resolve("biomes.bin.gz")))
+                        .equivalent())
+                    throw new IllegalStateException("Detached BIOMES changed after owner close");
+                try {
+                    var persisted =
+                            net.minecraft.nbt.NbtIo.readCompressed(
+                                    run.output.resolve("biomes-native.nbt.gz"),
+                                    net.minecraft.nbt.NbtAccounter.unlimitedHeap());
+                    if (!persisted.equals(
+                            net.minecraft.world.level.chunk.storage.SerializableChunkData.copyOf(
+                                            level, prepared.target())
+                                    .write()))
+                        throw new IllegalStateException(
+                                "Detached BIOMES serialization changed after close");
+                } catch (IOException failure) {
+                    throw new java.io.UncheckedIOException(failure);
+                }
+                if (beforeChunks != level.getChunkSource().getLoadedChunksCount())
+                    throw new IllegalStateException(
+                            "Detached BIOMES accessed physical host chunks");
+                result.addProperty("detachedAfterClose", true);
+                result.addProperty("serializationAfterClose", true);
+                result.add(
+                        "detachedBiomes",
+                        new GsonBuilder().create().toJsonTree(prepared.metrics()));
+            } else if (role.equals("lightweight")) {
                 try (var context =
                         IsolatedGenerationContext.create(
                                 IsolatedGenerationMode.ISOLATED_MOSAIC, level, local, pos)) {
@@ -212,20 +307,40 @@ public final class PreFeaturesVerifier {
                                     : null) {
                         // Exercise the same completed-palette copy used by a B neighbor fallback.
                         if (biomes != null) biomes.prepare(context, pos);
+                        java.util.function.BiConsumer<ChunkStatus, ChunkAccess> captureStage =
+                                (stage, chunk) ->
+                                        capture(
+                                                context.worldGenContext(),
+                                                net.minecraft.world.level.chunk.status.ChunkPyramid
+                                                        .GENERATION_PYRAMID
+                                                        .getStepTo(stage),
+                                                null,
+                                                chunk);
                         var generated =
-                                io.github.recrivenvi.randomnibble6plus24generator.worldgen.terrain
-                                        .LightweightTerrainGenerator.generate(
-                                        context,
-                                        run.compact,
-                                        (stage, chunk) ->
-                                                capture(
-                                                        context.worldGenContext(),
-                                                        net.minecraft.world.level.chunk.status
-                                                                .ChunkPyramid.GENERATION_PYRAMID
-                                                                .getStepTo(stage),
-                                                        null,
-                                                        chunk),
-                                        biomes);
+                                Boolean.getBoolean(PREFIX + "nativeTerrain")
+                                        ? io.github.recrivenvi.randomnibble6plus24generator.worldgen
+                                                .materialization.DetachedTerrainInputs.generate(
+                                                context, run.compact, captureStage)
+                                        : io.github.recrivenvi.randomnibble6plus24generator.worldgen
+                                                .terrain.LightweightTerrainGenerator.generate(
+                                                context,
+                                                run.compact,
+                                                (stage, chunk) ->
+                                                        capture(
+                                                                context.worldGenContext(),
+                                                                net.minecraft.world.level.chunk
+                                                                        .status.ChunkPyramid
+                                                                        .GENERATION_PYRAMID
+                                                                        .getStepTo(stage),
+                                                                null,
+                                                                chunk),
+                                                biomes);
+                        if (Boolean.getBoolean(PREFIX + "nativeTerrain")) {
+                            if (generated.target().getPersistedStatus() != ChunkStatus.TERRAIN)
+                                throw new IllegalStateException(
+                                        "Detached terrain escaped its native stage");
+                            run.detachedTerrain = generated.target();
+                        }
                         result.add(
                                 "lightweightTerrain",
                                 new GsonBuilder().create().toJsonTree(generated.metrics()));
@@ -240,10 +355,42 @@ public final class PreFeaturesVerifier {
                         throw new IllegalStateException("Lightweight path created holders");
                     result.addProperty("virtualChunks", 0);
                 }
+                if (Boolean.getBoolean(PREFIX + "nativeTerrain")) {
+                    var chunk = Objects.requireNonNull(run.detachedTerrain);
+                    if (!FeatureStageSnapshot.capture(
+                                    level.dimension().identifier().toString(),
+                                    chunk,
+                                    level.registryAccess())
+                            .diff(FeatureStageSnapshot.read(run.output.resolve("terrain.bin.gz")))
+                            .equivalent())
+                        throw new IllegalStateException(
+                                "Detached terrain changed after owner close");
+                    try {
+                        var raw =
+                                net.minecraft.nbt.NbtIo.readCompressed(
+                                        run.output.resolve("terrain-native.nbt.gz"),
+                                        net.minecraft.nbt.NbtAccounter.unlimitedHeap());
+                        if (!raw.equals(
+                                net.minecraft.world.level.chunk.storage.SerializableChunkData
+                                        .copyOf(level, chunk)
+                                        .write()))
+                            throw new IllegalStateException(
+                                    "Detached terrain serialization changed after close");
+                    } catch (IOException failure) {
+                        throw new java.io.UncheckedIOException(failure);
+                    }
+                    result.addProperty("detachedAfterClose", true);
+                    result.addProperty("serializationAfterClose", true);
+                    run.detachedTerrain = null;
+                }
             } else if (role.equals("native")) {
-                ChunkAccess target = level.getChunk(pos.x(), pos.z(), ChunkStatus.TERRAIN, true);
-                if (target.getPersistedStatus() != ChunkStatus.TERRAIN)
-                    throw new IllegalStateException("Native stage boundary escaped TERRAIN");
+                ChunkStatus requested =
+                        Boolean.getBoolean(PREFIX + "biomeOnly")
+                                ? ChunkStatus.BIOMES
+                                : ChunkStatus.TERRAIN;
+                ChunkAccess target = level.getChunk(pos.x(), pos.z(), requested, true);
+                if (target.getPersistedStatus() != requested)
+                    throw new IllegalStateException("Native stage boundary escaped " + requested);
             } else {
                 // Explicit seed fixtures test the structure algorithm independently of seed
                 // derivation.
@@ -332,6 +479,25 @@ public final class PreFeaturesVerifier {
                                 chunk,
                                 run.level.registryAccess());
         JsonObject structures = structureInputs(run.level, chunk, cache);
+        if ((Boolean.getBoolean(PREFIX + "biomeOnly") && status == ChunkStatus.BIOMES)
+                || (Boolean.getBoolean(PREFIX + "nativeTerrain")
+                        && status == ChunkStatus.TERRAIN)) {
+            var raw =
+                    net.minecraft.world.level.chunk.storage.SerializableChunkData.copyOf(
+                                    run.level, chunk)
+                            .write();
+            var parsed =
+                    net.minecraft.world.level.chunk.storage.SerializableChunkData.parse(
+                            run.level, run.level.palettedContainerFactory(), raw.copy());
+            if (parsed == null || parsed.chunkStatus() != status || !raw.equals(parsed.write()))
+                throw new IllegalStateException("Native BIOMES codec did not roundtrip exactly");
+            try {
+                net.minecraft.nbt.NbtIo.writeCompressed(
+                        raw, run.output.resolve(stageName(status) + "-native.nbt.gz"));
+            } catch (IOException failure) {
+                throw new java.io.UncheckedIOException(failure);
+            }
+        }
         if (Boolean.getBoolean(PREFIX + "structures")
                 && status == ChunkStatus.STRUCTURE_REFERENCES) {
             // Detached persistence input includes every referenced start, not a writer-ring subset.
@@ -538,6 +704,30 @@ public final class PreFeaturesVerifier {
             throw new IllegalStateException(
                     "Control evidence is not an independent completed producer");
         JsonArray differences = new JsonArray();
+        if (Boolean.getBoolean(PREFIX + "biomeOnly")
+                || Boolean.getBoolean(PREFIX + "nativeTerrain")) {
+            String name =
+                    Boolean.getBoolean(PREFIX + "biomeOnly")
+                            ? "biomes-native.nbt.gz"
+                            : "terrain-native.nbt.gz";
+            try {
+                var before =
+                        net.minecraft.nbt.NbtIo.readCompressed(
+                                nativeRoot.resolve(name),
+                                net.minecraft.nbt.NbtAccounter.unlimitedHeap());
+                var after =
+                        net.minecraft.nbt.NbtIo.readCompressed(
+                                run.output.resolve(name),
+                                net.minecraft.nbt.NbtAccounter.unlimitedHeap());
+                if (!before.equals(after)) {
+                    var difference = new JsonObject();
+                    difference.addProperty("stage", "full-native-partial-nbt");
+                    differences.add(difference);
+                }
+            } catch (IOException failure) {
+                throw new java.io.UncheckedIOException(failure);
+            }
+        }
         if (Boolean.getBoolean(PREFIX + "lightweight"))
             TerrainProbeEvidence.compare(nativeRoot, run.output, differences);
         if (Boolean.getBoolean(PREFIX + "structures")) {
@@ -830,6 +1020,7 @@ public final class PreFeaturesVerifier {
     private static final class Run {
         final String role;
         CompactStructureInputs compact;
+        net.minecraft.world.level.chunk.ProtoChunk detachedTerrain;
         final ServerLevel level;
         final ChunkPos target;
         final Path output;

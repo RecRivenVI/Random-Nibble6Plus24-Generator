@@ -12,7 +12,7 @@
 
 三组分别交错运行未复用 B、状态安全复用 B 和普通 Vanilla，九个 PID/run identity 不重复。每次运行另行 CheckOnly，聚合工具复核原始条件、结果与 JFR 分析的哈希。来源缓存算法没有第三轮实现。
 
-证据为[第一组](../../validations/performance-worldgen/result/legacy_frontier_cold/1.21.1-neoforge/overworld/v8/collision_pair_a-duration180/comparison.json)、[第二组](../../validations/performance-worldgen/result/legacy_frontier_cold/1.21.1-neoforge/overworld/v8/collision_pair_b-duration180/comparison.json)、[第三组](../../validations/performance-worldgen/result/legacy_frontier_cold/1.21.1-neoforge/overworld/v8/collision_pair_c-duration180/comparison.json)及[聚合结果](../../validations/performance-worldgen/result/legacy_frontier_cold/1.21.1-neoforge/overworld/v8/reuse-paired-summary.json)。CLI send-ready 是服务器可发送条件，不代表实际客户端收包或画面。
+证据为第一组（本机证据：`../../validations/performance-worldgen/result/legacy_frontier_cold/1.21.1-neoforge/overworld/v8/collision_pair_a-duration180/comparison.json`）、第二组（本机证据：`../../validations/performance-worldgen/result/legacy_frontier_cold/1.21.1-neoforge/overworld/v8/collision_pair_b-duration180/comparison.json`）、第三组（本机证据：`../../validations/performance-worldgen/result/legacy_frontier_cold/1.21.1-neoforge/overworld/v8/collision_pair_c-duration180/comparison.json`）及聚合结果（本机证据：`../../validations/performance-worldgen/result/legacy_frontier_cold/1.21.1-neoforge/overworld/v8/reuse-paired-summary.json`）。CLI send-ready 是服务器可发送条件，不代表实际客户端收包或画面。
 
 ## 发现
 
@@ -36,7 +36,7 @@ JFR 加权分配量：未复用为 219.57、243.12、242.72 GiB，复用为 196.
 
 复用组互斥 CPU 样本中，其它结构约占 48.7%～50.8%，Noise/Surface/Biomes 约占 44.0%～46.2%，Stronghold 约占 0.23%～0.36%。GC pause 总和约 2.74～3.55 秒，不能解释整个 180 秒缺口；不把线程累计锁等待当作墙钟占比。
 
-九次游戏均正常完成、保存退出，没有新增崩溃。单独的[碰撞筛选](../../validations/performance-worldgen/result/legacy_frontier_cold/1.21.1-neoforge/overworld/v8/collision_screen-duration180/comparison.json)已有实际正向读取覆盖；配对组没有读取命中时只记未覆盖，不判新崩溃，也不冒充碰撞正例。第一组最初误将“必须有命中”用于每个配对，被工具拒绝；原始正常游戏和 coverage assertion 保留在该组 first_failure，修正为只在专门筛选强制正例后，独立复核同一原始结果，没有重新挑选有利的一轮。
+九次游戏均正常完成、保存退出，没有新增崩溃。单独的碰撞筛选（本机证据：`../../validations/performance-worldgen/result/legacy_frontier_cold/1.21.1-neoforge/overworld/v8/collision_screen-duration180/comparison.json`）已有实际正向读取覆盖；配对组没有读取命中时只记未覆盖，不判新崩溃，也不冒充碰撞正例。第一组最初误将“必须有命中”用于每个配对，被工具拒绝；原始正常游戏和 coverage assertion 保留在该组 first_failure，修正为只在专门筛选强制正例后，独立复核同一原始结果，没有重新挑选有利的一轮。
 
 ## 结论
 

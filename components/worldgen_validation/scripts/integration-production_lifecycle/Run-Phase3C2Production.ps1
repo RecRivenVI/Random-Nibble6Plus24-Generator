@@ -14,6 +14,7 @@ param(
     [switch]$Mutate,
     [switch]$StateProof,
     [switch]$PartialBiomes,
+    [switch]$PartialTerrain,
     [switch]$VanillaControl,
     [switch]$RuntimeProof,
     [switch]$RequestProof,
@@ -34,9 +35,11 @@ param(
 )
 
 if ($Bop) { $validationProjectOverride = 'compatibility-bop' }
+if ($PartialTerrain) { $PartialBiomes = [switch]::new($true) }
 . (Join-Path $PSScriptRoot '../Validation-Environment.ps1')
 . (Join-Path $PSScriptRoot '../Native-RequestEvidence.ps1')
 $ErrorActionPreference = 'Stop'
+if ($PartialTerrain -and $validationTarget -notin @('26.3-fabric','26.3-neoforge')) { throw 'Partial TERRAIN lifecycle requires a 26.3 native adapter' }
 Set-StrictMode -Version Latest
 
 if ($FeatureOrderingVersion -eq 2 -and $validationTarget -notin @('26.3-fabric','26.3-neoforge','26.1.2-neoforge','1.21.1-neoforge')) {
@@ -56,7 +59,7 @@ if ($ReuseSources -and ((!$ColdSpawn -and !$RuntimeProof) -or !$NarrowLocks -or 
 if ($RequestProof -and ($validationTarget -notin @('26.3-fabric','26.3-neoforge') -or !$DevelopmentB -or !$EvidenceLabel -or
         $Mode -notin @('concurrent','pair','patch') -or $VerifyReload -or $RuntimeProof -or $StateProof -or $PartialBiomes -or
         $VanillaControl -or $PhysicalHandoff -or $ColdSpawn -or $Bop -or $CompletionOrder)) { throw 'Request proof requires separate labelled modern B concurrent/pair/patch conditions' }
-if ($EvidenceLabel -and !$PhysicalHandoff -and !$RuntimeProof -and !$ColdSpawn -and !$RequestProof -and !$PlayerLifecycle) { throw 'Evidence labels require a distinct physical-handoff, runtime, request, player or cold-SPAWN proof' }
+if ($EvidenceLabel -and !$PhysicalHandoff -and !$RuntimeProof -and !$ColdSpawn -and !$RequestProof -and !$PlayerLifecycle -and !$PartialBiomes) { throw 'Evidence labels require a distinct physical-handoff, runtime, request, player, partial-biome or cold-SPAWN proof' }
 if ($LazyRings -and ($validationTarget -ne '1.21.1-neoforge' -or (!$PhysicalHandoff -and !$RuntimeProof -and !$ColdSpawn) -or !$DevelopmentB)) { throw 'Candidate ring scope requires an isolated 1.21.1 B physical or runtime proof' }
 if ($NarrowLocks -and ($validationTarget -ne '1.21.1-neoforge' -or !$LazyRings -or !$EvidenceLabel)) { throw 'Narrow locks require the separately labelled 1.21.1 ring candidate' }
 if ($RuntimeProof -and ($validationTarget -notin @('26.3-fabric','26.3-neoforge','26.1.2-neoforge','1.21.1-neoforge') -or $StateProof -or $PartialBiomes -or
@@ -64,11 +67,11 @@ if ($RuntimeProof -and ($validationTarget -notin @('26.3-fabric','26.3-neoforge'
             (!$VanillaControl -and !$DevelopmentB))) {
     throw 'Native tick-loop evidence requires an adapted B/Vanilla FULL save/restart probe, separately from state/partial proofs'
 }
-if($NaturalProof -and ($validationTarget -ne '26.3-fabric' -or !$DevelopmentB -or !$RuntimeProof -or !$VerifyReload -or !$EvidenceLabel -or
+if($NaturalProof -and ($validationTarget -notin @('26.3-fabric','26.3-neoforge') -or !$DevelopmentB -or !$RuntimeProof -or !$VerifyReload -or !$EvidenceLabel -or
         $VanillaControl -or $RequestProof -or $Mode -ne 'full')){throw 'Natural source evidence requires distinct labelled Fabric B runtime/save/reload conditions'}
 if($PublicationInventory -and ($validationTarget -ne '26.3-fabric' -or !$DevelopmentB -or !$RuntimeProof -or !$VerifyReload -or !$EvidenceLabel -or
         $VanillaControl -or $RequestProof -or $NaturalProof -or $Mode -ne 'full')){throw 'Publication inventory requires separate labelled Fabric B runtime/save/reload, not a positive activation proof'}
-if ($PartialBiomes -and ($validationTarget -ne '26.3-fabric' -or !$DevelopmentB -or !$VerifyReload)) { throw 'Partial BIOMES lifecycle requires 26.3 Fabric Development B and save/restart validation' }
+if ($PartialBiomes -and ($validationTarget -notin @('26.3-fabric','26.3-neoforge') -or !$DevelopmentB -or !$VerifyReload)) { throw 'Partial BIOMES lifecycle requires 26.3 Development B and save/restart validation' }
 if ($PhysicalHandoff -and ($validationTarget -ne '1.21.1-neoforge' -or (!$DevelopmentB -and !$VanillaControl) -or $StateProof -or $RuntimeProof -or $PartialBiomes)) { throw 'Scoped physical-handoff evidence currently requires the 1.21.1 B or Vanilla native lifecycle probe' }
 if ($CompletionOrder -and ($validationTarget -ne '1.21.1-neoforge' -or !$DevelopmentB -or $VanillaControl -or $RuntimeProof -or $StateProof -or $PartialBiomes -or $Mode -ne 'full' -or $VerifyReload)) { throw 'Completed-input interleaving is a separate 1.21.1 Mosaic FULL probe, not reload/runtime evidence' }
 if ($DevelopmentB -and ($validationTarget -notin @('26.3-fabric','26.3-neoforge','26.1.2-neoforge','1.21.1-neoforge') -or $FeatureOrderingVersion -ne 2)) { throw 'Development B requires an adapted Target and explicit Ordering 2' }
@@ -112,7 +115,7 @@ if ($DevelopmentB) { $resultRoot = Join-Path $resultRoot 'development-b' }
 if ($PublicationInventory) { $resultRoot = Join-Path $resultRoot 'publication-inventory' }
 if ($PlayerLifecycle) { $resultRoot = Join-Path $resultRoot 'player-lifecycle' }
 if ($StateProof) { $resultRoot = Join-Path $resultRoot 'state-proof' }
-if ($PartialBiomes) { $resultRoot = Join-Path $resultRoot 'partial-biomes' }
+if ($PartialBiomes) { $resultRoot = Join-Path $resultRoot $(if ($PartialTerrain) { 'partial-terrain' } else { 'partial-biomes' }) }
 if ($CompletionOrder) { $resultRoot = Join-Path $resultRoot 'completion-order' }
 if ($VanillaControl) { $resultRoot = Join-Path $resultRoot 'vanilla-control' }
 if ($PhysicalHandoff) { $resultRoot = Join-Path (Join-Path $resultRoot 'physical-handoff') $Dimension.Replace(':','-') }
@@ -295,6 +298,7 @@ function Invoke-Production([string]$productionMode, [string]$output, [bool]$muta
     if ($NarrowLocks) { $options += '-Drandomnibble6plus24generator.structure.narrowLocks=true' }
     if ($ReuseSources) { $options += '-Drandomnibble6plus24generator.structure.reuseSources=true' }
     if ($PartialBiomes) {
+        if ($PartialTerrain) { $options += '-Drandomnibble6plus24generator.phase3c2.production.partialTerrain=true' }
         $baselineName = "expected-native-load-$($Dimension.Replace(':','-'))-$ChunkX-$ChunkZ.snapshot"
         $options += "-Drandomnibble6plus24generator.phase3c2.production.biomeBaseline=$((Join-Path $resultRoot $baselineName).Replace('\','/'))"
     }
@@ -407,7 +411,7 @@ function Invoke-Production([string]$productionMode, [string]$output, [bool]$muta
     }
     if ($productionMode.StartsWith('biomes-')) {
         if ($result.mode -cne $productionMode -or $result.dimension -cne $Dimension -or
-                $result.target -cne "[$ChunkX, $ChunkZ]" -or $result.chunkStatus -cne 'minecraft:biomes' -or
+                $result.target -cne "[$ChunkX, $ChunkZ]" -or $result.chunkStatus -cne $(if ($PartialTerrain) { 'minecraft:terrain' } else { 'minecraft:biomes' }) -or
                 $result.artifactGenerations -ne 0 -or !$result.sameChunkFor16Requests -or
                 !(Test-Path -LiteralPath "$output.nbt.gz")) { throw 'Partial BIOMES physical lifecycle evidence is incomplete' }
         if ($productionMode -eq 'biomes-first' -and !$result.concurrentUpgradeExactlyOneArtifact) { throw 'Partial/full upgrade race was not covered' }
@@ -512,6 +516,7 @@ try {
             naturalProof = $NaturalProof
             publicationInventory = $PublicationInventory.IsPresent
             playerLifecycle = $PlayerLifecycle.IsPresent
+            partialBiomes = $PartialBiomes.IsPresent; partialTerrain = $PartialTerrain.IsPresent
             verifyReload = $VerifyReload.IsPresent; runIdentity = [Guid]::NewGuid().ToString('D')
         }
         [IO.File]::WriteAllText((Join-Path $resultRoot "conditions-$Mode-$ChunkX-$ChunkZ.json"), ($conditions | ConvertTo-Json -Depth 4) + "`n", [Text.UTF8Encoding]::new($false))

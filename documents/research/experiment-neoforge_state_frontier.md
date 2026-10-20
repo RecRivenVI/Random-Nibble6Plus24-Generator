@@ -12,7 +12,7 @@
 
 使用真实原生玩家距离票据而非 forceload，不登录假玩家。各组新建世界，按 Vanilla→B 串行；十八个 PID、world identity 各不相同，源码指纹相同，实际 availableProcessors 均为四。模组集合不含 MCP，不借未知模组回退的客户端结果代替当前快路径性能。
 
-结果固定于 [climate_state_frontier](../../validations/performance-worldgen/result/b_milestone/26.3-neoforge/climate_state_frontier)。归并器分别核对相同请求轨迹、原生视野需求集合、正常测量终态及原始文件 hash；保留未完成和已撤销请求，截尾延迟使用区间，不只报告已完成子集。send-ready 仅为服务端首次发送就绪，不等于 packet 已到客户端。
+结果固定于 climate_state_frontier（本机证据：`../../validations/performance-worldgen/result/b_milestone/26.3-neoforge/climate_state_frontier`）。归并器分别核对相同请求轨迹、原生视野需求集合、正常测量终态及原始文件 hash；保留未完成和已撤销请求，截尾延迟使用区间，不只报告已完成子集。send-ready 仅为服务端首次发送就绪，不等于 packet 已到客户端。
 
 ## 发现
 
@@ -40,7 +40,7 @@
 | 16 | 下界 | 288.93–302.49% | ≥260.02%，无有限上界 |
 | 16 | 末地 | 239.87% | 249.53% |
 
-完整比值分别见 [8/8](../../validations/performance-worldgen/result/b_milestone/26.3-neoforge/climate_state_frontier/vanilla-comparison.json)、[12/12](../../validations/performance-worldgen/result/b_milestone/26.3-neoforge/climate_state_frontier/vanilla-comparison-v12-duration45.json)、[16/16](../../validations/performance-worldgen/result/b_milestone/26.3-neoforge/climate_state_frontier/vanilla-comparison-v16-duration45.json)。高视距主世界的百分比只是截尾下界，不能据其数值变小认定加载更快。后两维度部分组已清空有限前沿，canonical/s 和约 100% 完成吞吐不是持续满载上限，不能据此认定追平 Vanilla。
+完整比值分别见 8/8（本机证据：`../../validations/performance-worldgen/result/b_milestone/26.3-neoforge/climate_state_frontier/vanilla-comparison.json`）、12/12（本机证据：`../../validations/performance-worldgen/result/b_milestone/26.3-neoforge/climate_state_frontier/vanilla-comparison-v12-duration45.json`）、16/16（本机证据：`../../validations/performance-worldgen/result/b_milestone/26.3-neoforge/climate_state_frontier/vanilla-comparison-v16-duration45.json`）。高视距主世界的百分比只是截尾下界，不能据其数值变小认定加载更快。后两维度部分组已清空有限前沿，canonical/s 和约 100% 完成吞吐不是持续满载上限，不能据此认定追平 Vanilla。
 
 ### 主世界 8/8 关键路径
 

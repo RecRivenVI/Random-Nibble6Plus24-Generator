@@ -9,10 +9,10 @@ Minecraft Java Fabric 的 Random Chunk Mosaic 实验项目：每个物理 Chunk 
 | Target | 加载器版本 | Java |
 | --- | --- | --- |
 | `1.20.1-forge` | 47.4.28 | 17 |
-| `1.21.1-neoforge` | 21.1.262 | 21 |
-| `26.1.2-neoforge` | 26.1.2.121 | 25 |
+| `1.21.1-neoforge` | 21.1.264 | 21 |
+| `26.1.2-neoforge` | 26.1.2.122 | 25 |
 | `26.2-fabric` | 0.19.5 | 25 |
-| `26.3-neoforge` | 26.3.0.83 | 25 |
+| `26.3-neoforge` | 26.3.0.94 | 25 |
 | `26.3-fabric` | 0.19.5 | 25 |
 
 ## 快速开始

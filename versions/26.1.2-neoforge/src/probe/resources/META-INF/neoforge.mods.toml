@@ -21,4 +21,7 @@ config = "mosaic-prefeatures-test.mixins.json"
 config = "mosaic-feature-b-test.mixins.json"
 
 [[mixins]]
+config = "mosaic-dependency-smoke.mixins.json"
+
+[[mixins]]
 config = "mosaic-production-test.mixins.json"

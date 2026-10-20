@@ -40,3 +40,10 @@ version = "0.0.1-phase8"
 description = "固定 MCP alpha 的 26.3 Fabric 自动化验证输入，不进入产品或用户实例"
 source = "D:/Workspaces/Artifacts/MineCraftProtocol/Alpha/20261017-1504-e83283fc"
 sha256 = ["d922028c09ca1b93201af820eddd0915bdd3c68fe96630e95c7d097e51c95b03"]
+
+[minecraft-protocol-alpha-neoforge]
+mod-id = "minecraft_protocol_probe"
+version = "0.0.1-phase8"
+description = "同批固定 MCP alpha 的 26.3 NeoForge 自动化输入，不进入产品或用户实例"
+source = "D:/Workspaces/Artifacts/MineCraftProtocol/Alpha/20261017-1504-e83283fc"
+sha256 = ["11a1a94c5cbbf1aa2aa099d915e0133fa0e6d682ff4082382729c0722a9da131"]

@@ -10,7 +10,7 @@
 
 使用 Forge 47.4.28、Java 17、四逻辑 CPU、低优先级，两次独立 fresh JVM/save；每次从空模板 repository 和 141 个未初始化 pool 尺寸开始。候选先行与原生整段锁先行各运行一次，六类真实结构各重复三个并行任务，与另一模式的串行原生结果比较。实际并发上限为二，不把组件的两线程当作生产并发设置。
 
-输入指纹为 1EA12F079FCA02DC86A46521A746B48D6F88F50F8DDC502CF68FB9EC99848BC6；两次进程号分别为 80720、106100。原始结果、条件和模板冷态检查见[固定组件证据](../../validations/conformance-structure_inputs/result/narrow_lock_concurrency_rotation_safe/1.20.1-forge)。工具的 CheckOnly 在相同源码下再次通过。
+输入指纹为 1EA12F079FCA02DC86A46521A746B48D6F88F50F8DDC502CF68FB9EC99848BC6；两次进程号分别为 80720、106100。原始结果、条件和模板冷态检查见固定组件证据（本机证据：`../../validations/conformance-structure_inputs/result/narrow_lock_concurrency_rotation_safe/1.20.1-forge`）。工具的 CheckOnly 在相同源码下再次通过。
 
 ## 发现
 
@@ -18,7 +18,7 @@
 - 每个 JVM 另外从空旋转缓存比较全部 48 个 OctahedralGroup 的六个 Direction 和十二个 FrontAndTop 返回值，两个线程执行 64 轮。原生 API 对某些组合返回的 null 也逐项相同，不替换方向算法或填默认方向。
 - 候选只保护完整原生初始化的可见性；拥有初始化作用域的线程重入原生 rotate，其余线程等待同一个枚举对象。没有新增种子、排序、RNG 消费或旋转数据表。
 - 在原生初始化入口注入异常时，异常继续报告；初始化绑定清零，另一线程随后能恢复相同的原生返回值，没有遗留锁或线程局部状态。
-- 关闭 startup 属性或发现未知模组时不安装四项行为 Mixin；context 同时要求实际能力标记及已审计原生配置，不能仅用可变属性假定注入已安装。[四项独立六阶段 smoke](../../validations/conformance-legacy_terrain/result/narrow_locks_ring_scope_smoke_rotation_safe/1.20.1-forge)通过，原生控制检查未安装能力标记。
+- 关闭 startup 属性或发现未知模组时不安装四项行为 Mixin；context 同时要求实际能力标记及已审计原生配置，不能仅用可变属性假定注入已安装。四项独立六阶段 smoke（本机证据：`../../validations/conformance-legacy_terrain/result/narrow_locks_ring_scope_smoke_rotation_safe/1.20.1-forge`）通过，原生控制检查未安装能力标记。
 - 第一轮[冷并发真实失败](../research/incident-forge_rotation_cache.md)继续保留，没有倒填 PASS；本轮证明也没有把共享状态竞争解释为可接受的自然随机差异。
 
 ## 结论

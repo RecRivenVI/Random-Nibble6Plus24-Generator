@@ -16,9 +16,9 @@
 
 | 门禁 | 实际结果 | 证据 |
 | --- | --- | --- |
-| 装饰前矩阵 | 72/72：主世界 40、下界 16、末地 16；144 个 fixture JVM/save | [matrix](../../validations/conformance-prefeatures/result/structure_reuse_matrix_climate_state/26.3-fabric) |
-| 七类结构专项 | 18/18；36 个 fixture JVM/save | [structures](../../validations/conformance-prefeatures/result/structure_reuse_structures_climate_state/26.3-fabric) |
-| 独立完整 B | 19/19：主世界 14、下界 2、末地 3；76 个 fixture JVM/save | [independent](../../validations/conformance-feature_b/result/climate_state_launch_ports/independent/26.3-fabric) |
+| 装饰前矩阵 | 72/72：主世界 40、下界 16、末地 16；144 个 fixture JVM/save | matrix（本机证据：`../../validations/conformance-prefeatures/result/structure_reuse_matrix_climate_state/26.3-fabric`） |
+| 七类结构专项 | 18/18；36 个 fixture JVM/save | structures（本机证据：`../../validations/conformance-prefeatures/result/structure_reuse_structures_climate_state/26.3-fabric`） |
+| 独立完整 B | 19/19：主世界 14、下界 2、末地 3；76 个 fixture JVM/save | independent（本机证据：`../../validations/conformance-feature_b/result/climate_state_launch_ports/independent/26.3-fabric`） |
 
 上述合计 256 个 fixture JVM/save，不包括空世界导出、组件预检或失败启动。结构专项覆盖 Village、Mineshaft、Trial Chambers、Ocean Monument、Nether Fortress、End City、Stronghold；包含邻区 start、两种 halo 及原点／原 blocker。完整 starts、pieces、references、地形适配输入、stored biomes、密度内部切片、表面与洞穴仍按同条件原版严格对照，不按对象数量或视觉近似判等。
 

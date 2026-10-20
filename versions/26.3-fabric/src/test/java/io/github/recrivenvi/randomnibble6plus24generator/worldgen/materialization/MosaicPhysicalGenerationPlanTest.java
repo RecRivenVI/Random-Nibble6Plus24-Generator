@@ -103,7 +103,7 @@ class MosaicPhysicalGenerationPlanTest {
     }
 
     @Test
-    void partialBiomeCapabilityDoesNotPrunePhysicalDependenciesOrTerrain() {
+    void partialCapabilityKeepsDependenciesAndStopsAtRequestedPreFeaturesStage() {
         var center = new ChunkPos(125, -37);
         for (var status :
                 java.util.List.of(
@@ -119,10 +119,9 @@ class MosaicPhysicalGenerationPlanTest {
             var partial = MosaicPhysicalGenerationPlan.derive(center, status, true);
             assertEquals(legacy.physicalStatusRequirements(), partial.physicalStatusRequirements());
             assertEquals(legacy.accumulatedRadius(), partial.accumulatedRadius());
-            if (status == ChunkStatus.BIOMES)
+            if (status == ChunkStatus.BIOMES || status == ChunkStatus.TERRAIN)
                 assertEquals(
-                        java.util.Map.of(center, ChunkStatus.BIOMES),
-                        partial.materializationObligations());
+                        java.util.Map.of(center, status), partial.materializationObligations());
             else
                 assertEquals(
                         legacy.materializationObligations(), partial.materializationObligations());

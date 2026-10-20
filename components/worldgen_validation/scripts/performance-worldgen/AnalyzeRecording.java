@@ -39,10 +39,11 @@ class AnalyzeRecording {
         Map<String,Double> monitors=new HashMap<>(),parks=new HashMap<>(),sync=new HashMap<>(),allocation=new HashMap<>(),allocationSites=new HashMap<>(),files=new HashMap<>();
         Map<String,Double> syncThreads=new HashMap<>(),serverParkStacks=new HashMap<>();Map<String,Long> syncCounts=new HashMap<>();
         Map<String,List<long[]>> spanPoints=new HashMap<>();
-        List<Map<String,Object>> pauses=new ArrayList<>(),slowCalls=new ArrayList<>();
+        List<Map<String,Object>> pauses=new ArrayList<>(),slowCalls=new ArrayList<>(),cpuLoadSamples=new ArrayList<>();
         List<Long> afterGcHeap=new ArrayList<>();
         Map<String,String> prepared=new TreeMap<>();long sampleCount=0;double gcMs=0,maxGcMs=0;
-        Map<String,Long> cpuBuckets=new TreeMap<>();boolean jfrMarkerTimestamps=false;
+        Map<String,Long> cpuBuckets=new TreeMap<>(),workCpu=new TreeMap<>(),biomeCpu=new TreeMap<>(),nativeBiomeCpu=new TreeMap<>();
+        Map<String,Double> workMonitors=new TreeMap<>();boolean jfrMarkerTimestamps=false;
         try(RecordingFile file=new RecordingFile(input);var events=Files.newBufferedWriter(Path.of(args[1]+".events.tsv"))){
             events.write("nanos\tkey\tphase\tdetail\tthread\n");
             while(file.hasMoreEvents()){
@@ -67,10 +68,22 @@ class AnalyzeRecording {
                     else if(stack.stream().anyMatch(f->f.contains(".levelgen.feature.")||f.contains(".applyBiomeDecoration")))bucket="features";
                     else bucket="other";
                     cpuBuckets.merge(bucket,1L,Long::sum);
+                    // Nearest scope wins: a worker waiting in join can execute another task.
+                    String work=workScope(stack);workCpu.merge(work,1L,Long::sum);
+                    if(stack.stream().anyMatch(f->f.endsWith("TerrainBiomeInputs.palette")||f.endsWith("TerrainBiomeInputs.rememberGenerated")))
+                        biomeCpu.merge(work,1L,Long::sum);
+                    if(stack.stream().anyMatch(f->f.endsWith("ChunkGenerator.doCreateBiomes")))
+                        nativeBiomeCpu.merge(work,1L,Long::sum);
+                }else if(type.equals("jdk.CPULoad")){
+                    cpuLoadSamples.add(Map.of("at",e.getStartTime().toString(),
+                            "machineTotal",(double)e.getFloat("machineTotal"),
+                            "jvmUser",(double)e.getFloat("jvmUser"),
+                            "jvmSystem",(double)e.getFloat("jvmSystem")));
                 }else if(type.equals("jdk.NativeMethodSample")){
                     nativeSamples.merge(site,1L,Long::sum);
                 }else if(type.equals("jdk.JavaMonitorEnter")){
                     String monitor=e.getClass("monitorClass").getName();monitors.merge(monitor+" | "+gameSite,ms,Double::sum);
+                    workMonitors.merge(workScope(stack)+" | "+monitor,ms,Double::sum);
                 }else if(type.equals("jdk.ThreadPark")){
                     parks.merge((e.getThread()==null?"?":e.getThread().getJavaName())+" | "+gameSite,ms,Double::sum);
                     if(e.getThread()!=null&&e.getThread().getJavaName().equals("Server thread"))
@@ -103,13 +116,23 @@ class AnalyzeRecording {
         }
         Map<String,Object> out=new LinkedHashMap<>();out.put("windowStart",start.toString());out.put("windowEnd",end.toString());
         out.put("wallSeconds",Duration.between(start,end).toNanos()/1e9);out.put("eventCounts",types);out.put("cpuSamples",sampleCount);
+        out.put("cpuLoadSamples",cpuLoadSamples);
+        var machineCpuMean=cpuLoadSamples.stream()
+                .mapToDouble(row->((Number)row.get("machineTotal")).doubleValue()).average();
+        out.put("machineCpuLoadSampleMean",machineCpuMean.isPresent()?machineCpuMean.getAsDouble():null);
         out.put("missingElapsedNanosUsesJfrWindowTimestamps",jfrMarkerTimestamps);
         out.put("cpuLeafTop",top(cpu,35));out.put("cpuInclusiveTop",top(cpuAll,50));out.put("cpuThreads",top(cpuThreads,25));
         Map<String,Long> focused=new TreeMap<>();
         cpuAll.forEach((key,value)->{if(key.contains("StructureGenerationLocks.supports")
                 || key.contains("LocalDensityTiles$Audit.") || key.contains("LocalTerrainColumns$Batch.")
-                || key.contains("ScopedStructureSources.source") || key.contains("DetachedBiomeInputs.generate"))focused.put(key,value);});
+                || key.contains("ScopedStructureSources.source") || key.contains("DetachedBiomeInputs.generate")
+                || key.contains(".RandomState.") || key.contains("SeedLocalNoiseGenerator.copy")
+                || key.contains("IsolatedGenerationContext.<init>") || key.contains("CanonicalChunkArtifact.")
+                || key.contains("NoiseBasedChunkGenerator.getOrigin") || key.contains("NoiseSpawnFinder."))focused.put(key,value);});
         out.put("focusedCpuSamples",focused);
+        out.put("workCpuSamples",workCpu);out.put("storedBiomeCpuSamples",biomeCpu);
+        out.put("nativeBiomeCpuSamples",nativeBiomeCpu);
+        out.put("workMonitorBlockedMs",workMonitors);
         out.put("exclusiveCpuBuckets",cpuBuckets);
         out.put("nativeWallSamplesNotCpu",top(nativeSamples,20));
         out.put("monitorBlockedMsTop",top(monitors,30));out.put("threadParkMsTop",top(parks,30));
@@ -128,6 +151,15 @@ class AnalyzeRecording {
         });out.put("peakConcurrentSpans",peaks);
         slowCalls.sort(Comparator.comparingDouble(m->-((Number)m.get("ms")).doubleValue()));out.put("slowCalls",slowCalls.subList(0,Math.min(60,slowCalls.size())));
         Files.writeString(Path.of(args[1]),json(out));
+    }
+    static String workScope(List<String> stack){
+        for(String frame:stack){
+            if(frame.contains(".BFeaturePreparation."))return "canonicalB";
+            if(frame.contains(".PhysicalBiomePreparation."))return "physicalBiomes";
+            if(frame.contains(".DetachedTerrainInputs."))return "physicalTerrain";
+            if(frame.contains(".PhysicalPreFeaturesPreparation."))return "physicalPreFeatures";
+        }
+        return "other";
     }
     static List<String> stack(RecordedEvent e){
         List<String> result=new ArrayList<>();if(e.getStackTrace()==null)return result;

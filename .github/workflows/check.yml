@@ -22,7 +22,7 @@ jobs:
           java-version: 25
       - uses: gradle/actions/setup-gradle@v6
       - name: Check
-        run: .\gradlew.bat check verifyRelease --continue
+        run: .\gradlew.bat checkRepository --continue
       - name: Upload compliance report
         if: always()
         uses: actions/upload-artifact@v7

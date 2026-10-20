@@ -16,7 +16,7 @@
 
 ## 发现
 
-当前组件输入指纹为 `29CF837192253E66666555A548B30B6AC4906DAB46337C01771C605682C5C8B3`。原始证据在[独立 smoke 目录](../../validations/conformance-legacy_terrain/result/ring_scope_smoke_climate_tail/1.20.1-forge)：`ring-climate-tail.json` 的四个方向/歧义案例全部通过，原始“直接省略搜索”反例仍可见；修正后的入口、真实出口 leaf 身份和下一次查询严格一致。超界数值、重复最小记录和未知 ParameterList 均拒绝快路径。
+当前组件输入指纹为 `29CF837192253E66666555A548B30B6AC4906DAB46337C01771C605682C5C8B3`。原始证据在独立 smoke 目录（本机证据：`../../validations/conformance-legacy_terrain/result/ring_scope_smoke_climate_tail/1.20.1-forge`）：`ring-climate-tail.json` 的四个方向/歧义案例全部通过，原始“直接省略搜索”反例仍可见；修正后的入口、真实出口 leaf 身份和下一次查询严格一致。超界数值、重复最小记录和未知 ParameterList 均拒绝快路径。
 
 `ring-proof.json` 完成 1536 个相关正例，零漏检；1000 个普通目标的 128000 个 slot 仅执行 34 次完整群系搜索，其余执行已证明的原生尾查询。全部相关正例共 196608 个 slot 执行 1536 次完整搜索。组件用时约 63.18 秒，父随机流与续流一致、supplier 绑定清空。这是同 JVM 原生组件证明，不是默认世界普遍无差异或吞吐提升的结论。
 

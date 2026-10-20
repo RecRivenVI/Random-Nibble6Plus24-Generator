@@ -393,6 +393,21 @@ public final class PerfTrace {
             root.addProperty("uptimeNanos", System.nanoTime() - ORIGIN);
             root.add("samples", new Gson().toJsonTree(SAMPLES));
             root.add("structureExperiment", new Gson().toJsonTree(StructureIsolation.snapshot()));
+            root.add(
+                    "physicalTerrain",
+                    new Gson()
+                            .toJsonTree(
+                                    io.github.recrivenvi.randomnibble6plus24generator.worldgen
+                                            .materialization.PhysicalPreFeaturesPreparation.metrics(
+                                            net.minecraft.world.level.chunk.status.ChunkStatus
+                                                    .TERRAIN)));
+            root.add(
+                    "physicalBiomes",
+                    new Gson()
+                            .toJsonTree(
+                                    io.github.recrivenvi.randomnibble6plus24generator.worldgen
+                                            .materialization.PhysicalPreFeaturesPreparation
+                                            .metrics()));
             JsonObject totals = new JsonObject();
             AGGREGATES.forEach((k, v) -> totals.addProperty(k, v.sum()));
             root.add("aggregates", totals);

@@ -1,5 +1,6 @@
-param([ValidateSet('overworld','the_nether','the_end')][string]$Dimension='overworld', [switch]$RecoverShutdown, [switch]$RingScope, [switch]$RuntimeProof, [switch]$FailureProof, [switch]$PartialPreLight, [switch]$RequestProof, [ValidateSet(1,8,16,32)][int]$Requests=1, [ValidateSet('','forward','reverse','parallel')][string]$TargetOrder='', [ValidatePattern('^[a-z0-9_]*$')][string]$EvidenceLabel='', [switch]$CheckOnly, [switch]$Offline, [long]$CpuAffinity=3840, [switch]$ExportServer)
+param([ValidateSet('overworld','the_nether','the_end')][string]$Dimension='overworld', [switch]$RecoverShutdown, [switch]$RingScope, [switch]$RuntimeProof, [switch]$FullWaitDiagnosis, [switch]$FailureProof, [switch]$PartialPreLight, [switch]$RequestProof, [ValidateSet(1,8,16,32)][int]$Requests=1, [ValidateSet('','forward','reverse','parallel')][string]$TargetOrder='', [ValidatePattern('^[a-z0-9_]*$')][string]$EvidenceLabel='', [switch]$CheckOnly, [switch]$Offline, [long]$CpuAffinity=3840, [switch]$ExportServer)
 $ErrorActionPreference='Stop'
+if($FullWaitDiagnosis -and (!$RuntimeProof -or $Dimension -ne 'overworld' -or $RingScope)){throw 'FULL wait diagnosis is the default Overworld runtime fixture, never a scoped-ring candidate'}
 if($RingScope -and $RecoverShutdown){throw 'Scoped ring recovery requires its own lifecycle fixture; do not relabel an unscoped save'}
 if($RuntimeProof -and $RecoverShutdown){throw 'Runtime promotion is separate from interrupted FULL recovery'}
 if($FailureProof -and ($RecoverShutdown -or $RingScope -or $RuntimeProof -or $ExportServer -or $PartialPreLight)){throw 'Observation failure reporting is a separate bounded negative probe'}
@@ -13,6 +14,7 @@ $target='1.20.1-forge'
 $validation=Join-Path $repo 'validations/integration-legacy_physical'
 $variant=if($RingScope){'ring_scope'}elseif($RecoverShutdown){'recovery_shutdown'}else{'current'}
 if($RuntimeProof){$variant='runtime_'+$variant}
+if($FullWaitDiagnosis){$variant+='_full_wait_game_owned'}
 if($FailureProof){$variant='observation_failure'}
 if($PartialPreLight){$variant='partial_pre_light'}
 if($EvidenceLabel){$variant+='_'+$EvidenceLabel}
@@ -185,7 +187,7 @@ try {
         $worldName=if($RecoverShutdown){"legacy-lifecycle-shutdown-$pipeline-$Dimension"}elseif($variant -ne 'current'){"legacy-physical-$variant-$pipeline-$Dimension"}else{"legacy-physical-$pipeline-$Dimension"}
         $world=Join-Path $instance $worldName
         $common=Join-Path $result "$pipeline/$leaf"
-        if(($FailureProof -or $PartialPreLight -or $RequestProof -or $TargetOrder) -and (Test-Path $common)){throw 'Preserve existing checkpoint/reporting/request evidence; never overwrite it on rerun'}
+        if(($FullWaitDiagnosis -or $FailureProof -or $PartialPreLight -or $RequestProof -or $TargetOrder) -and (Test-Path $common)){throw 'Preserve existing checkpoint/reporting/request evidence; never overwrite it on rerun'}
         $failureRoot=if($variant -ne 'current'){Join-Path $validation "result/first_failure/$variant/$target/$pipeline/$leaf"}else{Join-Path $validation "result/first_failure/$target/$pipeline/$leaf"}
         if((Test-Path $common) -and !(Test-Path $failureRoot)){
             $failed=@(Get-ChildItem $common -Filter summary.json -Recurse|Where-Object{(Get-Content $_.FullName -Raw|ConvertFrom-Json).status -cne 'PASS'})
@@ -227,6 +229,7 @@ try {
             if($pipeline -eq 'b'){$env:JAVA_TOOL_OPTIONS+=" -D${modId}.developmentB=true"}
             if($RingScope){$env:JAVA_TOOL_OPTIONS+=" -D${modId}.structure.lazyRings=true"}
             if($RuntimeProof){$env:JAVA_TOOL_OPTIONS+=" -D${modId}.nativePhysical.runtimeProof=true"}
+            if($FullWaitDiagnosis){$env:JAVA_TOOL_OPTIONS+=" -D${modId}.nativePhysical.fullWaitEvidence=true"}
             if($FailureProof){$env:JAVA_TOOL_OPTIONS+=" -D${modId}.nativePhysical.observationFailure=true"}
             if($PartialPreLight){$env:JAVA_TOOL_OPTIONS+=" -D${modId}.nativePhysical.partialPreLight=true"}
             if($RequestProof){$env:JAVA_TOOL_OPTIONS+=" -D${modId}.nativePhysical.requests=$Requests"}

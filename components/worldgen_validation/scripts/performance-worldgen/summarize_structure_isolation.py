@@ -130,6 +130,41 @@ if mode in ('none','no-other') and exp.get('otherPlacementEvaluations',0):
     raise RuntimeError('Other structures were not disabled')
 if mode=='none' and any(key.startswith('startAttempts.') for key in exp):
     raise RuntimeError('Structure generation was not disabled')
+
+work = {}
+for event in events:
+    if start <= event['nanos'] <= end and event['phase'] == 'B_WORK_METRICS':
+        if event['key'] in work:
+            raise RuntimeError('Repeated B preparation for one physical owner: ' + event['key'])
+        counters = json.loads(event['detail'])
+        if counters['schema'] != 1:
+            raise RuntimeError('Unknown B work counter schema')
+        work[event['key']] = counters
+full_keys = {chunk['key'] for chunk in chunks
+             if start <= chunk['firstNanos'].get('STAGE_FULL_END', end+1) <= end}
+full_work = None
+if work:
+    paths = ('preparationNanos', 'decorationNanos', 'reads.fullNeighbors', 'reads.fallbackNanos',
+             'reads.biomePalettes', 'reads.blockReads', 'reads.heightReads',
+             'reads.columns.columns', 'reads.columns.noiseBatches', 'reads.columns.materialBatches',
+             'reads.columns.densitySamples', 'reads.columns.densitySourceSamples',
+             'biomeReuse.nativeBuilds', 'biomeReuse.nativeBuildNanos',
+             'structureReuse.queries', 'structureReuse.evaluations', 'structureReuse.evaluationNanos')
+    metrics = {}
+    for path in paths:
+        values = []
+        for key in full_keys & work.keys():
+            value = work[key]
+            for part in path.split('.'):
+                value = value.get(part) if value is not None else None
+            if value is not None:
+                values.append(value)
+        metrics[path] = stats(values)
+    full_work = dict(scope='ONLY_OWNERS_WITH_FULL_IN_WINDOW_NOT_UNFINISHED_PREPARATIONS',
+                     fullOwners=len(full_keys), observedOwners=len(full_keys & work.keys()),
+                     missingOwners=sorted(full_keys - work.keys()),
+                     retainedTerrainOwners=sum(work[key].get('retainedTerrain') is True for key in full_keys & work.keys()),
+                     metrics=metrics)
 buckets=jfr['exclusiveCpuBuckets'];cpu_count=jfr['cpuSamples']
 result=dict(label=root.name,conditions=conditions,windowSeconds=seconds,canonical=count('PREPARE_END'),
             javaRuntime=data.get('javaRuntime'),javaVendor=data.get('javaVendor'),
@@ -137,11 +172,16 @@ result=dict(label=root.name,conditions=conditions,windowSeconds=seconds,canonica
             canonicalPerSecond=count('PREPARE_END')/seconds,
             busyCanonicalPerSecond=count('PREPARE_END')/(busy_ns/1e9) if busy_ns else None,
             canonicalBusySeconds=busy_ns/1e9,FULL=count('STAGE_FULL_END'),sendReady=count('READY_TO_SEND'),
+            fullCohortWork=full_work,
+            windowWorkPerFull=dict(scope='WINDOW_TOTALS_INCLUDE_UNFINISHED_WORK_NOT_PER_OWNER_CAUSAL_COST',
+                                  canonical=count('PREPARE_END')/len(full_keys) if full_keys else None,
+                                  physicalBiomeReady=count('PHYSICAL_BIOMES_READY')/len(full_keys) if full_keys else None),
             entityTicking=count('ENTITY_TICKING_READY'),viewDemand=count('VIEW_DEMAND'),
             averageTargetLatency=stats(prepare),visibleReadyLatency=stats(visible_latency),
             initialCenterTimelineSeconds=initial_timeline,
             initialCenterEntityReadyProxySeconds=player_proxy,
             processCpuPercent=statistics.mean(cpu_loads)*100 if cpu_loads else None,
+            machineCpuPercentSamples=stats([row['machineTotal']*100 for row in jfr.get('cpuLoadSamples', [])]),
             processCoreEquivalents=process_cores,
             processCpuBudgetPercent=process_cores/conditions['cpu']*100 if process_cores is not None and conditions.get('cpu',0)>0 else None,
             serverThreadOneCorePercent=thread_cpu,maxLoggedServerLagMs=max(lag) if lag else None,

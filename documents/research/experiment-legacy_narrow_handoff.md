@@ -12,11 +12,11 @@
 
 ## 发现
 
-- [完整套件](../../validations/integration-world_identity/result/structures-shared-handoff-ring-scope-narrow-locks-template_lock/1.21.1-neoforge)为 18 PRODUCED、54 PASS，共 72 个独立 JVM/save；包含七类结构的真实 start/邻区、Village/Trial Chambers 地形适配 halo、Mosaic 原点和已知非原点。
+- 完整套件（本机证据：`../../validations/integration-world_identity/result/structures-shared-handoff-ring-scope-narrow-locks-template_lock/1.21.1-neoforge`）为 18 PRODUCED、54 PASS，共 72 个独立 JVM/save；包含七类结构的真实 start/邻区、Village/Trial Chambers 地形适配 halo、Mosaic 原点和已知非原点。
 - 完整方块、群系、高度图、结构 NBT/pieces/references、九份装饰前输入、外围原生阶段、feature seed 序列、可见群系和目标副作用均通过既有严格比较。真实 structure placement 与方块写入正例也由工具检查，不以只有 starts 元数据通过。
 - 消费者实际缩锁 context 数与 worldStateBuilds/borrowedContexts 相符，结束时绑定与 live context 为零；物理 entities、tick schedulers、POI 未改变。未知组合的保守回退没有被算作候选激活。
 - 36 个消费者均验证 owner 关闭后的 Artifact 与八邻区 stored SPAWN palette 交接，完整 pending/instantiated BE、ticks、实体与 post-processing 继续携带；结构加载显式观察 S(C)，并与原生加载控制比较。
-- [四 JVM 原生朝向控制](../../validations/integration-world_identity/result/end-yaw-ring-scope-template_lock/1.21.1-neoforge)双向完整重现通过，只沿用既有版本限定规则。未固定生产实体随机源，未增加任何忽略字段。
+- 四 JVM 原生朝向控制（本机证据：`../../validations/integration-world_identity/result/end-yaw-ring-scope-template_lock/1.21.1-neoforge`）双向完整重现通过，只沿用既有版本限定规则。未固定生产实体随机源，未增加任何忽略字段。
 - 冷缓存七类结构 42 次并发的范围另见[前沿初筛](experiment-legacy_narrow_runtime.md)。本套件按 fixture/角色串行，不代替不同完整 B target 的并发、实体静态选择器安全或真实玩家行为证明。
 
 ## 结论

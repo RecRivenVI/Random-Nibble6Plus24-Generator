@@ -14,7 +14,7 @@
 
 - 原启动参数只有 suite=end-yaw，没有 variant。游戏默认写入 integration-world_identity/result/end-yaw/1.21.1-neoforge/end_city-start/native_a，新工具却读取 end-yaw-ring-scope，因缺文件失败。
 - 这一次将旧目录 native_a 的部分原始文件写成新输入指纹 7BA70184B3F8FB59FD7DFC16A4C877FFC7884D614DDE47565B57A1AC36CAB8EB；不能再把该目录当作原 AC6E 指纹的完整四角色证据。原聚合说明与其它角色不是恢复缺失 raw 的依据，不手工重建或倒填。baseline_initial 与 first_failure 中 9B610E 原始证据仍保留。
-- 修正后四个独立 fresh JVM/save 完整执行 native_a、native_b、native_a_with_b、native_b_with_a，双向重现通过，证据位于 [end-yaw-ring-scope](../../validations/integration-world_identity/result/end-yaw-ring-scope/1.21.1-neoforge)。这是原生实体构造随机性的组件因果控制，不是 B 或完整地形通过。
+- 修正后四个独立 fresh JVM/save 完整执行 native_a、native_b、native_a_with_b、native_b_with_a，双向重现通过，证据位于 end-yaw-ring-scope（本机证据：`../../validations/integration-world_identity/result/end-yaw-ring-scope/1.21.1-neoforge`）。这是原生实体构造随机性的组件因果控制，不是 B 或完整地形通过。
 - 工具现在显式传递 variant=$evidenceVariant，目录与游戏内命名只有一个来源；Python 回归检查两端都使用该变量。新增验证路径不再依赖 Java 默认目录。
 
 ## 结论

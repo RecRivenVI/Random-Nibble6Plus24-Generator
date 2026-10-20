@@ -24,7 +24,7 @@ probe 在原有 preparation observer 的完成边界检查来源 scope 已关闭
 
 三维度均有 49 FULL、49 SPAWN 和实际自然实体/流体跨 seed 边界、scheduled callback 与烧炼产物。自然模拟期间 Artifact 与 SPAWN 计数不增长，绑定清空，探针票据正常移除。三个 reload 均为 Artifact/preparation/SPAWN 零，修改方块保留，仍通过同样的自然回调。六个普通 Vanilla fresh/reload 均保持 Mosaic 创建及生成路由零。
 
-证据在 [B 三维度根目录](../../validations/integration-production_lifecycle/result/current/1.21.1-neoforge/phase3c2-production/features-2/development-b/lazy-rings/narrow-locks/source-reuse/runtime-proof-frontier/)及[普通 Vanilla 根目录](../../validations/integration-production_lifecycle/result/current/1.21.1-neoforge/phase3c2-production/vanilla-control/runtime-proof-frontier/)，各维度固定子目录为 source_state。最后独立只读检查输出三维度、十二个不同游戏 PID 和当前输入指纹一致。
+证据在 B 三维度根目录（本机证据：`../../validations/integration-production_lifecycle/result/current/1.21.1-neoforge/phase3c2-production/features-2/development-b/lazy-rings/narrow-locks/source-reuse/runtime-proof-frontier/`）及普通 Vanilla 根目录（本机证据：`../../validations/integration-production_lifecycle/result/current/1.21.1-neoforge/phase3c2-production/vanilla-control/runtime-proof-frontier/`），各维度固定子目录为 source_state。最后独立只读检查输出三维度、十二个不同游戏 PID 和当前输入指纹一致。
 
 末地普通 Vanilla 首次 reload 被另一 Target 的构建配置错误阻止在 Gradle 配置阶段，尚未启动游戏。原始 launcher failure 和已完成的 fresh 结果保留在该场景 first_runtime_failure；修复延迟任务注册后，重新执行这一完整 fresh/reload。它不归类为 Vanilla 或 Mosaic 游戏崩溃，也未改写旧记录。
 

@@ -7,17 +7,22 @@ import struct
 from pathlib import Path
 
 from prepare_target_only_world import read_nbt, write_nbt
+from prepare_client import instance_directory
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", required=True, type=Path)
     parser.add_argument("--name", default="Mosaic B Milestone Fresh")
+    parser.add_argument("--target", choices=("26.3-fabric", "26.3-neoforge"), default="26.3-fabric")
+    parser.add_argument("--source-target", choices=("26.3-fabric", "26.3-neoforge"))
+    parser.add_argument("--variant", default="client")
     args = parser.parse_args()
     repository = Path(__file__).resolve().parents[4]
     source = args.source.resolve()
-    server = repository / "validations/integration-production_lifecycle/instance/26.3-fabric/server"
-    saves = repository / "instances/26.3-fabric/client/saves"
+    server = repository / "validations/integration-production_lifecycle/instance" / (args.source_target or args.target) / "server"
+    instance, base = instance_directory(repository, args.target, args.variant)
+    saves = instance if base == "server" else instance / "saves"
     destination = (saves / args.name).resolve()
     if source.parent != server.resolve() or destination.parent != saves.resolve() or destination.exists():
         raise ValueError("Only create a new save from this project's verified B server; never overwrite")

@@ -32,6 +32,16 @@ class ClientPreferencesTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             CLIENT.client_directory(repository, "26.3-fabric", "acceptance", "performance-worldgen")
 
+    def test_review_client_uses_its_registered_directory(self):
+        repository = SCRIPT.parents[4]
+        self.assertEqual(repository / "instances/26.3-fabric/b-review-client",
+                         CLIENT.client_directory(repository, "26.3-fabric", "acceptance", None,
+                                                 "b-review-client"))
+        with self.assertRaises(ValueError):
+            CLIENT.client_directory(repository, "26.3-fabric", "acceptance", None, "b-review-server")
+        with self.assertRaises(ValueError):
+            CLIENT.instance_directory(repository, "26.3-fabric", "not-registered")
+
     def test_native_client_argument_file_is_not_mistaken_for_a_closed_instance(self):
         root = Path("D:/project")
         instance = root / "instances/1.21.1-neoforge/client"

@@ -18,7 +18,7 @@
 
 ## 发现
 
-原始与严格归并入口：[8/8](../../validations/performance-worldgen/result/b_milestone/26.3-fabric/climate_state_frontier/vanilla-comparison.json)、[12/12](../../validations/performance-worldgen/result/b_milestone/26.3-fabric/climate_state_frontier/vanilla-comparison-v12-duration45.json)、[16/16](../../validations/performance-worldgen/result/b_milestone/26.3-fabric/climate_state_frontier/vanilla-comparison-v16-duration45.json)。吞吐比例越高越好，延迟比例越低越好；≥ 表示只有下界、没有有限上界。
+原始与严格归并入口：8/8（本机证据：`../../validations/performance-worldgen/result/b_milestone/26.3-fabric/climate_state_frontier/vanilla-comparison.json`）、12/12（本机证据：`../../validations/performance-worldgen/result/b_milestone/26.3-fabric/climate_state_frontier/vanilla-comparison-v12-duration45.json`）、16/16（本机证据：`../../validations/performance-worldgen/result/b_milestone/26.3-fabric/climate_state_frontier/vanilla-comparison-v16-duration45.json`）。吞吐比例越高越好，延迟比例越低越好；≥ 表示只有下界、没有有限上界。
 
 | 视距／模拟 | 维度 | B canonical/s | FULL / Vanilla | send-ready / Vanilla | 最终原生视野就绪 | p50 / Vanilla | p95 / Vanilla |
 | --- | --- | --- | --- | --- | --- | --- | --- |

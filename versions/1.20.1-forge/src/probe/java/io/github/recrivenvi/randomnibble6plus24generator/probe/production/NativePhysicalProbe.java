@@ -222,6 +222,8 @@ public final class NativePhysicalProbe {
         if (done || request == null) return;
         try {
             NativePhysicalTargets.advance();
+            if (Boolean.getBoolean(PREFIX + "fullWaitEvidence"))
+                NativeFullWaitEvidence.observe(level, started, folder, request);
             if (Boolean.getBoolean(PREFIX + "observationFailure"))
                 throw new IllegalStateException("Injected native physical observation failure");
             if (!request.isDone()) {
@@ -371,6 +373,7 @@ public final class NativePhysicalProbe {
             proof.addProperty(proof.has("failure") ? "stopFailure" : "failure", error.toString());
             write();
         } finally {
+            NativeFullWaitEvidence.close();
             NativePhysicalTargets.reset();
             ARTIFACTS.clear();
             level = null;

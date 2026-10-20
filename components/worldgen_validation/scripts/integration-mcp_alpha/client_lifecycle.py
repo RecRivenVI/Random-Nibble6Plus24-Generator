@@ -12,13 +12,18 @@ import time
 import mcp_alpha as alpha
 
 
+def lifecycle_results():
+    root = alpha.VALIDATION / "result/client-lifecycle"
+    return root / alpha.TARGET if alpha.TARGET.endswith("-neoforge") else root
+
+
 class ClientScenario:
-    def __init__(self, stage, label):
+    def __init__(self, stage, label, world=None):
         if stage not in ("lifecycle_b", "lifecycle_vanilla") or Path(label).name != label:
             raise ValueError("Expected an isolated lifecycle stage and local evidence label")
         self.stage = stage
         self.instance = alpha.VALIDATION / "instance" / alpha.TARGET / stage
-        self.result = alpha.VALIDATION / "result/client-lifecycle" / stage / label
+        self.result = lifecycle_results() / stage / label
         if self.result.exists():
             raise RuntimeError("Preserve the previous lifecycle result")
         self.result.mkdir(parents=True)
@@ -27,7 +32,8 @@ class ClientScenario:
                        "arrange": "Creative/kill/dimension teleport/setblock are diagnostic player-command fixtures",
                        "checkpoints": [], "operations": []}
         self.observer = self.instance / "project-observer"
-        self.world = "MCP B Lifecycle" if stage == "lifecycle_b" else "MCP Vanilla Lifecycle"
+        self.world = world or ("MCP B Lifecycle" if stage == "lifecycle_b" else "MCP Vanilla Lifecycle")
+        self.report["selectedWorld"] = self.world
         self.run_id = None
         self.save()
 
@@ -128,7 +134,7 @@ class ClientScenario:
         self.run_id = state["serverRunId"]
         return observed["anchor"]
 
-    def checkpoint(self, name, dimension="minecraft:overworld", baseline=None, marker=None):
+    def checkpoint(self, name, dimension="minecraft:overworld", baseline=None, marker=None, append=True):
         request = {"id": name, "dimension": dimension, "serverRunId": self.run_id}
         if baseline:
             request["baseline"] = baseline
@@ -151,8 +157,9 @@ class ClientScenario:
             raise RuntimeError("Physical native player readiness is incomplete")
         if len(record["physicalNeighbors"]) != 9:
             raise RuntimeError("Missing real physical runtime neighbors")
-        self.report["checkpoints"].append({"name": name, "serverRunId": self.run_id, "server": record,
-                                            "clientAnchor": client["anchor"]})
+        if append:
+            self.report["checkpoints"].append({"name": name, "serverRunId": self.run_id, "server": record,
+                                                "clientAnchor": client["anchor"]})
         self.save()
         return record
 
@@ -246,6 +253,66 @@ class ClientScenario:
         finally:
             self.save()
 
+    def portals(self):
+        """Commands arrange frames/entry only; native PortalProcessor must resolve each hop."""
+        self.report["kind"] = "native_portals"
+        self.report["arrange"] = "Player commands arrange real portal blocks and entry; no cross-dimension teleport commands"
+        try:
+            self.enter("portal")
+            self.command("/gamemode creative", "portal_creative")
+            self.checkpoint("portal_begin")
+            for name, source, destination, block in (
+                    ("nether_portal", "minecraft:overworld", "minecraft:the_nether", "nether_portal"),
+                    ("nether_return_portal", "minecraft:the_nether", "minecraft:overworld", "nether_portal"),
+                    ("end_portal", "minecraft:overworld", "minecraft:the_end", "end_portal"),
+                    ("end_return_portal", "minecraft:the_end", "minecraft:overworld", "end_portal")):
+                anchor = self.wait(lambda: self.player(source), name + "-source")["anchor"]
+                x, z = math.floor(anchor["x"]) + 6, math.floor(anchor["z"])
+                y = 140
+                self.command(f"/fill {x-2} {y-2} {z-2} {x+3} {y+4} {z+2} minecraft:air", name + "-clear")
+                if block == "nether_portal":
+                    self.command(f"/fill {x-1} {y-1} {z} {x+2} {y+3} {z} minecraft:obsidian", name + "-frame")
+                    self.command(f"/fill {x} {y} {z} {x+1} {y+2} {z} minecraft:nether_portal[axis=x]", name + "-blocks")
+                else:
+                    self.command(f"/setblock {x} {y} {z} minecraft:end_portal", name + "-blocks")
+                # Leave any arrival portal before allowing the native cooldown to expire.
+                self.command(f"/setblock {x+4} {y+3} {z} minecraft:glass", name + "-waiting_floor")
+                self.command(f"/tp @s {x+4.5} {y+4} {z+0.5}", name + "-waiting_position")
+                for sample in range(30):
+                    state = self.checkpoint(name + "_cooldown_" + str(sample), source, append=False)
+                    if state["portalCooldown"] == 0:
+                        break
+                else:
+                    raise RuntimeError("Native portal cooldown did not expire while outside portal")
+                self.command(f"/tp @s {x+0.5} {y+0.1} {z+0.5}", name + "-entry")
+                def arrived():
+                    session = self.read("/v0/session")
+                    if "WinScreen" in session.get("screenClass", ""):
+                        self.key(256)
+                        return None
+                    return self.player(destination)
+                self.wait(arrived, name + "-arrived")
+                row = self.checkpoint(name, destination)
+                portals = row["nativePortals"]
+                expected = "NetherPortalBlock" if block == "nether_portal" else "EndPortalBlock"
+                if not portals:
+                    raise RuntimeError("No native portal or first-credits entry evidence")
+                validate_portal_event(portals[-1], source, destination, expected)
+            self.leave("portal_exit")
+            self.control()
+            alpha.request(self.instance, "/v0/control/release", {}, lease=True)
+            clean = self.read("/v0/input/state")
+            if clean.get("pressedKeyCount") != 0 or clean.get("pressedButtonCount") != 0:
+                raise RuntimeError("Portal scenario left held native input")
+            self.report["inputReleased"] = True
+            self.report["status"] = "PASS"
+        except Exception as failure:
+            self.report["status"] = "FAIL"
+            self.report["failure"] = str(failure)
+            raise
+        finally:
+            self.save()
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -254,11 +321,15 @@ def main():
     parser.add_argument("--check-only", action="store_true")
     parser.add_argument("--expected-input-hash")
     parser.add_argument("--cold-baseline")
+    parser.add_argument("--portals-only", action="store_true")
+    parser.add_argument("--world")
     args = parser.parse_args()
     if args.expected_input_hash and not args.check_only:
         parser.error("Historical input hashes are supported only by read-only checks")
     if args.check_only:
         check(args.stage, args.label, args.expected_input_hash)
+    elif args.portals_only:
+        ClientScenario(args.stage, args.label, args.world).portals()
     elif args.cold_baseline:
         ClientScenario(args.stage, args.label).cold(args.cold_baseline)
     else:
@@ -268,15 +339,17 @@ def main():
 def check(stage, label, expected_hash=None):
     if stage not in ("lifecycle_b", "lifecycle_vanilla") or Path(label).name != label:
         raise ValueError("Invalid lifecycle evidence scope")
-    directory = alpha.VALIDATION / "result/client-lifecycle" / stage / label
+    directory = lifecycle_results() / stage / label
     report = alpha.read_json(directory / "summary.json")
     if report.get("status") != "PASS" or not report.get("inputReleased"):
         raise RuntimeError("Real-client scenario is incomplete")
     cold = report.get("kind") == "cold_restart"
-    names = ["cold_reenter"] if cold else ["fresh_join", "respawn", "nether", "nether_return", "end", "end_return", "before_save", "saved_reenter"]
+    portals_only = report.get("kind") == "native_portals"
+    names = (["portal_begin", "nether_portal", "nether_return_portal", "end_portal", "end_return_portal"]
+             if portals_only else ["cold_reenter"] if cold else ["fresh_join", "respawn", "nether", "nether_return", "end", "end_return", "before_save", "saved_reenter"])
     if [item["name"] for item in report["checkpoints"]] != names:
         raise RuntimeError("Real-client checkpoint coverage differs")
-    if len({item["serverRunId"] for item in report["checkpoints"]}) != (1 if cold else 2):
+    if len({item["serverRunId"] for item in report["checkpoints"]}) != (1 if cold or portals_only else 2):
         raise RuntimeError("Fresh/reenter did not use independent server instances")
     if expected_hash is None:
         source = hashlib.sha256()
@@ -314,7 +387,7 @@ def check(stage, label, expected_hash=None):
         if math.floor(client["anchor"]["x"] / 16) != row["chunkX"] or math.floor(client["anchor"]["z"] / 16) != row["chunkZ"]:
             raise RuntimeError("Client/server owner positions differ")
         pids.add(observed["pid"])
-    for name in (("cold_exit",) if cold else ("first_exit", "second_exit")):
+    for name in (("portal_exit",) if portals_only else ("cold_exit",) if cold else ("first_exit", "second_exit")):
         closed = alpha.read_json(directory / (name + "-server-close.json"))
         if closed["inputHash"] != expected_hash or closed.get("failure") or closed["observerRetained"]:
             raise RuntimeError("Server close evidence differs")
@@ -323,19 +396,43 @@ def check(stage, label, expected_hash=None):
     first = report["checkpoints"][0]["server"]
     respawn = None if cold else report["checkpoints"][1]["server"]
     reload = report["checkpoints"][-1]["server"]
-    if not cold and (first["findSpawnCalls"] <= 0 or first["postProcessCalls"] <= 0 or respawn["deaths"] != 1 or respawn["respawns"] != 1):
+    if portals_only:
+        expected = [("minecraft:overworld", "minecraft:the_nether", "NetherPortalBlock"),
+                    ("minecraft:the_nether", "minecraft:overworld", "NetherPortalBlock"),
+                    ("minecraft:overworld", "minecraft:the_end", "EndPortalBlock"),
+                    ("minecraft:the_end", "minecraft:overworld", "EndPortalBlock")]
+        for item, (source, destination, kind) in zip(report["checkpoints"][1:], expected, strict=True):
+            events = item["server"]["nativePortals"]
+            if not events:
+                raise RuntimeError("Missing native portal resolution proof")
+            validate_portal_event(events[-1], source, destination, kind)
+        if any("/execute in " in item.get("command", "") for item in report["operations"]):
+            raise RuntimeError("Portal scenario used a cross-dimension teleport command")
+    elif not cold and (first["findSpawnCalls"] <= 0 or first["postProcessCalls"] <= 0 or respawn["deaths"] != 1 or respawn["respawns"] != 1):
         raise RuntimeError("Native spawn/death/respawn coverage missing")
-    if (not cold and first["playerUuid"] != respawn["playerUuid"]) or reload["findSpawnCalls"] != 0 or reload["artifactCaptures"] != 0 or reload.get("marker") != "minecraft:gold_block":
+    if not portals_only and ((not cold and first["playerUuid"] != respawn["playerUuid"]) or reload["findSpawnCalls"] != 0 or reload["artifactCaptures"] != 0 or reload.get("marker") != "minecraft:gold_block"):
         raise RuntimeError("Real player/save/reload semantics differ")
     if cold:
         baseline = alpha.read_json(directory.parent / report["baseline"] / "fresh_join-server-checkpoint.json")
         if baseline["pid"] in pids or baseline["inputHash"] != expected_hash:
             raise RuntimeError("Cold reload did not use an independent JVM with the same source")
     result = {"status": "PASS", "stage": stage, "inputHash": expected_hash, "pids": sorted(pids),
-              "checkpointCount": len(names), "integratedServerInstances": 1 if cold else 2,
-              "scope": "NATIVE_REAL_CLIENT_DEATH_AND_COMMAND_TELEPORT_ROUNDTRIP_NOT_PORTAL_SEARCH_OR_PERFORMANCE"}
+              "checkpointCount": len(names), "integratedServerInstances": 1 if cold or portals_only else 2,
+              "scope": "NATIVE_PORTAL_RESOLUTION_AND_PHYSICAL_PLAYER_ROUNDTRIP" if portals_only else "NATIVE_REAL_CLIENT_DEATH_AND_COMMAND_TELEPORT_ROUNDTRIP_NOT_PORTAL_SEARCH_OR_PERFORMANCE"}
     alpha.save(directory / "check.json", result)
     print(json.dumps(result))
+
+
+def validate_portal_event(event, source, destination, kind):
+    if event.get("source") != source or not event.get("portalType", "").endswith(kind):
+        raise RuntimeError("Wrong actual native portal source or type")
+    if event.get("route") == "END_CREDITS_NATIVE_RESPAWN":
+        if (source, destination, kind) != ("minecraft:the_end", "minecraft:overworld", "EndPortalBlock"):
+            raise RuntimeError("First credits branch cannot stand in for another portal route")
+        # This event does not invent a destination: the separate client/server checkpoint
+        # above verifies native respawn's actual destination after the WinScreen acknowledgement.
+    elif event.get("destination") != destination:
+        raise RuntimeError("Dimension changed without the expected native portal resolver")
 
 
 if __name__ == "__main__":

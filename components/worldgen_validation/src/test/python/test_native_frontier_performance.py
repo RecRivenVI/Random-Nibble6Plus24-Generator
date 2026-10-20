@@ -6,6 +6,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 
 SCRIPTS = Path(__file__).resolve().parents[3] / "scripts/performance-worldgen"
@@ -23,6 +24,43 @@ def chunk(key, demand=0, ready=None):
 
 
 class NativeFrontierPerformanceTests(unittest.TestCase):
+    @staticmethod
+    def pair(index, ratio):
+        return {"conditions": {"inputHash": "same", "view": 8},
+                "vanilla": {"runIdentity": f"native-{index}", "processId": index * 2},
+                "b": {"runIdentity": f"b-{index}", "processId": index * 2 + 1},
+                "versusVanillaPercent": {"fullPerSecond": ratio, "sendReadyPerSecond": ratio}}
+
+    def test_three_pair_summary_keeps_rows_and_uses_ratio_median(self):
+        rows = [self.pair(index, ratio) for index, ratio in enumerate((65, 70, 90))]
+        result = MODULE.paired_summary(rows)
+        self.assertEqual(70, result["medianVersusVanillaPercent"]["sendReadyPerSecond"])
+        self.assertIs(rows, result["pairs"])
+
+    def test_three_pair_summary_rejects_reused_process_and_changed_input(self):
+        for change in ("pid", "input"):
+            rows = [self.pair(index, 60) for index in range(3)]
+            if change == "pid":
+                rows[1]["b"]["processId"] = rows[0]["b"]["processId"]
+            else:
+                rows[1]["conditions"]["inputHash"] = "other"
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                MODULE.paired_summary(rows)
+
+    def test_one_dimension_cli_keeps_independent_process_validation(self):
+        row = {"conditions": {"dimension": "minecraft:overworld", "inputHash": "same"},
+               "vanilla": {"processId": 1, "runIdentity": "native"},
+               "b": {"processId": 2, "runIdentity": "mosaic"},
+               "versusVanillaPercent": {"sendReadyPerSecond": 50}}
+        with tempfile.TemporaryDirectory() as temporary:
+            with patch.object(sys, "argv", ["compare", temporary, "--dimension", "overworld"]), \
+                    patch.object(MODULE, "compare", return_value=row) as compare:
+                MODULE.main()
+            self.assertEqual(1, compare.call_count)
+            result = json.loads((Path(temporary) / "vanilla-comparison-overworld.json").read_text())
+            self.assertEqual(["overworld"], list(result["dimensions"]))
+            self.assertTrue(result["scope"].startswith("SINGLE_DIMENSION"))
+
     def test_diagnostic_history_cannot_be_used_as_a_performance_control(self):
         conditions = {"structureReuseAudit": True}
         with tempfile.TemporaryDirectory() as temporary:

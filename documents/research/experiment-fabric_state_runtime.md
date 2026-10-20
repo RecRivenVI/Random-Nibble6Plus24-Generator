@@ -30,7 +30,7 @@ B 三维度的 fresh 前沿各记录 156 次 B 生成，而实际要求 FULL 为
 
 B 的初次主目标 physicalBiomeChecks 为 49，重载为零。Fabric schema 1 没有逐一审计全部 49 个 owner 的 generation/loading BIOMES；它不能被写成 NeoForge schema 2 的全 owner 证明。运行期设施也不替代自然生成的实体／方块实体正例持久化。
 
-证据分别位于 [B runtime-proof](../../validations/integration-production_lifecycle/result/current/26.3-fabric/phase3c2-production/features-2/development-b/runtime-proof) 与 [Vanilla runtime-proof](../../validations/integration-production_lifecycle/result/current/26.3-fabric/phase3c2-production/vanilla-control/runtime-proof) 下各维度的 climate_state。只读复核入口及通过范围见[验证说明](../../validations/integration-production_lifecycle/validation.md)。
+证据分别位于 B runtime-proof（本机证据：`../../validations/integration-production_lifecycle/result/current/26.3-fabric/phase3c2-production/features-2/development-b/runtime-proof`） 与 Vanilla runtime-proof（本机证据：`../../validations/integration-production_lifecycle/result/current/26.3-fabric/phase3c2-production/vanilla-control/runtime-proof`） 下各维度的 climate_state。只读复核入口及通过范围见[验证说明](../../validations/integration-production_lifecycle/validation.md)。
 
 ## 结论
 

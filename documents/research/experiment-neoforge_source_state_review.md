@@ -16,7 +16,7 @@ NeoForge probe 单独绑定本版 ScopedStructureSources 的真实 supplier 与 
 
 每个 owner 最多观察十六个输入对象身份；记录 2／4／16 近期位置中同一 token 再次出现的实际原生 supplier 墙钟。结构图交接时失效相应位置，close 清空历史。只存诊断 token，不存或返回历史 carrier／piece。原生求值计数与观察计数必须完全一致，open／close 相同，关闭后残留为零。
 
-三维度顺序运行，每组 fresh world、四 CPU、BelowNormal、8/8、60 秒及相同两次移动，未与其它游戏或正确性队列并行。新 probe 输入为 5B7A0FF45FAC1F5226C0EDD56A02960157F09A2F8D2E6AEA82CA06CA9050CE8A，生产 main 未修改；不能将其重标为原基线的 7172 输入。编译、四十三项布局及四十六项性能工具测试见[编译日志](../../build/research/neoforge-source-audit-compile-retry-stdout.log)，原始任务名写错的首次启动日志保留，不计游戏或 Oracle 失败。
+三维度顺序运行，每组 fresh world、四 CPU、BelowNormal、8/8、60 秒及相同两次移动，未与其它游戏或正确性队列并行。新 probe 输入为 5B7A0FF45FAC1F5226C0EDD56A02960157F09A2F8D2E6AEA82CA06CA9050CE8A，生产 main 未修改；不能将其重标为原基线的 7172 输入。编译、四十三项布局及四十六项性能工具测试见编译日志（本机证据：`../../build/research/neoforge-source-audit-compile-retry-stdout.log`），原始任务名写错的首次启动日志保留，不计游戏或 Oracle 失败。
 
 ## 发现
 
@@ -26,13 +26,13 @@ NeoForge probe 单独绑定本版 ScopedStructureSources 的真实 supplier 与 
 | 下界 | 783 | 390280 | 61233／390280，15.69% | 1.395 s | 1.431 s | 0 |
 | 末地 | 837 | 244780 | 0／244780 | 0 | 0 | 0 |
 
-三组分别见 [主世界](../../validations/performance-worldgen/result/b_milestone/26.3-neoforge/source_state_screen/b-source-audit-v8-s8/source-state-audit.json)、[下界](../../validations/performance-worldgen/result/b_milestone/26.3-neoforge/source_state_screen/b-source-audit-the_nether-v8-s8/source-state-audit.json)、[末地](../../validations/performance-worldgen/result/b_milestone/26.3-neoforge/source_state_screen/b-source-audit-the_end-v8-s8/source-state-audit.json)。open 等于 close，evaluationCountMismatch 与 retainedAfterClose 均为零。scope 计量包含关闭尾部已完成的 supplier 调用，不能拿它除以六十秒伪造端到端加速。
+三组分别见 主世界（本机证据：`../../validations/performance-worldgen/result/b_milestone/26.3-neoforge/source_state_screen/b-source-audit-v8-s8/source-state-audit.json`）、下界（本机证据：`../../validations/performance-worldgen/result/b_milestone/26.3-neoforge/source_state_screen/b-source-audit-the_nether-v8-s8/source-state-audit.json`）、末地（本机证据：`../../validations/performance-worldgen/result/b_milestone/26.3-neoforge/source_state_screen/b-source-audit-the_end-v8-s8/source-state-audit.json`）。open 等于 close，evaluationCountMismatch 与 retainedAfterClose 均为零。scope 计量包含关闭尾部已完成的 supplier 调用，不能拿它除以六十秒伪造端到端加速。
 
 主世界实际原生 supplier 总墙钟约 60.734 s；两入口重访占其中 15.45%，但相对完整准备与装饰累计约 1084.60 s 只占约 0.87%。下界对应 11.275 s、348.42 s，两入口占完整累计约 0.40%；末地没有机会。这些是不同线程的累计墙钟，只作筛选，既不是 CPU 百分比，也不是严格的 critical-path 加速上界。
 
 将历史从两个扩大到十六个，主世界额外覆盖仅约 1.270 s 的 supplier 墙钟，下界约 0.036 s；不能用约四分之一的重复调用数宣称同等吞吐收益。真的缓存更多结构结果还需证明多版本 piece 可变对象、handoff 失效与内存峰值；本观察器没有持有结果，不能从 token 计数编造缓存内存数字。
 
-[关闭控制](../../validations/performance-worldgen/result/b_milestone/26.3-neoforge/source_state_screen_control/b-v8-s8)中 reuseAudit 计数为零，实际 source 查询约 162 万，身份检查两次，SPAWN 携带命中 300 次，说明并非因所有 source 工作失效而没有诊断。该次 canonical 为 9.32/s，原基线为 10.35/s；两者不是处理／对照优化，单次波动不支持收益或退化结论，也不拿诊断 10.10/s 当作生产速度。
+关闭控制（本机证据：`../../validations/performance-worldgen/result/b_milestone/26.3-neoforge/source_state_screen_control/b-v8-s8`）中 reuseAudit 计数为零，实际 source 查询约 162 万，身份检查两次，SPAWN 携带命中 300 次，说明并非因所有 source 工作失效而没有诊断。该次 canonical 为 9.32/s，原基线为 10.35/s；两者不是处理／对照优化，单次波动不支持收益或退化结论，也不拿诊断 10.10/s 当作生产速度。
 
 ### 支持与查询准备审查
 

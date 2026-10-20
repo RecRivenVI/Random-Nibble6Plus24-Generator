@@ -268,6 +268,28 @@ python components/worldgen_validation/scripts/development/prepare_target_only_wo
 
 ## 按需 B 里程碑验收
 
+### 本机独立服验收入口
+
+两个 26.3 Target 提供 `b-review-server`／`b-review-client` 实例，基于模板的正常 server／client 运行，不加载项目 probe、不要求 Phase 验证参数。世界为独立的 `mosaic-b-review`；只从已验证的同版 B 世界复制身份、配置和 datapack，不复制原地形、玩家、Overlay 或索引。实际运行会正常生成并保存新区域，不转换旧存档。
+
+分别在两个终端从仓库根目录运行；同一时间选择一个 Target。先等服务端 ready，再启动对应客户端：
+
+```powershell
+.\gradlew.bat :version:26.3-fabric:runBReviewServer
+.\gradlew.bat :version:26.3-fabric:runBReviewClient
+```
+
+```powershell
+.\gradlew.bat :version:26.3-neoforge:runBReviewServer
+.\gradlew.bat :version:26.3-neoforge:runBReviewClient
+```
+
+服务端口及客户端 Quick Play 地址以 `instances.toml` 为准，使用明确 IPv4 回环，不受 localhost 的 IPv6 优先级影响。个人用户名、窗口和测试模组从 `local.toml` 的 client 基础实例继承；`prepare_client.py --mode acceptance --variant b-review-client` 设置声音，不改变视距和模拟距离。当前本机服务端默认 8/8，可在其 server.properties 调整；不是宣称中高视距性能已通过。退出客户端后，在服务端控制台输入 `stop` 正常保存停服。
+
+皮肤模组只在客户端，服务端保留已测的原生快路径。单人环境安装未知模组仍可能触发精确保守回退，本轮不擅自扩大能力白名单。Zume 仅在上游有对应版本时安装，当前 26.x 无匹配。自动化检查使用验证实例中的独立 MCP 客户端，不把 MCP 安装到这两份日常验收实例。
+
+### 隔离与集成验证
+
 完整 detached 交接与物理流程分开运行，均不迁移旧世界。实验客户端使用产品、不加载 probe；只有新 `development_b` 地图需要显式 opt-in。后续验收不再要求使用者手动游玩：使用验证实例中的游戏内探针自动创建专用世界、加载真实区块并采样；不能自动覆盖的玩家或渲染行为仍标记未验证，不用 CLI 数据冒充。禁止 GUI 自动化；只有核实命令行、实例目录及启动记录属于本线程的游戏进程，才可直接正常关闭并重启，无须再次询问。
 
 26.3 的物理计划使用反向依赖与分状态引用计数。专项单元测试以全扫描测试 Oracle 逐操作对照最高状态与 owner 集合，覆盖重复替换、失败清理、并发访问、跨世界关闭与无关计划不参与完成查询；不改变 Vanilla 依赖形状。运行验证继续使用下面的真实生产请求、修改后重载和既有关闭取消验证，不把单元测试等同于客户端体验通过。

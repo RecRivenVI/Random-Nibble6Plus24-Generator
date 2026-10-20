@@ -30,6 +30,11 @@ public record MosaicPhysicalGenerationPlan(
 
     public static MosaicPhysicalGenerationPlan derive(
             ChunkPos requestedPos, ChunkStatus requestedStatus) {
+        return derive(requestedPos, requestedStatus, false);
+    }
+
+    public static MosaicPhysicalGenerationPlan derive(
+            ChunkPos requestedPos, ChunkStatus requestedStatus, boolean partialBiomes) {
         if (requestedStatus == ChunkStatus.EMPTY) {
             return new MosaicPhysicalGenerationPlan(
                     requestedPos, requestedStatus, 0, Map.of(), Map.of());
@@ -51,9 +56,15 @@ public record MosaicPhysicalGenerationPlan(
         requirements.merge(requestedPos, requestedStatus, MosaicPhysicalGenerationPlan::later);
 
         if (requestedStatus.isOrBefore(ChunkStatus.FEATURES)) {
-            // Mosaic never executes a partial seed-dependent physical pipeline. Any non-empty
-            // request for a missing target publishes the complete pre-light Artifact instead.
-            obligations.put(requestedPos, ChunkStatus.FEATURES);
+            // Legacy requests retain the complete Artifact. Validated B prerequisites stop at
+            // their actual native stage; FEATURES still requires the complete B Artifact.
+            obligations.put(
+                    requestedPos,
+                    partialBiomes
+                                    && (requestedStatus == ChunkStatus.BIOMES
+                                            || requestedStatus == ChunkStatus.TERRAIN)
+                            ? requestedStatus
+                            : ChunkStatus.FEATURES);
         } else if (requestedStatus.isOrBefore(ChunkStatus.LIGHT)) {
             for (int radius = 0; radius <= dependencies.getRadius(); radius++) {
                 ChunkStatus required = dependencies.get(radius);

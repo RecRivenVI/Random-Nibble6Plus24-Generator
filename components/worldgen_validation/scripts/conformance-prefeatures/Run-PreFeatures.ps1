@@ -6,6 +6,7 @@ param(
     [switch]$Compact,
     [switch]$Bop,
     [switch]$BiomeOnly,
+    [switch]$NativeTerrain,
     [switch]$Offline,
     [ValidatePattern('^[a-z0-9_]*$')][string]$EvidenceLabel = '',
     [ValidatePattern('^[A-Fa-f0-9]{64}$')][string]$ExpectedInputHash = '',
@@ -16,11 +17,12 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 if ($ExpectedInputHash -and !$CheckOnly) { throw 'Explicit historical source identity is read-only' }
-if ($EvidenceLabel -and !($Target -in @('26.3-fabric','26.3-neoforge') -and $Lightweight -and !$Bop)) { throw 'Bounded source-state evidence labels require audited modern Vanilla lightweight inputs' }
+if ($EvidenceLabel -and !($Target -in @('26.3-fabric','26.3-neoforge') -and ($Lightweight -or $BiomeOnly) -and !$Bop)) { throw 'Bounded evidence labels require audited modern Vanilla lightweight/biome-only inputs' }
 if ($BootstrapLauncher -and (!$EvidenceLabel -or $CheckOnly)) { throw 'Owned launcher bootstrap requires a new scoped Vanilla lightweight run' }
 $env:MOSAIC_VALIDATION_TARGET = $Target
+if ($NativeTerrain -and ($Target -notin @('26.3-fabric','26.3-neoforge') -or !$Lightweight -or $BiomeOnly -or $Bop -or $StructureReuse)) { throw 'Native detached TERRAIN requires the separate native 26.3 lightweight input proof' }
 if ($Bop -and $Target -ne '26.3-fabric') { throw 'BOP validation is not yet adapted to this target' }
-if ($BiomeOnly -and ($Target -ne '26.3-fabric' -or $Lightweight -or $StructureReuse -or $Compact -or $Bop)) { throw 'Detached BIOMES is currently a separate Vanilla 26.3 Fabric candidate' }
+if ($BiomeOnly -and ($Target -notin @('26.3-fabric','26.3-neoforge') -or $Lightweight -or $StructureReuse -or $Compact -or $Bop)) { throw 'Detached BIOMES is a separate Vanilla 26.3 candidate' }
 if ($Target -eq '26.1.2-neoforge' -and $StructureReuse) { throw '26.1.2 structure-source reuse is intrinsic to its lightweight consumer; no separate reuse comparison is implemented yet' }
 if ($Compact -and ($Target -ne '26.1.2-neoforge' -or $Suite -ne 'structures')) { throw 'Explicit compact input validation requires the 26.1.2 structure suite' }
 if ($Bop) { $validationProjectOverride = 'compatibility-bop' }
@@ -29,6 +31,7 @@ $repoRoot = $validationRepository
 if ($StructureReuse -and !$Lightweight) { throw 'Structure reuse is a lightweight consumer check' }
 $resultVariant = if ($BiomeOnly) { "biome_only_$Suite" } elseif ($Bop) { "bop_$($Suite)_$($Lightweight)_host$HostSeed" } elseif ($StructureReuse) { "structure_reuse_$Suite" } elseif ($Lightweight) { "terrain_$Suite" } elseif ($Compact) { 'compact' } elseif ($Suite -eq 'structures' -and $Target -eq '26.1.2-neoforge') { 'native_structures' } elseif ($Suite -eq 'structures') { 'compact' } else { 'current' }
 if ($EvidenceLabel) { $resultVariant += '_' + $EvidenceLabel }
+if ($NativeTerrain) { $resultVariant = 'native_' + $resultVariant }
 $worldSuffix = if ($EvidenceLabel) { '-' + $resultVariant } else { '' }
 $resultRoot = Join-Path $repoRoot "validations/$validationProject/result/$resultVariant/$validationTarget"
 $selectionPath = Join-Path $resultRoot 'selection.json'
@@ -44,6 +47,7 @@ $stageNames = if ($BiomeOnly) { @('structure_starts','structure_references','bio
 
 if ($CheckOnly) {
     $selection = Get-Content -LiteralPath $selectionPath -Raw | ConvertFrom-Json
+    if ([bool]$selection.nativeTerrain -ne [bool]$NativeTerrain) { throw 'Native TERRAIN evidence control changed' }
     if ($selection.suite -ne $Suite -or [bool]$selection.lightweight -ne [bool]$Lightweight -or [bool]$selection.structureReuse -ne [bool]$StructureReuse -or [bool]$selection.compact -ne [bool]$Compact -or [bool]$selection.biomeOnly -ne [bool]$BiomeOnly) { throw 'Selection does not match the requested suite' }
     if ($selection.ownedNativePort) {
         $nativeConfig = Get-Content (Join-Path $resultRoot 'native-launch-config.json') -Raw | ConvertFrom-Json
@@ -116,6 +120,10 @@ if ($CheckOnly) {
                 if ((Get-FileHash (Join-Path $fixtureRoot "native/$file")).Hash -cne
                         (Get-FileHash (Join-Path $fixtureRoot "$role/$file")).Hash) { throw "Native separated inputs differ: $($fixture.id) $file" }
             }
+        }
+        if ($NativeTerrain) {
+            if (!$reference.detachedAfterClose -or !$reference.serializationAfterClose -or $reference.virtualChunks -ne 0) { throw 'Detached terrain lacks its complete post-close check' }
+            if ((Get-FileHash (Join-Path $fixtureRoot 'native/terrain-native.nbt.gz')).Hash -cne (Get-FileHash (Join-Path $fixtureRoot "$role/terrain-native.nbt.gz")).Hash) { throw 'Detached native TERRAIN full NBT differs' }
         }
         if ($BiomeOnly) {
             if (!$reference.detachedAfterClose -or !$reference.serializationAfterClose -or $reference.virtualChunks -ne 0 -or $reference.detachedBiomes.protoChunks -ne 1) { throw 'Detached native BIOMES retains a session/noise graph or lacks a post-close check' }
@@ -368,12 +376,12 @@ try {
         if ($Target -eq '26.3-fabric' -and ($launcher.main -cne 'net.fabricmc.devlaunchinjector.Main' -or $launcher.jvmArguments -cnotcontains '-Dfabric.dli.env=server')) { throw 'Unknown Fabric server bootstrap' }
         $privateNativeConfig = New-OwnedNativeConfig $launcher
     }
-    $suiteProperties = @(if ($Suite -eq 'structures') { "-D$($prefix)structures=true" }; if ($Compact) { "-D$($prefix)compact=true" }; if ($Lightweight) { "-D$($prefix)lightweight=true" }; if ($Lightweight -or $Bop -or $BiomeOnly) { "-D$($prefix)variant=$resultVariant" }; if ($StructureReuse) { "-D$($prefix)structureReuse=true" }; if ($BiomeOnly) { "-D$($prefix)biomeOnly=true" })
+    $suiteProperties = @(if ($Suite -eq 'structures') { "-D$($prefix)structures=true" }; if ($Compact) { "-D$($prefix)compact=true" }; if ($Lightweight) { "-D$($prefix)lightweight=true" }; if ($Lightweight -or $Bop -or $BiomeOnly) { "-D$($prefix)variant=$resultVariant" }; if ($StructureReuse) { "-D$($prefix)structureReuse=true" }; if ($BiomeOnly) { "-D$($prefix)biomeOnly=true" }; if ($NativeTerrain) { "-D$($prefix)nativeTerrain=true" })
     Invoke-Probe -World "prefeatures-export$worldSuffix" -Seed '0' -Properties (@("-D$($prefix)export=true") + $suiteProperties) -Log (Join-Path $resultRoot 'export.log')
     $launcher = Get-Content -LiteralPath (Join-Path $resultRoot 'launcher.json') -Raw | ConvertFrom-Json
     $fixtures = @(Get-Content -LiteralPath (Join-Path $resultRoot 'fixtures.json') -Raw | ConvertFrom-Json)
     if ($Suite -eq 'smoke' -and !$Bop) { $fixtures = @($fixtures[3], $fixtures[22], $fixtures[40], $fixtures[56]) }
-    [IO.File]::WriteAllText($selectionPath, (@{ suite = $Suite; lightweight = [bool]$Lightweight; structureReuse = [bool]$StructureReuse; compact = [bool]$Compact; biomeOnly = [bool]$BiomeOnly; fixtures = $fixtures; ownedNativePort = [bool]$privateNativeConfig; cpuAffinity = $CpuAffinity } | ConvertTo-Json -Depth 8) + "`n", [Text.UTF8Encoding]::new($false))
+    [IO.File]::WriteAllText($selectionPath, (@{ suite = $Suite; lightweight = [bool]$Lightweight; structureReuse = [bool]$StructureReuse; compact = [bool]$Compact; biomeOnly = [bool]$BiomeOnly; nativeTerrain = [bool]$NativeTerrain; fixtures = $fixtures; ownedNativePort = [bool]$privateNativeConfig; cpuAffinity = $CpuAffinity } | ConvertTo-Json -Depth 8) + "`n", [Text.UTF8Encoding]::new($false))
     $count = 0
     foreach ($fixture in $fixtures) {
         $fixtureRoot = Join-Path $resultRoot $fixture.id
@@ -404,4 +412,4 @@ try {
     $orchestrator.ProcessorAffinity = $originalAffinity
     [IO.File]::WriteAllText($validationProperties, $originalProperties, [Text.UTF8Encoding]::new($false))
 }
-& $PSCommandPath -Target $Target -Suite $Suite -Lightweight:$Lightweight -StructureReuse:$StructureReuse -Compact:$Compact -Bop:$Bop -BiomeOnly:$BiomeOnly -HostSeed $HostSeed -EvidenceLabel $EvidenceLabel -CheckOnly
+& $PSCommandPath -Target $Target -Suite $Suite -Lightweight:$Lightweight -StructureReuse:$StructureReuse -Compact:$Compact -Bop:$Bop -BiomeOnly:$BiomeOnly -NativeTerrain:$NativeTerrain -HostSeed $HostSeed -EvidenceLabel $EvidenceLabel -CheckOnly

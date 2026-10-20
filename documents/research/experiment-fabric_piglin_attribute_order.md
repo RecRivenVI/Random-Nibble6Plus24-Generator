@@ -22,7 +22,7 @@ fixture 为主种子 123456789、下界 (-10,-10)，local seed 22009055173054585
 
 实际 26.3 字节码为 LivingEntity.addAdditionalSaveData → AttributeMap.pack → attributes.values().iterator → AttributeInstance.pack → Packed.LIST_CODEC → ValueOutput。原版 AttributeMap 使用 Object2ObjectOpenHashMap；Holder.Reference 没有自定义 hashCode/equals。fastutil 8.5.18 的 MapIterator 从高索引向低索引扫描；本案例两键落在不同槽，没有碰撞或修改期间遍历。
 
-[schema-2 因果汇总](../../validations/conformance-feature_b/result/piglin_order_iterator-effective-causality.json)绑定 main/probe 输入 62BC2BDE3833508BCE83ABAE2406C310006A35AA75E66E387CBBD8417D17EB65。四捕获都逐项证明原版 iterator、pack 与最终 NBT 顺序一致，observed 等于 used，没有排序干预。
+schema-2 因果汇总（本机证据：`../../validations/conformance-feature_b/result/piglin_order_iterator-effective-causality.json`）绑定 main/probe 输入 62BC2BDE3833508BCE83ABAE2406C310006A35AA75E66E387CBBD8417D17EB65。四捕获都逐项证明原版 iterator、pack 与最终 NBT 顺序一致，observed 等于 used，没有排序干预。
 
 | 捕获 | 目标 JVM PID | 原版属性顺序 | 身份哈希对应槽位 |
 | --- | --- | --- | --- |
@@ -57,7 +57,7 @@ a 的两个身份哈希分别为 1104693947、115715241；c 为 1364242148、636
 
 使用者在取得上述证据后明确批准有限例外。规则只在显式 nether-chests fixture 对 minecraft:piglin 开启，必须恰含 follow_range、movement_speed 两个唯一属性 ID；只对齐整项，不忽略数值、modifiers 或其它字段。默认规则、brute、其它实体/Target/模组和未知属性集不扩张。三个新增单元测试覆盖换序、值/修饰符/生命差异、brute、未知/缺失/重复属性，连同原八项共十一项通过。
 
-[新四角色结果](../../validations/conformance-feature_b/result/nether_natural_accepted/independent/26.3-fabric)绑定 BC19FA3F0B0EAFD5EEC5326A8B326C46054F0A71684F31BBAE537299CE09D2E1 main/probe 输入。运行前与 CheckOnly 均显式按历史输入复核 schema-2 因果证据，不将其伪装成新增验收器后的新实验。
+新四角色结果（本机证据：`../../validations/conformance-feature_b/result/nether_natural_accepted/independent/26.3-fabric`）绑定 BC19FA3F0B0EAFD5EEC5326A8B326C46054F0A71684F31BBAE537299CE09D2E1 main/probe 输入。运行前与 CheckOnly 均显式按历史输入复核 schema-2 因果证据，不将其伪装成新增验收器后的新实验。
 
 | 角色 | 目标 JVM PID | 结果 | UUID-only strictParity |
 | --- | --- | --- | --- |

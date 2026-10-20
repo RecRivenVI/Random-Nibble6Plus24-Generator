@@ -24,7 +24,7 @@ Vanilla 的实际磁盘加载注册目标 section 身份；只在原生 applyBio
 
 ### 恢复结果
 
-证据固定在 [partial_pre_light_section_causal/1.20.1-forge](../../validations/integration-legacy_physical/result/partial_pre_light_section_causal/1.20.1-forge)。两维度各六个独立 JVM，执行后均已通过当前指纹 CheckOnly。
+证据固定在 partial_pre_light_section_causal/1.20.1-forge（本机证据：`../../validations/integration-legacy_physical/result/partial_pre_light_section_causal/1.20.1-forge`）。两维度各六个独立 JVM，执行后均已通过当前指纹 CheckOnly。
 
 | B 维度 | local seed | fresh 目标生成 / SPAWN | resume 目标生成 / SPAWN | FULL reload 生成 / SPAWN | 冷载群系逐项比较 |
 | --- | --- | --- | --- | --- | --- |
@@ -37,15 +37,15 @@ Vanilla 的实际磁盘加载注册目标 section 身份；只在原生 applyBio
 
 ### 原始失败与观测边界
 
-输入 9054 的首次 PartialPreLight 控制，Vanilla fresh 通过，resume 报目标投影变化；原始 FAIL 与世界保存在 [partial_pre_light](../../validations/integration-legacy_physical/result/partial_pre_light/1.20.1-forge/vanilla/minecraft-the_nether)及对应 first_failure 中。磁盘输入相同，推进 FULL 后有 143 个真实方块变化，包括诡异疣块、藤蔓、砂砾和岩浆块；不能因此判定 Mosaic 重载重生成。
+输入 9054 的首次 PartialPreLight 控制，Vanilla fresh 通过，resume 报目标投影变化；原始 FAIL 与世界保存在 partial_pre_light（本机证据：`../../validations/integration-legacy_physical/result/partial_pre_light/1.20.1-forge/vanilla/minecraft-the_nether`）及对应 first_failure 中。磁盘输入相同，推进 FULL 后有 143 个真实方块变化，包括诡异疣块、藤蔓、砂砾和岩浆块；不能因此判定 Mosaic 重载重生成。
 
-输入 9AC0 的 WorldGenRegion 放块观察记录了 138 次实际写入，仍不能解释砂砾等变化，原始 FAIL 保留在 [partial_pre_light_causal](../../validations/integration-legacy_physical/result/partial_pre_light_causal/1.20.1-forge/vanilla/minecraft-the_nether)。本版 OreFeature 使用 BulkSectionAccess 直接调用 LevelChunkSection.setBlockState，绕过 WorldGenRegion.setBlock。
+输入 9AC0 的 WorldGenRegion 放块观察记录了 138 次实际写入，仍不能解释砂砾等变化，原始 FAIL 保留在 partial_pre_light_causal（本机证据：`../../validations/integration-legacy_physical/result/partial_pre_light_causal/1.20.1-forge/vanilla/minecraft-the_nether`）。本版 OreFeature 使用 BulkSectionAccess 直接调用 LevelChunkSection.setBlockState，绕过 WorldGenRegion.setBlock。
 
 当前 section 观察条件下，Vanilla 下界 resume 的 180 次实际邻区写入完整解释最终所有方块变化，群系与结构未变；末地本次无新增目标写入。Vanilla 最终 FULL 重载与自身 resume 保存状态严格一致。B 两维度没有任何目标投影变化，不采用 Vanilla 邻区解释来放宽 B 合同。两份失败没有改写为 PASS，也未扩大实体 canonical 例外。
 
 ### 装饰前回归
 
-当前 DB8B 的[四项六阶段原生/轻量对照](../../validations/conformance-legacy_terrain/result/legacy_terrain_smoke_partial_section_probe/1.20.1-forge)全部通过及 CheckOnly，覆盖主世界 origin/non-origin、下界和末地；不替代正式 72 项。9AC0 的同类四项也已独立完成；9054 编排中仅完成两项后进程与句柄均不在场，该目录保留为不完整，不计整套通过或世界生成失败，不以其余运行补写原指纹。
+当前 DB8B 的四项六阶段原生/轻量对照（本机证据：`../../validations/conformance-legacy_terrain/result/legacy_terrain_smoke_partial_section_probe/1.20.1-forge`）全部通过及 CheckOnly，覆盖主世界 origin/non-origin、下界和末地；不替代正式 72 项。9AC0 的同类四项也已独立完成；9054 编排中仅完成两项后进程与句柄均不在场，该目录保留为不完整，不计整套通过或世界生成失败，不以其余运行补写原指纹。
 
 ## 结论
 

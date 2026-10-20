@@ -1,7 +1,7 @@
 param(
     [ValidateSet('26.3-fabric', '26.3-neoforge')][string]$Target = '26.3-fabric',
     [ValidateSet('overworld', 'the_nether', 'the_end')][string]$Dimension = 'overworld',
-    [ValidateSet('b', 'ordering2', 'vanilla', 'b-source-reference', 'b-source-audit', 'b-biome-reference', 'b-physical-biome-reference')][string[]]$Pipelines = @('b','ordering2','vanilla'),
+    [ValidateSet('b', 'ordering2', 'vanilla', 'b-source-reference', 'b-source-audit', 'b-biome-reference', 'b-physical-biome-reference', 'b-biome-lock-reference', 'b-physical-terrain-reference', 'b-load-reference', 'b-origin-reference')][string[]]$Pipelines = @('b','ordering2','vanilla'),
     [int]$View = 8,
     [int]$Simulation = 8,
     [int]$Seconds = 60,

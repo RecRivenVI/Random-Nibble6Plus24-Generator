@@ -77,6 +77,10 @@ public final class VanillaLifecycleEvidence {
                 || !trace.physicalStatusCalls().isEmpty()
                 || !trace.generatorCalls().isEmpty()
                 || BDevelopmentWorld.metrics(server).get("generations") != 0L
+                || io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization
+                                .PhysicalPreFeaturesPreparation.metrics()
+                                .get("builds")
+                        != 0L
                 || GenerationContextRegistry.bindingCount() != 0
                 || MosaicSpawnContextRegistry.bindingCount() != 0)
             throw new IllegalStateException("Ordinary Vanilla entered Mosaic production work");
@@ -99,6 +103,11 @@ public final class VanillaLifecycleEvidence {
         result.add("mosaicMaterializer", gson.toJsonTree(metrics));
         result.add("mosaicPoi", gson.toJsonTree(MosaicPhysicalPoiReconciler.metrics()));
         result.add("mosaicTrace", gson.toJsonTree(trace));
+        result.add(
+                "mosaicPartialBiomes",
+                gson.toJsonTree(
+                        io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization
+                                .PhysicalPreFeaturesPreparation.metrics()));
         RuntimeLifecycleEvidence.capture(result);
         try {
             Path output = Path.of(System.getProperty(PREFIX + "output"));

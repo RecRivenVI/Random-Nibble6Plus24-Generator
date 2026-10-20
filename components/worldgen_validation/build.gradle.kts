@@ -2,6 +2,20 @@ plugins {
     base
 }
 
+tasks.register<Exec>("verifyDependencies") {
+    group = "verification"
+    description = "检查指定 Target 的稳定依赖原生客户端／服务端冒烟摘要。"
+    commandLine(
+        "pwsh",
+        "-NoProfile",
+        "-File",
+        "scripts/smoke-dependencies/Run-Dependencies.ps1",
+        "-Target",
+        providers.gradleProperty("validationTarget").getOrElse("26.3-fabric"),
+        "-CheckOnly",
+    )
+}
+
 val testMcpAlpha =
     tasks.register<Exec>("testMcpAlpha") {
         group = "verification"

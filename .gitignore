@@ -7,6 +7,8 @@
 .kotlin/
 build/
 out/
+__pycache__/
+*.py[cod]
 
 # IDE 文件
 .idea/
@@ -30,6 +32,7 @@ Thumbs.db
 /validations/*/result/current/
 /validations/*/result/compact/
 /validations/integration-mcp_alpha/result/
+/validations/smoke-dependencies/result/
 /components/worldgen_validation/scripts/integration-mcp_alpha/__pycache__/
 /components/worldgen_validation/src/test/python/__pycache__/test_mcp_alpha.*.pyc
 /validations/*/result/terrain_*/

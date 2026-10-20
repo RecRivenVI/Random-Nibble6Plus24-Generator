@@ -12,11 +12,11 @@
 
 ## 发现
 
-真实失败在[候选先行结果](../../validations/conformance-structure_inputs/result/narrow_lock_concurrency/1.20.1-forge/candidate_first)：初始模板 repository 为空、141 个 pool 尺寸缓存未初始化，产品与探针 Mixin 均已加载。异常链为 JigsawPlacement→SinglePoolElement.getShuffledJigsawBlocks→StructureTemplate.filterBlocks→JigsawBlock.rotate→OctahedralGroup.rotate(FrontAndTop)→FrontAndTop.lookupKey，空 Direction 触发 NullPointerException。
+真实失败在候选先行结果（本机证据：`../../validations/conformance-structure_inputs/result/narrow_lock_concurrency/1.20.1-forge/candidate_first`）：初始模板 repository 为空、141 个 pool 尺寸缓存未初始化，产品与探针 Mixin 均已加载。异常链为 JigsawPlacement→SinglePoolElement.getShuffledJigsawBlocks→StructureTemplate.filterBlocks→JigsawBlock.rotate→OctahedralGroup.rotate(FrontAndTop)→FrontAndTop.lookupKey，空 Direction 触发 NullPointerException。
 
 原生 rotate(Direction) 在字节码偏移 13 把新建的空 EnumMap 写入 rotatedDirections，偏移 105/112 才在循环中填充六个方向；另一线程在偏移 1 看到非空后跳过初始化，偏移 125/129 可以读到尚不存在的键。这里没有随机抽取、种子或高度计算，缺口是共享惰性缓存的初始化可见性。不能把这个生产并发缺陷归为可豁免的原版自然波动。
 
-较早一次失败仅由旧启动参数缺少产品 Mixin 导致 StructurePlacementAccessor 类型转换错误；完整证据与原始世界独立保全于[缺失 bootstrap 的目录](../../validations/conformance-structure_inputs/result/narrow_lock_concurrency_missing_bootstrap/1.20.1-forge)。正式 prepareValidationConformanceStructureInputsServerRun 刷新参数后，工具增加产品/probe 配置检查；该启动失败不代替本次真实并发结果。
+较早一次失败仅由旧启动参数缺少产品 Mixin 导致 StructurePlacementAccessor 类型转换错误；完整证据与原始世界独立保全于缺失 bootstrap 的目录（本机证据：`../../validations/conformance-structure_inputs/result/narrow_lock_concurrency_missing_bootstrap/1.20.1-forge`）。正式 prepareValidationConformanceStructureInputsServerRun 刷新参数后，工具增加产品/probe 配置检查；该启动失败不代替本次真实并发结果。
 
 ## 结论
 

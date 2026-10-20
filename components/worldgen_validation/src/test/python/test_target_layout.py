@@ -237,7 +237,7 @@ class TargetLayoutTests(unittest.TestCase):
                 sidecar.write_text(json.dumps(data), encoding="utf-8")
                 code = (f". '{reader}'; $r=Get-Content -LiteralPath '{raw}' -Raw|ConvertFrom-Json; "
                         f"try {{[void](Read-NativeRequestSidecar -RawPath '{raw}' -RawResult $r)}} "
-                        "catch {exit 3}")
+                        "catch {[Console]::Error.WriteLine($_.Exception.ToString()); exit 3}")
                 run = subprocess.run(["pwsh", "-NoProfile", "-Command", code], capture_output=True, text=True, timeout=30)
                 self.assertEqual(run.returncode, 3 if mutation else 0, run.stderr)
 

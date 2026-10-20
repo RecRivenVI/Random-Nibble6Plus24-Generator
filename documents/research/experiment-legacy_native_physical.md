@@ -21,7 +21,7 @@
 | 下界 | 115732 / 43152 | 116684 / 103276 | 23.580 s | 0.678 s |
 | 末地 | 74612 / 100160 | 114792 / 112408 | 21.850 s | 0.724 s |
 
-八个 PID 独立，报告角色与 save 均由工具严格复核。证据分别在[下界](../../validations/integration-legacy_physical/result/current/1.20.1-forge/b/minecraft-the_nether)和[末地](../../validations/integration-legacy_physical/result/current/1.20.1-forge/b/minecraft-the_end)，相应普通控制位于同级 vanilla 目录。
+八个 PID 独立，报告角色与 save 均由工具严格复核。证据分别在下界（本机证据：`../../validations/integration-legacy_physical/result/current/1.20.1-forge/b/minecraft-the_nether`）和末地（本机证据：`../../validations/integration-legacy_physical/result/current/1.20.1-forge/b/minecraft-the_end`），相应普通控制位于同级 vanilla 目录。
 
 每个 B 首次请求产生原生依赖要求的 49 个 Artifact/物化/POI，三者计数一致；目标生成恰好一次，原生 LIGHT、SPAWN、FULL 各一次。全部 49 个 BIOMES+ owner 的 50,176 个 quart cell 与其 canonical Artifact 相同；没有用空 palette 代替较低阶段的物理输入。这里只有一个 FULL，不把 49 次 Artifact 计为 49 个 gameplay-ready Chunk。
 

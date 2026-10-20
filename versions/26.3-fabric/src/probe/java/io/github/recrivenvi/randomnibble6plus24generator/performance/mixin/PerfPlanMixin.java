@@ -10,10 +10,15 @@ import org.spongepowered.asm.mixin.Mixin;
 
 @Mixin(value = MosaicPhysicalGenerationPlan.class, remap = false)
 abstract class PerfPlanMixin {
-    @WrapMethod(method = "derive")
+    @WrapMethod(
+            method =
+                    "derive(Lnet/minecraft/world/level/ChunkPos;Lnet/minecraft/world/level/chunk/status/ChunkStatus;Z)Lio/github/recrivenvi/randomnibble6plus24generator/worldgen/materialization/MosaicPhysicalGenerationPlan;")
     private static MosaicPhysicalGenerationPlan plan(
-            ChunkPos pos, ChunkStatus status, Operation<MosaicPhysicalGenerationPlan> original) {
-        var result = original.call(pos, status);
+            ChunkPos pos,
+            ChunkStatus status,
+            boolean partialBiomes,
+            Operation<MosaicPhysicalGenerationPlan> original) {
+        var result = original.call(pos, status, partialBiomes);
         var level = PerfTrace.planLevel();
         if (level != null) {
             PerfTrace.event(
@@ -25,16 +30,21 @@ abstract class PerfPlanMixin {
                             + ";requirements="
                             + result.physicalStatusRequirements().size()
                             + ";artifacts="
-                            + result.materializationObligations().size());
-            result.materializationObligations()
-                    .forEach(
-                            (p, s) ->
-                                    PerfTrace.event(
-                                            level,
-                                            p,
-                                            "PLAN_CANONICAL_DEPENDENCY",
-                                            PerfTrace.key(level, pos) + "/" + status + "->" + s));
+                            + result.materializationObligations().size()
+                            + ";partialBiomes="
+                            + partialBiomes
+                            + ";requiredStages="
+                            + counts(result.physicalStatusRequirements())
+                            + ";obligationStages="
+                            + counts(result.materializationObligations()));
         }
         return result;
+    }
+
+    private static java.util.Map<String, Integer> counts(
+            java.util.Map<ChunkPos, ChunkStatus> stages) {
+        var counts = new java.util.TreeMap<String, Integer>();
+        stages.values().forEach(stage -> counts.merge(stage.getName(), 1, Integer::sum));
+        return counts;
     }
 }

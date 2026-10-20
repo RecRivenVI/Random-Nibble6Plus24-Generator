@@ -10,6 +10,14 @@ import net.minecraftforge.fml.common.Mod;
 @Mod(ModConstants.MOD_ID + "_probe")
 public final class WorldgenProbe {
     public WorldgenProbe() {
+        if ("smoke-dependencies".equals(System.getProperty("validation.name"))) {
+            MinecraftForge.EVENT_BUS.addListener(
+                    io.github.recrivenvi.randomnibble6plus24generator.probe.smoke
+                                    .DependencyServerSmoke
+                            ::tick);
+            io.github.recrivenvi.randomnibble6plus24generator.probe.smoke.DependencyClientSmoke
+                    .register();
+        }
         if (io.github.recrivenvi.randomnibble6plus24generator.probe.performance
                 .LegacyPerformanceProbe.enabled())
             MinecraftForge.EVENT_BUS.addListener(WorldgenProbe::performanceTick);

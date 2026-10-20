@@ -100,7 +100,8 @@ public final class MosaicPhysicalMaterializer {
                 REQUESTED_PHYSICAL_STATUSES.merge(
                         key, targetStatus, (left, right) -> right.isAfter(left) ? right : left);
         MosaicPhysicalGenerationPlan plan =
-                MosaicPhysicalGenerationPlan.derive(pos, effectiveStatus);
+                MosaicPhysicalGenerationPlan.derive(
+                        pos, effectiveStatus, PhysicalPreFeaturesPreparation.supported(level));
         PLAN_COUNT.incrementAndGet();
         plan.materializationObligations()
                 .forEach(
@@ -176,7 +177,23 @@ public final class MosaicPhysicalMaterializer {
                         MATERIALIZATION_OBLIGATIONS.remove(key);
                         return CompletableFuture.completedFuture(loaded);
                     }
-                    return requestPrepared(level, holder.getPos())
+                    ChunkStatus required = MATERIALIZATION_OBLIGATIONS.get(key);
+                    if ((required == ChunkStatus.BIOMES || required == ChunkStatus.TERRAIN)
+                            && PhysicalPreFeaturesPreparation.supported(level)
+                            && (required != ChunkStatus.TERRAIN
+                                    || PhysicalPreFeaturesPreparation.terrainSupported(level))) {
+                        if (loaded.getPersistedStatus().isOrAfter(required)) {
+                            // Remove only the fulfilled obligation, never a concurrent upgrade.
+                            MATERIALIZATION_OBLIGATIONS.remove(key, required);
+                            return CompletableFuture.completedFuture(loaded);
+                        }
+                        return PhysicalPreFeaturesPreparation.request(level, key, required)
+                                .thenApply(
+                                        chunk ->
+                                                PhysicalPreFeaturesPreparation.awaiting(
+                                                        key, required, chunk));
+                    }
+                    return requestPreparedWithTerrain(level, holder.getPos(), loaded)
                             .thenApply(
                                     prepared -> {
                                         try {
@@ -197,6 +214,11 @@ public final class MosaicPhysicalMaterializer {
      */
     public static CompletableFuture<PreparedMaterialization> requestPrepared(
             ServerLevel level, ChunkPos pos) {
+        return requestPreparedWithTerrain(level, pos, null);
+    }
+
+    private static CompletableFuture<PreparedMaterialization> requestPreparedWithTerrain(
+            ServerLevel level, ChunkPos pos, ChunkAccess terrain) {
         MosaicGenerationLifecycle lifecycle = lifecycle(level);
         if (lifecycle.active() && lifecycle.closing()) {
             return CompletableFuture.failedFuture(lifecycle.cancellation());
@@ -228,7 +250,7 @@ public final class MosaicPhysicalMaterializer {
             CompletableFuture.runAsync(
                     () -> {
                         try {
-                            promise.complete(prepare(level, pos, key));
+                            promise.complete(prepare(level, pos, key, terrain));
                         } catch (Throwable throwable) {
                             if (!lifecycle.isExpected(throwable))
                                 io.github.recrivenvi.randomnibble6plus24generator
@@ -312,7 +334,10 @@ public final class MosaicPhysicalMaterializer {
         ChunkStatus targetStatus = step.targetStatus();
         GenerationKey key = key(level, holder.getPos());
         CompletableFuture<PreparedMaterialization> preparedFuture =
-                requestPrepared(level, holder.getPos());
+                requestPreparedWithTerrain(
+                        level,
+                        holder.getPos(),
+                        holder.getChunkIfPresentUnchecked(ChunkStatus.TERRAIN));
         CompletableFuture<ChunkAccess> stage =
                 preparedFuture.thenCompose(
                         prepared -> {
@@ -422,6 +447,12 @@ public final class MosaicPhysicalMaterializer {
     /** Called from GenerationChunkHolder.completeFuture, the scheduler-owned publication point. */
     public static void onHolderFutureCompleted(
             GenerationChunkHolder holder, ChunkStatus status, ChunkAccess chunk) {
+        var partial = PhysicalPreFeaturesPreparation.published(chunk);
+        if (partial != null) {
+            if (!holder.getPos().equals(partial.owner().pos()))
+                throw new IllegalStateException("Partial preparation published to another holder");
+            MATERIALIZATION_OBLIGATIONS.remove(partial.owner(), partial.status());
+        }
         if (status.isOrBefore(ChunkStatus.FEATURES)) {
             GenerationKey key = AWAITING_PUBLISH.remove(chunk);
             if (key != null) {
@@ -522,6 +553,7 @@ public final class MosaicPhysicalMaterializer {
     }
 
     private static void clearClosedServer(MinecraftServer server) {
+        PhysicalPreFeaturesPreparation.clear(key -> key.server() == server);
         IN_FLIGHT.keySet().removeIf(key -> key.server() == server);
         REQUESTED_PHYSICAL_STATUSES.keySet().removeIf(key -> key.server() == server);
         MATERIALIZATION_OBLIGATIONS.keySet().removeIf(key -> key.server() == server);
@@ -551,6 +583,7 @@ public final class MosaicPhysicalMaterializer {
                 key ->
                         key.server() == level.getServer()
                                 && key.dimension().equals(level.dimension());
+        PhysicalPreFeaturesPreparation.clear(belongs);
         IN_FLIGHT.keySet().removeIf(belongs);
         REQUESTED_PHYSICAL_STATUSES.keySet().removeIf(belongs);
         MATERIALIZATION_OBLIGATIONS.keySet().removeIf(belongs);
@@ -607,6 +640,7 @@ public final class MosaicPhysicalMaterializer {
     }
 
     public static void resetVerificationState() {
+        PhysicalPreFeaturesPreparation.resetVerificationState();
         if (!IN_FLIGHT.isEmpty() || !AWAITING_PUBLISH.isEmpty()) {
             throw new IllegalStateException(
                     "Cannot reset Phase 3A metrics while materialization is in flight");
@@ -639,7 +673,7 @@ public final class MosaicPhysicalMaterializer {
     }
 
     private static PreparedMaterialization prepare(
-            ServerLevel level, ChunkPos pos, GenerationKey key) {
+            ServerLevel level, ChunkPos pos, GenerationKey key, ChunkAccess terrain) {
         MosaicGenerationLifecycle lifecycle = lifecycle(level);
         lifecycle.checkPreparing();
         long totalStarted = System.nanoTime();
@@ -664,11 +698,22 @@ public final class MosaicPhysicalMaterializer {
                         localSeed,
                         pos,
                         runtime.profile())) {
+            ProtoChunk retainedTerrain =
+                    terrain instanceof ProtoChunk proto
+                                    && proto.getPersistedStatus() == ChunkStatus.TERRAIN
+                                    && PhysicalPreFeaturesPreparation.terrainSupported(level)
+                            ? proto
+                            : null;
             var developmentB =
                     io.github.recrivenvi.randomnibble6plus24generator.worldgen.features
                                     .BDevelopmentWorld.active(level)
-                            ? io.github.recrivenvi.randomnibble6plus24generator.worldgen.features
-                                    .BFeaturePreparation.generate(context, runtime.profile())
+                            ? (retainedTerrain == null
+                                    ? io.github.recrivenvi.randomnibble6plus24generator.worldgen
+                                            .features.BFeaturePreparation.generate(
+                                            context, runtime.profile())
+                                    : io.github.recrivenvi.randomnibble6plus24generator.worldgen
+                                            .features.BFeaturePreparation.generateFromTerrain(
+                                            context, runtime.profile(), retainedTerrain))
                             : null;
             FeatureStableGenerationRun run =
                     developmentB == null ? context.generateFeaturesStable() : developmentB.run();
@@ -742,7 +787,7 @@ public final class MosaicPhysicalMaterializer {
                 System.nanoTime() - totalStarted);
     }
 
-    private static GenerationKey key(ServerLevel level, ChunkPos pos) {
+    static GenerationKey key(ServerLevel level, ChunkPos pos) {
         MosaicRuntimeContext runtime =
                 MosaicWorldIdentity.runtimeContext(level)
                         .orElseThrow(

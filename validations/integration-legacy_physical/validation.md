@@ -16,6 +16,7 @@ pwsh -NoProfile -File components/worldgen_validation/scripts/integration-product
 pwsh -NoProfile -File components/worldgen_validation/scripts/integration-production_lifecycle/Run-ForgePhysical.ps1 -Dimension overworld -RingScope -Offline
 pwsh -NoProfile -File components/worldgen_validation/scripts/integration-production_lifecycle/Run-ForgePhysical.ps1 -Dimension the_nether -RuntimeProof -Offline
 pwsh -NoProfile -File components/worldgen_validation/scripts/integration-production_lifecycle/Run-ForgePhysical.ps1 -Dimension the_nether -RuntimeProof -CheckOnly
+pwsh -NoProfile -File components/worldgen_validation/scripts/integration-production_lifecycle/Run-ForgePhysical.ps1 -Dimension overworld -RuntimeProof -FullWaitDiagnosis -Offline
 pwsh -NoProfile -File components/worldgen_validation/scripts/integration-production_lifecycle/Run-ForgePhysical.ps1 -Dimension the_nether -FailureProof -EvidenceLabel section_probe -Offline
 pwsh -NoProfile -File components/worldgen_validation/scripts/integration-production_lifecycle/Run-ForgePhysical.ps1 -Dimension the_nether -FailureProof -EvidenceLabel section_probe -CheckOnly
 pwsh -NoProfile -File components/worldgen_validation/scripts/integration-production_lifecycle/Run-ForgePhysical.ps1 -Dimension the_nether -PartialPreLight -EvidenceLabel section_causal -Offline
@@ -34,6 +35,8 @@ pwsh -NoProfile -File components/worldgen_validation/scripts/integration-product
 RuntimeProof 单独使用 runtime_current（或显式 RingScope 的 runtime_ring_scope）结果与世界，不覆盖普通 FULL 或首次失败。它使用本版 PLAYER 区域票据同时更新 loading 与 TickingTracker，等待真实 7×7 FULL 和相邻两个 ENTITY_TICKING future，检查本版动态生成依赖与实际 biome 输入；再让真实服务器 tick 运行 220 次，观察实体跨界、block/fluid tick、流体跨界及熔炉 ticker。测试设施明确不算 canonical generation 正例，结束后恢复并移除票据。完整请求及模拟不延长原有 300 秒上限；fresh 与新 JVM reload 都必须通过，已有 FULL 不重新生成 Artifact/SPAWN。
 
 FailureProof 单独使用 observation_failure 结果与世界，在实际请求后注入探针观察失败。它只验证原始错误与停服次生错误分开保留，不能代替 FULL 成功或真实生成异常隔离；原始 summary 的 FAIL 不改写为 PASS，不覆盖既有负例。
+
+FullWaitDiagnosis 只观察默认主世界 RuntimeProof，独立保存 runtime_current_full_wait_game_owned，不覆盖原 300 秒失败。每三十秒读取现有 production plan、obligation、holder 的票据／已存在 future 和 JVM 全线程栈、锁持有者、线程 CPU 时间；JFR 仅由游戏进程内探针创建，不通过 JAVA_TOOL_OPTIONS 传播到 Gradle 或工具链探测进程。不创建依赖、不调用生成、不启用有限环，也不延长 FULL 的 300 秒预算。它用于区分实际计算、锁等待、死锁与依赖放大，不能当作吞吐 benchmark；失败保留原始证据，不改判 PASS。
 
 PartialPreLight 单独使用 partial_pre_light，按本版 ChunkLevel 反推票据强度，只请求 INITIALIZE_LIGHT，保存真实 ProtoChunk；不用 FULL 票据或手工降级状态制造半成品。每侧 fresh、resume、reload 各用独立 JVM：从原生磁盘读取确认半成品，再普通请求 FULL，最后重启验证 FULL 重载。下界/末地分别执行，不把本项当作出生、自然碰撞或性能证明。
 

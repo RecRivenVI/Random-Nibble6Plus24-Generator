@@ -8,6 +8,15 @@
 
 ## 运行
 
+26.3 两端的自然实体／方块实体保存验证共用工具入口；名称保留为 `Run-FabricNatural.ps1`，Target 参数选择独立的原生适配。以下为 NeoForge 的五个真实正例，默认四逻辑 CPU、低优先级，逐个运行。
+
+```powershell
+pwsh -NoProfile -File components/worldgen_validation/scripts/integration-production_lifecycle/Run-FabricNatural.ps1 -Target 26.3-neoforge -EvidenceLabel native_natural
+pwsh -NoProfile -File components/worldgen_validation/scripts/integration-production_lifecycle/Run-FabricNatural.ps1 -Target 26.3-neoforge -Fixture nether_chests -EvidenceLabel native_natural
+```
+
+同源已通过结果只复核，不覆盖重跑；单项使用 `-Fixture`。自然激活与 native load control 不等于运行期 NBT 永不变化。NeoForge 检查真实群系依赖，Fabric 另核对逐 stored-biome cell；不把两个字段数量混为同一证明。
+
 从仓库根目录执行。先由使用者在 `local.toml` 顶层写入 `eula = true`，不要代替使用者接受 EULA。只启动单个高负载 JVM；所有运行限制为 4 个可见处理器。
 
 ```powershell
@@ -62,15 +71,31 @@ pwsh -NoProfile -File components/worldgen_validation/scripts/integration-product
 
 冷 SPAWN 的 stage/resume 必须为不同 PID、当前同一源码指纹，真实磁盘输入为 LIGHT；目标恢复 canonical prepare 为零、原版 population 恰好一次，最终为 lit LevelChunk。已有八来源 stored biomes 和 CARVERS 方块读取 hash 与冷重建完全一致。额外八次读取发生在原版 population 返回后，只计组件覆盖，不冒充自然刷怪越界正例；原始差异保持 FAIL。两次原生 level close 后 in-flight/worker 均零，不新增崩溃报告。
 
-参考 Target 的部分 BIOMES 候选另用以下命令验证：
+两个 26.3 Target 的部分 BIOMES 准备用以下命令验证；运行前通过 MOSAIC_VALIDATION_TARGET 选择加载器：
 
 ```powershell
 pwsh -NoProfile -File components/worldgen_validation/scripts/integration-production_lifecycle/Run-Phase3C2Production.ps1 -FeatureOrderingVersion 2 -DevelopmentB -PartialBiomes -VerifyReload -Mutate
+$env:MOSAIC_VALIDATION_TARGET = '26.3-neoforge'
+& components/worldgen_validation/scripts/integration-production_lifecycle/Run-Phase3C2Production.ps1 -FeatureOrderingVersion 2 -DevelopmentB -PartialBiomes -VerifyReload -Mutate -EvidenceLabel native_partial_biomes -Offline
 ```
 
-此项连续启动四个独立 JVM、同一专用存档：十六次同目标普通 BIOMES 请求得到同一个真实 S(C) ProtoChunk，不捕获 Artifact；保存重启后仍停 BIOMES，完整快照与原生结构加载控制一致，目标 biome preparation 为零；再通过普通 FULL 请求完成完整 B Artifact、光照与生命周期，修改方块后再次保存重启，canonical/Artifact/SPAWN 为零且修改保留。结果固定于 `result/current/26.3-fabric/phase3c2-production/features-2/development-b/partial-biomes/`。这不是删减物理邻区、空 palette 或近似采样；未知模组组合保持完整 Artifact 回退。通过此项尚不代表有性能收益，仍需同条件端到端配对对照。
+此项连续启动四个独立 JVM、同一专用存档：十六次同目标普通 BIOMES 请求得到同一个真实 S(C) ProtoChunk，不捕获 Artifact；保存重启后仍停 BIOMES，完整快照与原生结构加载控制一致，目标 biome preparation 为零；再通过普通 FULL 请求完成完整 B Artifact、光照与生命周期，修改方块后再次保存重启，canonical/Artifact/SPAWN 为零且修改保留。结果固定于 `result/current/<target>/phase3c2-production/features-2/development-b/partial-biomes/`，标签额外隔离证据。独立目标的十六次并发 FULL 升级必须只生成一个目标 Artifact。这不是删减物理邻区、空 palette 或近似采样；未知模组组合保持完整 Artifact 回退。通过此项尚不代表有性能收益，仍需同条件端到端配对对照。
+
+缩锁候选复验使用独立 `-EvidenceLabel biome_lock_scope`，在上述 partial-biomes 下隔离结果与世界，不覆盖原始证据：
+
+```powershell
+$env:MOSAIC_VALIDATION_TARGET = '26.3-fabric'
+& components/worldgen_validation/scripts/integration-production_lifecycle/Run-Phase3C2Production.ps1 -FeatureOrderingVersion 2 -DevelopmentB -PartialBiomes -VerifyReload -Mutate -EvidenceLabel biome_lock_scope -Offline
+```
 
 不靠手动逐阶段调用；去重、保存、重启、已修改 Chunk 和各维度生命周期保持正确。
+
+Fabric 的部分 TERRAIN 候选使用同一原生请求／保存／并发升级流程，停止状态和证据目录分别为 TERRAIN 与 partial-terrain，不复用 BIOMES 结果冒充通过：
+
+```powershell
+$env:MOSAIC_VALIDATION_TARGET = '26.3-fabric'
+& components/worldgen_validation/scripts/integration-production_lifecycle/Run-Phase3C2Production.ps1 -FeatureOrderingVersion 2 -DevelopmentB -PartialTerrain -VerifyReload -Mutate -EvidenceLabel native_partial_terrain -Offline
+```
 
 `-DevelopmentB` 仅创建全新 `development_b` 隐藏生成器世界，校验 marker 与显式运行 opt-in，使用按需 B 后复用既有物化和生命周期。结果写入 `features-2/development-b`，要求新生成计数大于零、重载为零；缺失 marker、混合维度身份或未启用时 fail closed。既有 `mosaic` codec 的 Ordering 1/2 世界不切换，也不公开 WorldPreset。
 

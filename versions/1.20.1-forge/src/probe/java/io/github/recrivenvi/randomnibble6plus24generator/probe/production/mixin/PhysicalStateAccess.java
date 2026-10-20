@@ -7,6 +7,21 @@ import org.spongepowered.asm.mixin.gen.Accessor;
 
 @Mixin(value = MosaicPhysicalLevelState.class, remap = false)
 public interface PhysicalStateAccess {
+    @Accessor(value = "requested", remap = false)
+    java.util.Map<net.minecraft.world.level.ChunkPos, net.minecraft.world.level.chunk.ChunkStatus>
+            mosaic$requested();
+
+    @Accessor(value = "plans", remap = false)
+    java.util.Map<
+                    net.minecraft.world.level.ChunkPos,
+                    java.util.Map<
+                            net.minecraft.world.level.ChunkPos,
+                            net.minecraft.world.level.chunk.ChunkStatus>>
+            mosaic$plans();
+
+    @Accessor(value = "obligations", remap = false)
+    java.util.Set<net.minecraft.world.level.ChunkPos> mosaic$obligations();
+
     @Accessor(value = "biomes", remap = false)
     java.util.Map<
                     net.minecraft.world.level.chunk.ChunkAccess,

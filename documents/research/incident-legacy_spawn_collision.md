@@ -8,7 +8,7 @@ H121-U 的第二组交错性能对照在 02:32:34 崩溃。崩溃报告首因为
 
 同一时刻另有 worker 报缺少 SPAWN 父状态。它不能用 catch 或假 parent 掩盖；先修复崩溃报告中的明确读取缺口，再用原负载检查是否仍出现。原报告没有完整的 owner/request 配对，不能据邻区坐标猜定精确 owner 或补造过去的执行顺序。
 
-原始世界、日志与崩溃报告在[第二组失败目录](../../validations/performance-worldgen/result/legacy_frontier_cold/1.21.1-neoforge/overworld/v8/pair_b-duration180/b_reuse/first_failure)保留；该组及未执行余组不计性能通过。
+原始世界、日志与崩溃报告在第二组失败目录（本机证据：`../../validations/performance-worldgen/result/legacy_frontier_cold/1.21.1-neoforge/overworld/v8/pair_b-duration180/b_reuse/first_failure`）保留；该组及未执行余组不计性能通过。
 
 ## 方法
 
@@ -28,15 +28,15 @@ B 准备已持有同 S(C) 的八份完整 CARVERS 邻区。携带它们的精确
 
 ### 测试侧失误与修正
 
-第一次复制隔离组件错误地把原生 `PalettedContainer.copy()` 结果当成可写深拷贝，扩容时触发 ZeroBitStorage 的范围异常；失败在[spawn_collision 冒烟目录](../../validations/integration-world_identity/result/smoke-shared-handoff-ring-scope-narrow-locks-source-reuse-spawn_collision/1.21.1-neoforge)保留。原生调色板复制仍带原来的 resize callback，不能用这个写操作证明隔离；不将该失败冒充新的 worldgen 算法差异。
+第一次复制隔离组件错误地把原生 `PalettedContainer.copy()` 结果当成可写深拷贝，扩容时触发 ZeroBitStorage 的范围异常；失败在spawn_collision 冒烟目录（本机证据：`../../validations/integration-world_identity/result/smoke-shared-handoff-ring-scope-narrow-locks-source-reuse-spawn_collision/1.21.1-neoforge`）保留。原生调色板复制仍带原来的 resize callback，不能用这个写操作证明隔离；不将该失败冒充新的 worldgen 算法差异。
 
 修正后组件从独立新建的 native ProtoChunk 写入测试点，不修改 canonical 输入；实际数据载体使用自有 packed entries/storage。该组件只证明复制隔离，不充当自然世界正例。
 
 ### 已执行结果
 
-输入指纹 `CADAD92C1A83EF1829063E547D95E9CA0085751A4305EBD7A59CBB2FBD17BB75` 的 34 项单元、编译、四 JVM 原生朝向双向重放及[完整 B 四项/十六 JVM](../../validations/integration-world_identity/result/smoke-shared-handoff-ring-scope-narrow-locks-source-reuse-spawn_packed/1.21.1-neoforge)通过。八个宿主消费者共比较 5,275,648 个方块/流体位置，含高度区间外层，均与原生 CARVERS 输入相同；复制隔离和 owner 关闭后 hash 不变均通过。FEATURES 输出、随机流、实体有限验收规则没有放宽。
+输入指纹 `CADAD92C1A83EF1829063E547D95E9CA0085751A4305EBD7A59CBB2FBD17BB75` 的 34 项单元、编译、四 JVM 原生朝向双向重放及完整 B 四项/十六 JVM（本机证据：`../../validations/integration-world_identity/result/smoke-shared-handoff-ring-scope-narrow-locks-source-reuse-spawn_packed/1.21.1-neoforge`）通过。八个宿主消费者共比较 5,275,648 个方块/流体位置，含高度区间外层，均与原生 CARVERS 输入相同；复制隔离和 owner 关闭后 hash 不变均通过。FEATURES 输出、随机流、实体有限验收规则没有放宽。
 
-[四核 8/8、180 秒实际前沿重验](../../validations/performance-worldgen/result/legacy_frontier_cold/1.21.1-neoforge/overworld/v8/collision_screen-duration180/b_reuse)实际触发十二次邻区碰撞读取，冷来源求值为零；完成 212 canonical、106 FULL、66 send-ready，正常保存退出，无新增崩溃，未再观察到缺少 SPAWN parent。主展示目标约 38.76 s 完成 canonical、109.40 s 到 FULL、109.62 s 到 send-ready。它验证命中修复路径，不等于完整生命周期或性能保留通过，也不足以将过去所有父状态错误概括成已证明的同一因果链。
+四核 8/8、180 秒实际前沿重验（本机证据：`../../validations/performance-worldgen/result/legacy_frontier_cold/1.21.1-neoforge/overworld/v8/collision_screen-duration180/b_reuse`）实际触发十二次邻区碰撞读取，冷来源求值为零；完成 212 canonical、106 FULL、66 send-ready，正常保存退出，无新增崩溃，未再观察到缺少 SPAWN parent。主展示目标约 38.76 s 完成 canonical、109.40 s 到 FULL、109.62 s 到 send-ready。它验证命中修复路径，不等于完整生命周期或性能保留通过，也不足以将过去所有父状态错误概括成已证明的同一因果链。
 
 严格合规在本次检查为零失败、零警告，Markdown 与工具测试通过。完整 source-cache 性能配对仍需在修复后的同一源码指纹重新执行；旧源码的单组收益不能拼入新组。
 

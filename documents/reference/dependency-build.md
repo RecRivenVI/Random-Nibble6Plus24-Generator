@@ -26,9 +26,11 @@ JUnit 只参与测试，不进入产品发行 JAR；其余构建工具不作为�
 
 Gradle 发行版与校验和由 Wrapper 配置定义；守护进程 Java 要求由 `gradle-daemon-jvm.properties` 定义，Target 的 Java 要求由 `java_version` 定义。Minecraft 自带的库随游戏版本取得，不独立覆盖其版本。
 
-当前 Target 与版本事实按上表读取，版本移植情况见[26.3 移植记录](../development/porting-minecraft_26_3.md)。依赖变更按[依赖升级规程](../../gradle/conventions/specification/development/procedure-update_dependencies.md)处理；模板受保护文件只随完整模板标签升级，不单独修改。当前里程碑不自动触发版本升级。
+当前 Target 与版本事实按上表读取，版本移植情况见[26.3 移植记录](../development/porting-minecraft_26_3.md)，本轮稳定版本与来源见[依赖更新记录](../development/porting-dependencies.md)。依赖变更按[依赖升级规程](../../gradle/conventions/specification/development/procedure-update_dependencies.md)处理；本轮已明确授权稳定依赖更新，Minecraft、模板及 Oracle 夹具保持不变，不单独修改受保护模板文件。
 
 与 Minecraft 无关的构建、格式化和测试工具版本随模板标签统一更新；Loom 和 ModDevGradle 保留项目选定版本。具体工具版本只在版本目录中定义，不单独修改模板插件来绕过接口不兼容。
+
+CI 无法取得本机登记的验证输入，因此按仓库规范 W-03 执行 `checkRepository`；包含本地输入的 `check` 与 `verifyRelease` 在本机执行。研究文档中的本机结果路径保留为文字，不要求云端取得测试世界或原始证据。
 
 ## BOP 验证输入
 
@@ -42,4 +44,4 @@ Custom Skin Loader 与 Zume 的 Modrinth 来源、JAR 元数据版本和 SHA-256
 
 ## MCP alpha 自动化输入
 
-固定批次、发行版本、来源与 SHA-256 在 `inputs.toml` 的 `minecraft-protocol-alpha-fabric`，本机复制路径在 `local.toml`。只用于[项目独占的接入验证](../../validations/integration-mcp_alpha/validation.md)，不进入产品、用户存档或其它线程的实例。先验证只装一个 MCP JAR 的正常 Fabric 安装，再接入 Mosaic；不补额外依赖、不构建或修改 MCP 仓库，端口按实例 endpoint 发现并绑定本次 Runtime 身份。
+固定批次、发行版本、来源与 SHA-256 在 `inputs.toml` 的 `minecraft-protocol-alpha-fabric` 与 `minecraft-protocol-alpha-neoforge`，本机复制路径在 `local.toml`。只用于[项目独占的接入验证](../../validations/integration-mcp_alpha/validation.md)，不进入产品、用户存档或其它线程的实例。各端先验证只装一个匹配 MCP JAR 的原生 Loader，再接 Mosaic；不补额外依赖、不构建或修改 MCP 仓库，端口按实例 endpoint 发现并绑定本次 Runtime 身份。NeoForge 保留模板生成的原生 loader／runtime classpath，排除开发产品目录后安装发行 JAR；该验证不声称独立官方安装器已验收。

@@ -8,6 +8,8 @@
         "PlayerLifecyclePostProcessMixin",
         "PlayerLifecycleSpawnMixin",
         "PlayerLifecycleCloseMixin",
+        "PlayerPortalEvidenceMixin",
+        "PlayerEndCreditsEvidenceMixin",
         "PublicationInventoryMixin",
         "PhysicalPersistenceMixin",
         "RuntimeTickEvidenceMixin",

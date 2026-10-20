@@ -3,10 +3,25 @@
     "package": "io.github.recrivenvi.randomnibble6plus24generator.productiontest.mixin",
     "compatibilityLevel": "JAVA_25",
     "mixins": [
+        "ClientLifecycleTickMixin",
+        "PlayerLifecycleTicketMixin",
+        "PlayerLifecycleSpawnMixin",
+        "PlayerLifecyclePostProcessMixin",
+        "PlayerLifecycleCloseMixin",
+        "PlayerPortalEvidenceMixin",
+        "PlayerEndCreditsEvidenceMixin",
+        "PartialBiomeLifecycleMixin",
         "PhysicalPersistenceMixin",
         "NativeRequestEvidenceMixin",
         "RuntimeTickEvidenceMixin",
-        "RuntimeFurnaceEvidenceMixin"
+        "RuntimeFurnaceEvidenceMixin",
+        "NaturalRuntimeServerMixin",
+        "NaturalEndCrystalTickMixin",
+        "NaturalBlockEntityLifecycleMixin",
+        "NaturalChunkSaveMixin"
+    ],
+    "client": [
+        "ClientLaunchExportMixin"
     ],
     "injectors": {
         "defaultRequire": 1

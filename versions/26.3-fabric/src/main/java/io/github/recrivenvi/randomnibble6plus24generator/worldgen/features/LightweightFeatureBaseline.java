@@ -63,15 +63,50 @@ public final class LightweightFeatureBaseline {
             ScopedStructureSources reuse,
             boolean captureProofs,
             TerrainBiomeInputs biomes) {
+        return generate(context, observer, beforeDecoration, reuse, captureProofs, biomes, null);
+    }
+
+    public static Result generateFromTerrain(
+            IsolatedGenerationContext context,
+            LocalFeatureInputs.Observer observer,
+            BiConsumer<StrictFeatureRegion, LocalFeatureInputs> beforeDecoration,
+            ProtoChunk source) {
+        try (var reuse = ScopedStructureSources.create(context);
+                var biomes = reuse == null ? null : new TerrainBiomeInputs(context)) {
+            return generate(context, observer, beforeDecoration, reuse, false, biomes, source);
+        }
+    }
+
+    private static Result generate(
+            IsolatedGenerationContext context,
+            LocalFeatureInputs.Observer observer,
+            BiConsumer<StrictFeatureRegion, LocalFeatureInputs> beforeDecoration,
+            ScopedStructureSources reuse,
+            boolean captureProofs,
+            TerrainBiomeInputs biomes,
+            ProtoChunk source) {
         long begin = System.nanoTime();
         var step = ChunkPyramid.GENERATION_PYRAMID.getStepTo(ChunkStatus.FEATURES);
         if (step.directDependencies().getRadiusOf(ChunkStatus.TERRAIN) != 1
                 || step.blockStateWriteRadius() != 1)
             throw new IllegalStateException("Unaudited B FEATURES metadata");
         var structures = CompactStructureInputs.resolve(context, reuse);
+        var copied =
+                source == null || reuse == null
+                        ? null
+                        : DetachedTerrainCopy.copy(context, structures, source);
         var target =
-                LightweightTerrainGenerator.generate(context, structures, (s, c) -> {}, biomes)
-                        .target();
+                copied == null
+                        ? LightweightTerrainGenerator.generate(
+                                        context, structures, (s, c) -> {}, biomes)
+                                .target()
+                        : copied;
+        if (copied != null && biomes != null) {
+            biomes.rememberDetachedTarget(context, target);
+            // Preserve the native stored-palette traversal before decoration. Only terrain
+            // density/surface/carving is skipped, not the palette preparation's native behavior.
+            biomes.prepare(context, context.target());
+        }
         Map<String, Long> rejected = new HashMap<>();
         java.util.function.Consumer<String> drop = api -> rejected.merge(api, 1L, Long::sum);
         if (reuse != null) structures.handoffForDecoration(reuse);
@@ -105,7 +140,8 @@ public final class LightweightFeatureBaseline {
                     structures,
                     Map.copyOf(rejected),
                     prepared - begin,
-                    decorated - prepared);
+                    decorated - prepared,
+                    copied != null);
         }
     }
 
@@ -116,7 +152,8 @@ public final class LightweightFeatureBaseline {
             CompactStructureInputs structures,
             Map<String, Long> rejected,
             long preparationNanos,
-            long decorationNanos) {
+            long decorationNanos,
+            boolean retainedTerrain) {
         /** Transfer only materialized data, never the closed local-query capability. */
         public StrictFeatureBaseline.Result contributionInputs(IsolatedGenerationContext context) {
             if (GenerationContextRegistry.find(region).orElse(null) != context

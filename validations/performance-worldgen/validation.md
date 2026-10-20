@@ -54,6 +54,44 @@ NeoForge 本版筛选对三个 Dimension 分别传参；当前固定批次使用
 
 其他矩阵与子场景的脚本在同一工具目录。脚本负责隐藏 preset、输入与系统属性，不直接使用日常实例。后续不要求人工游玩；自动采样没有真实客户端发送时，发送与渲染仍标记未测。
 
+### 当前主世界 Goal 最小配对
+
+当前主世界 Goal 的最小样本先运行同一固定条件的一个 Vanilla／B 配对，不要求先测无关维度；三个交错配对及高视距门槛仍由当前里程碑要求。以下是四逻辑 CPU、低优先级、8/8、六十秒、两次固定移动的第一配对；结果标签固定，不覆盖已有证据。
+
+```powershell
+pwsh -NoProfile -File components/worldgen_validation/scripts/performance-worldgen/Run-BPerformance.ps1 -Target 26.3-fabric -Pipeline vanilla -View 8 -Simulation 8 -Seconds 60 -EvidenceLabel goal_baseline_pair_one
+pwsh -NoProfile -File components/worldgen_validation/scripts/performance-worldgen/Run-BPerformance.ps1 -Target 26.3-fabric -Pipeline b -View 8 -Simulation 8 -Seconds 60 -EvidenceLabel goal_baseline_pair_one
+& components/worldgen_validation/scripts/performance-worldgen/Analyze-BPerformance.ps1 -Target 26.3-fabric -Pipelines @('vanilla', 'b') -View 8 -Simulation 8 -Seconds 60 -EvidenceLabel goal_baseline_pair_one
+python components/worldgen_validation/scripts/performance-worldgen/compare_native_frontier.py validations/performance-worldgen/result/b_milestone/26.3-fabric/goal_baseline_pair_one --dimension overworld
+```
+
+新 JFR 汇总保留整机 machineTotal 与游戏 jvmUser／jvmSystem 原始 CPU 样本；缺测写 null，不以游戏 CPU 冒充整机负载。B_WORK_METRICS 只在显式 profiling 的 probe 中发出轻量计数，不保存地形／NBT／证明快照。fullCohortWork 只统计窗口内真正 FULL 的 owner，列出缺测；windowWorkPerFull 另列包含未完成工作的整窗摊销，不能把后者直接称为某个已完成 Chunk 必需的额外成本。
+
+物理 BIOMES 缩锁候选只复用参考端已审计的 scoped source 入口，不改变候选、pieces 或 stored palette。仅 probe 的 `-ReferenceBiomeLocks` 恢复整段模板锁；生产不读取该属性。先通过独立 BIOMES Oracle 与部分保存重载，再进行同源受限筛选；没有显著端到端收益不保留。以下结果标签禁止覆盖：
+
+```powershell
+& components/worldgen_validation/scripts/performance-worldgen/Run-BPerformance.ps1 -Target 26.3-fabric -Pipeline b -ReferenceBiomeLocks -EvidenceLabel biome_lock_screen
+& components/worldgen_validation/scripts/performance-worldgen/Run-BPerformance.ps1 -Target 26.3-fabric -Pipeline b -EvidenceLabel biome_lock_screen
+& components/worldgen_validation/scripts/performance-worldgen/Analyze-BPerformance.ps1 -Target 26.3-fabric -Pipelines @('b-biome-lock-reference', 'b') -EvidenceLabel biome_lock_screen
+python components/worldgen_validation/scripts/performance-worldgen/compare_biome_locks.py validations/performance-worldgen/result/b_milestone/26.3-fabric/biome_lock_screen
+```
+
+`PHYSICAL_BIOMES_STRUCTURE_READY` 区分真实缩锁与参考路径；JFR 的 workCpuSamples、storedBiomeCpuSamples 与 workMonitorBlockedMs 按最内层实际任务分类。worker 在 join 中帮助执行另一任务时不把后者错误归给外层等待者；线程累计阻塞不是单目标的 critical path。
+
+nativeBuildNanos 等原有同步跨度包含 join 的等待和帮助执行其它任务，不能相加当作纯 CPU 成本。storedBiomeCpuSamples 只表示栈内出现调用者，nativeBiomeCpuSamples 才要求实际原生 doCreateBiomes 帧；后者没有 owner 时保留 other，不猜测归属。
+
+准备义务的最小诊断使用二十秒主世界样本，只有第十五秒的一次移动，不冒充六十秒双移动性能门槛。修正后的 PLAN_SHAPE 只记录阶段分布，不为每条依赖发大批标记；PREPARE_REQUIREMENT／PREPARED_REQUIREMENT 只读取实际 ConcurrentHashMap，不创建计划、票据、future 或 Chunk。null 保留为未观察到的请求，不能当作无需生成。
+
+```powershell
+foreach ($target in @('26.3-fabric', '26.3-neoforge')) {
+    & components/worldgen_validation/scripts/performance-worldgen/Run-BPerformance.ps1 -Target $target -Pipeline b -View 8 -Simulation 8 -Seconds 20 -EvidenceLabel preparation_scope_smoke
+    & components/worldgen_validation/scripts/performance-worldgen/Analyze-BPerformance.ps1 -Target $target -Pipelines @('b') -View 8 -Simulation 8 -Seconds 20 -EvidenceLabel preparation_scope_smoke
+    python components/worldgen_validation/scripts/performance-worldgen/summarize_preparation_requirements.py "validations/performance-worldgen/result/b_milestone/$target/preparation_scope_smoke/b-duration20-v8-s8"
+}
+```
+
+completedWithPreFeaturesObligationAtBothSnapshots 只列开始与结束均为 BIOMES／TERRAIN 的已完成准备；不含未完成任务，不表示整次探索的最高未来需求，更不能单凭它宣称安全移除 FEATURES。部分 TERRAIN 还须审计 holder 缓存中的旧对象、装饰后的光照更新及 native 保存升级边界。
+
 ## 通过标准
 
 1.20.1 Forge 使用该版本独立实现的原生票据探针。三组 vanilla、b_eager、b_ring 分别为普通原版、默认保守 B、显式状态安全有限环候选；不支持其它版本的缩锁或 source 复用。候选默认关闭，算法未通过端到端保留门槛前不切换生产默认。
@@ -108,6 +146,14 @@ python components/worldgen_validation/scripts/performance-worldgen/summarize_reu
 短 smoke 使用 `-View 2 -Simulation 2 -Seconds 20`，非 60 秒结果名追加 `-duration<seconds>`，不覆盖标准负载。短 smoke 只证明维度入口、真实请求、采样和关闭可运行，不作为性能收敛结论。
 
 `compare_native_frontier.py` 读取三维度六组 8/8、60 秒结果，核对相同源码/资源/轨迹、六个独立 JVM 与 fresh world identity、实际四 CPU 和相同原生请求集合。当前视野使用原生 VIEW_DEMAND/VIEW_WITHDRAWN 集合，不用理论正方形代替；已撤销请求另列。未就绪请求继续保留在 p50/p95 区间，无法识别时不给点值；相对 Vanilla 的吞吐与延迟分别报告。固定输出 vanilla-comparison.json，单组对照只作基线，不自动通过优化保留门槛。
+
+当前里程碑在两个 26.3 Target 的主世界分别测 8／12／16 视距，每档三组 Vanilla／B 交错配对。先按相同 EvidenceLabel 执行两种 pipeline 和 Analyze-BPerformance，再用以下归并；示例中的三个标签必须是实际独立运行目录，不复用 PID、世界或改变输入。输出保留每组的截尾延迟区间，吞吐比取三组比值的中位数，不把未完成需求剔除或改成零。
+
+```powershell
+python components/worldgen_validation/scripts/performance-worldgen/compare_native_frontier.py validations/performance-worldgen/result/b_milestone/26.3-fabric --dimension overworld --view 8 --pair-labels goal_final_first goal_final_reverse goal_final_forward
+```
+
+离线 JFR 汇总另外保留 RandomState、隔离上下文初始化、种子本地生成器和 Artifact 的包含式 CPU 样本，用于区分实际初始化与嵌套结构／地形工作。包含式调用栈不能相加，也不能直接换算为可删除的墙钟时间。
 
 H1 的物理 BIOMES 候选控制只支持参考 Target：`-Pipeline b -ReferencePhysicalBiomes` 由 probe 关闭部分阶段能力、恢复完整 Artifact 参考，其余输入/资源/轨迹相同。结果独立存入 `b-physical-biome-reference-v8-s8`；无此开关为候选。必须先通过独立 72 项和结构部分阶段 Oracle、部分保存重载/完整升级门禁，再筛选并决定是否进行三组交错配对。不把减少 Artifact 数量或模块耗时当作端到端改善。
 

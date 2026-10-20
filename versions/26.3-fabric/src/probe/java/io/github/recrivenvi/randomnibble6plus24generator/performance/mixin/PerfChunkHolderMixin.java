@@ -14,6 +14,23 @@ abstract class PerfChunkHolderMixin {
         ChunkHolder self = (ChunkHolder) (Object) this;
         ServerLevel level = PerfTrace.owner(map);
         if (level != null) PerfTrace.bind(self, level);
+        if (level != null) {
+            if (level.getServer().isSameThread())
+                PerfTrace.event(
+                        level,
+                        self.getPos(),
+                        "NATIVE_TICKET_DEMAND",
+                        "ticket="
+                                + self.getTicketLevel()
+                                + ";generation="
+                                + ChunkLevel.generationStatus(self.getTicketLevel()));
+            else
+                PerfTrace.event(
+                        level,
+                        self.getPos(),
+                        "NATIVE_TICKET_DEMAND_OFF_THREAD",
+                        Thread.currentThread().getName());
+        }
         var span = PerfTrace.begin(level, self.getPos(), "UPDATE_FUTURES");
         try {
             original.call(map, executor);

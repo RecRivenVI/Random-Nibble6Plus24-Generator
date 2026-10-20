@@ -20,13 +20,13 @@ JAR SHA-256：`d922028c09ca1b93201af820eddd0915bdd3c68fe96630e95c7d097e51c95b03`
 
 首次项目启动 PID 106908 被现有 B 身份门禁拒绝：启动工具漏传 developmentB 显式 opt-in；原始 19:27:29 server crash report 保留于本验证实例。这是测试配置错误，未修改产品安全检查。重复 acquire 返回冲突、POST capture 返回 404 也分别是测试驱动调用错误；调整调用，不修改 MCP、补依赖或忽略错误。首个驱动失败保留于 result/mosaic-smoke，未倒填。
 
-修正启动配置后，PID 82400、Runtime UUID `104b0060-b595-4df9-924f-1d34536b2a8e` 完成[真实客户端闭环](../../validations/integration-mcp_alpha/result/mosaic-smoke-ready/summary.json)：通过原生语义控件打开独占 Mosaic MCP Alpha 新图，客户端实际获得 Creative 玩家 `(26.5,97,19.5)`，进入后保存并退出；重新进入同一地图，再次正常保存退出。角色读取明确标 CLIENT_KNOWN，不冒充服务器真值。
+修正启动配置后，PID 82400、Runtime UUID `104b0060-b595-4df9-924f-1d34536b2a8e` 完成真实客户端闭环（本机证据：`../../validations/integration-mcp_alpha/result/mosaic-smoke-ready/summary.json`）：通过原生语义控件打开独占 Mosaic MCP Alpha 新图，客户端实际获得 Creative 玩家 `(26.5,97,19.5)`，进入后保存并退出；重新进入同一地图，再次正常保存退出。角色读取明确标 CLIENT_KNOWN，不冒充服务器真值。
 
 原生 B 日志显示首次关闭累计生成 200 个目标，重进关闭又生成 25 个；后者可能来自尚未完成的外围请求，不能仅凭总数宣称旧 FULL 重生成或完全无重生成。具体 owner 去重仍由既有项目探针证明。本次没有测量新的 Vanilla/B 性能比。
 
 释放后 pressedKeyCount、pressedButtonCount 均为 0，模式 READ。GET capture 实际取得 2027252 字节 PNG，1920×1080；未用桌面截图或截图替代 UI 语义控制。正常 Quit 时 HTTP 503 RUNTIME_SHUTTING_DOWN 符合本批手册的未确认边界，另外观察 Stopping、PID 消失和 endpoint 移除，没有盲重放。新启动没有新增崩溃报告，先前配置失败报告仍保留。
 
-[最终只读检查](../../validations/integration-mcp_alpha/result/check.json)通过；安装、存档和产物共约 134.4 MiB，低于该验证 512 MiB 上限。试用结束已显式释放快照登记，两个自有客户端均已关闭。
+最终只读检查（本机证据：`../../validations/integration-mcp_alpha/result/check.json`）通过；安装、存档和产物共约 134.4 MiB，低于该验证 512 MiB 上限。试用结束已显式释放快照登记，两个自有客户端均已关闭。
 
 ## 结论
 

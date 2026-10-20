@@ -6,7 +6,7 @@
 
 原有 FULL 验证只检查目标或两侧互动区块的输入，未覆盖票据前沿边缘。加强检查在全部 49 个 FULL 请求及两个 ENTITY_TICKING future 完成、生成会话清空后发现：位置 (119,-43) 的依赖要求 minecraft:biomes，实际 persisted status 为 minecraft:empty。
 
-原始故障由 RuntimeLifecycleEvidence.verifyPhysicalBiomes 抛出，时间为 17:30:38。现场位于 [Mosaic 原始失败](../../validations/integration-production_lifecycle/result/current/26.1.2-neoforge/phase3c2-production/features-2/development-b/runtime-proof-frontier/minecraft-overworld/first_runtime_failure)，保留 crash report、日志与世界，不倒改为 PASS。
+原始故障由 RuntimeLifecycleEvidence.verifyPhysicalBiomes 抛出，时间为 17:30:38。现场位于 Mosaic 原始失败（本机证据：`../../validations/integration-production_lifecycle/result/current/26.1.2-neoforge/phase3c2-production/features-2/development-b/runtime-proof-frontier/minecraft-overworld/first_runtime_failure`），保留 crash report、日志与世界，不倒改为 PASS。
 
 ## 方法
 

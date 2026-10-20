@@ -43,21 +43,54 @@ def frontier(folder):
     return summary, trace, demands
 
 
-def compare(left_folder, right_folder):
+def load_preparations(trace):
+    counts = {"beforeEmptyEnd": 0, "afterEmptyEnd": 0, "missingEmptyEnd": 0}
+    for row in trace["chunks"]:
+        phases = row["firstNanos"]
+        if "PREPARE_BEGIN" not in phases:
+            continue
+        if "STAGE_EMPTY_END" not in phases:
+            counts["missingEmptyEnd"] += 1
+        else:
+            key = "beforeEmptyEnd" if phases["PREPARE_BEGIN"] < phases["STAGE_EMPTY_END"] else "afterEmptyEnd"
+            counts[key] += 1
+    return counts
+
+
+def compare(left_folder, right_folder, stage="biomes"):
+    if stage not in ("biomes", "terrain", "load", "origins"):
+        raise ValueError("Unknown native partial stage")
     left, left_trace, old = frontier(left_folder)
     right, right_trace, new = frontier(right_folder)
     a, b = dict(left["conditions"]), dict(right["conditions"])
     identities = [a.pop("runIdentity", None), b.pop("runIdentity", None)]
-    if a.pop("referencePhysicalBiomes", None) is not True or b.pop("referencePhysicalBiomes", None) is not False:
-        raise ValueError("Wrong physical BIOMES A/B controls")
+    control = {"biomes": "referencePhysicalBiomes", "terrain": "referencePhysicalTerrain",
+               "load": "referenceLoadPreparation", "origins": "referenceRelatedOrigins"}[stage]
+    if a.pop(control, False) is not True or b.pop(control, False) is not False:
+        raise ValueError("Wrong physical partial-stage A/B controls")
     if a != b or not a.get("inputHash"):
         raise ValueError("Changed inputs/resources/source within physical A/B")
     if (a["cpu"], a["view"], a["simulation"], a["seconds"], a["structures"], a["pipeline"]) != (4, 8, 8, 60, "baseline", "b"):
         raise ValueError("Not the controlled production B frontier")
     if not old or old.keys() != new.keys():
         raise ValueError("Different physical demand sets")
-    if left_trace.get("physicalBiomes", {}).get("builds") != 0 or right_trace.get("physicalBiomes", {}).get("builds", 0) <= 0:
-        raise ValueError("Partial BIOMES candidate/control was not exercised")
+    observed = "physicalBiomes" if stage == "biomes" else "physicalTerrain"
+    load_counts = None
+    if stage == "origins":
+        if (left_trace.get("aggregates", {}).get("production.origins.reused", 0) != 0
+                or left_trace.get("aggregates", {}).get("production.origins.recomputed", 0) <= 0
+                or right_trace.get("aggregates", {}).get("production.origins.reused", 0) <= 0
+                or right_trace.get("aggregates", {}).get("production.origins.recomputed", 0) != 0):
+            raise ValueError("Related origin reuse was not exercised")
+    elif stage == "load":
+        load_counts = [load_preparations(trace) for trace in (left_trace, right_trace)]
+        if (load_counts[0]["beforeEmptyEnd"] <= 0 or load_counts[1]["beforeEmptyEnd"] != 0
+                or load_counts[1]["afterEmptyEnd"] <= 0):
+            raise ValueError("Native load/generation handoff was not exercised")
+    elif left_trace.get(observed, {}).get("builds") != 0 or right_trace.get(observed, {}).get("builds", 0) <= 0:
+        raise ValueError("Partial-stage candidate/control was not exercised")
+    if left_trace.get("processId") == right_trace.get("processId") or identities[0] == identities[1]:
+        raise ValueError("Reused process or fresh-world identity")
     common = [key for key in old if old[key]["complete"] and new[key]["complete"]]
     rows = {}
     for name, summary, requests in (("reference", left, old), ("candidate", right, new)):
@@ -65,6 +98,12 @@ def compare(left_folder, right_folder):
             "FULL": summary["FULL"], "sendReady": summary["sendReady"], "heapPeak": summary["heapPeak"],
             "afterGcHeapUsed": summary["afterGcHeapUsed"],
             "allocationWeightedBytes": summary["allocationWeightedBytes"],
+            "machineCpuPercentSamples": summary.get("machineCpuPercentSamples"),
+            "processCoreEquivalents": summary.get("processCoreEquivalents"),
+            "gcPauseMs": summary.get("gcPauseMs"),
+            "partialPreparation": (left_trace if name == "reference" else right_trace).get(observed),
+            "originCounts": {key: value for key, value in (left_trace if name == "reference" else right_trace).get("aggregates", {}).items() if key.startswith("production.origins.")},
+            "loadPreparation": load_counts[0 if name == "reference" else 1] if load_counts else None,
             "allocationWeightedBytesPerFull": summary["allocationWeightedBytes"] / summary["FULL"]
                 if summary["allocationWeightedBytes"] is not None and summary["FULL"] else None,
             "unfinishedDemand": sum(not entry["complete"] for entry in requests.values()),
@@ -72,7 +111,7 @@ def compare(left_folder, right_folder):
             "restrictedAllDemandLatency": stats([entry["restricted"] for entry in requests.values()])}
     improvement = 100 * (1 - rows["candidate"]["restrictedAllDemandLatency"]["mean"] /
                          rows["reference"]["restrictedAllDemandLatency"]["mean"])
-    return {"conditions": a, "runIdentities": identities,
+    return {"stage": stage, "conditions": a, "runIdentities": identities,
             "processIds": [left_trace.get("processId"), right_trace.get("processId")],
             "demandCount": len(old), "commonReadyCount": len(common), **rows,
             "restrictedMeanImprovementPercent": improvement}
@@ -82,9 +121,21 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("root", type=Path)
     parser.add_argument("--screen", action="store_true")
+    parser.add_argument("--stage", choices=("biomes", "terrain", "load", "origins"), default="biomes")
+    parser.add_argument("--labels", nargs=3, help="Three independent labelled run pairs, without copying their JFR data")
     options = parser.parse_args()
-    pairs = [compare(options.root / "b-physical-biome-reference-v8-s8", options.root / "b-v8-s8")] if options.screen else [
-        compare(options.root / f"pair-{index}/reference", options.root / f"pair-{index}/candidate") for index in range(3)]
+    reference = {"biomes": "b-physical-biome-reference", "terrain": "b-physical-terrain-reference",
+                 "load": "b-load-reference", "origins": "b-origin-reference"}[options.stage]
+    if options.screen and options.labels:
+        parser.error("A single screening pair is not three labelled pairs")
+    if options.screen:
+        pairs = [compare(options.root / (reference + "-v8-s8"), options.root / "b-v8-s8", options.stage)]
+    elif options.labels:
+        pairs = [compare(options.root / label / (reference + "-v8-s8"), options.root / label / "b-v8-s8", options.stage)
+                 for label in options.labels]
+    else:
+        pairs = [compare(options.root / f"pair-{index}/reference", options.root / f"pair-{index}/candidate", options.stage)
+                 for index in range(3)]
     if len({row["conditions"]["inputHash"] for row in pairs}) != 1:
         raise ValueError("Source changed between interleaved pairs")
     if not options.screen:
@@ -99,7 +150,8 @@ def main():
         "pairs": pairs,
         "medianRestrictedMeanImprovementPercent": statistics.median(row["restrictedMeanImprovementPercent"] for row in pairs),
         "retention": "PENDING correctness, p95/memory, noise review and all target/dimension gates"}
-    destination = options.root / ("physical-biomes-screen.json" if options.screen else "comparison.json")
+    destination = options.root / ("physical-biomes-screen.json" if options.screen else
+                                  (options.stage + "-paired.json" if options.labels else "comparison.json"))
     destination.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(result))
 

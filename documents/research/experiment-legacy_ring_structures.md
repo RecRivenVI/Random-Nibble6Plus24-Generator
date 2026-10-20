@@ -12,7 +12,7 @@
 
 ## 发现
 
-[十五项证据](../../validations/conformance-legacy_terrain/result/ring_scope_structures_climate_tail/1.20.1-forge)全部通过。覆盖本版本实际具有的 Village、Mineshaft、Ocean Monument、Nether Fortress、End City、Stronghold，以及邻区 start、地形 halo、原点与非原点回归；1.20.1 不存在 Trial Chambers，不虚构七类覆盖。
+十五项证据（本机证据：`../../validations/conformance-legacy_terrain/result/ring_scope_structures_climate_tail/1.20.1-forge`）全部通过。覆盖本版本实际具有的 Village、Mineshaft、Ocean Monument、Nether Fortress、End City、Stronghold，以及邻区 start、地形 halo、原点与非原点回归；1.20.1 不存在 Trial Chambers，不虚构七类覆盖。
 
 STRUCTURE_STARTS、STRUCTURE_REFERENCES、BIOMES、NOISE、SURFACE、CARVERS 的 canonical 数据与原始结构文件一致，stored-biome frontier、Beardifier 和实际原生密度切片 raw bits 一致。没有引入新忽略字段，没有近似高度或空邻区替代。
 

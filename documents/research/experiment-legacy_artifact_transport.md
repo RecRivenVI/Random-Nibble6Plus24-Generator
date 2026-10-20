@@ -14,8 +14,8 @@
 
 ## 发现
 
-- [四项交接](../../validations/conformance-legacy_b/result/smoke-handoff-artifact/1.20.1-forge)为主世界原点/非原点、下界及 EndSpike，4 PRODUCED 加 12 PASS，十六个 fresh JVM/save；额外 CheckOnly 通过。
-- [原生因果控制](../../validations/conformance-legacy_b/result/end-yaw-artifact/1.20.1-forge)四项完成，两方向的完整 UUID-only NBT 精确重现；没有新增随机字段例外。
+- 四项交接（本机证据：`../../validations/conformance-legacy_b/result/smoke-handoff-artifact/1.20.1-forge`）为主世界原点/非原点、下界及 EndSpike，4 PRODUCED 加 12 PASS，十六个 fresh JVM/save；额外 CheckOnly 通过。
+- 原生因果控制（本机证据：`../../validations/conformance-legacy_b/result/end-yaw-artifact/1.20.1-forge`）四项完成，两方向的完整 UUID-only NBT 精确重现；没有新增随机字段例外。
 - 八个消费者均验证 owner 已关闭、Artifact 不保留可变 section/tick 容器、全部生成高度图与 pending/instantiated 分离完整。跨 seed、坐标、维度和合同误用必须拒绝。
 - 主世界每目标保留 12,288 个邻区 biome 格，下界和末地各为 8,192；逐格及纵向 clamp 与真实 stored palette 一致。实际重建不引用 session、NoiseChunk 或 RandomState。
 - EndSpike 每个消费者有一个真实实体，交接中的原始 UUID/朝向严格保留，不用跨 JVM 的有限例外放宽同进程传输。physical host、实体/调度器/POI 检查通过，绑定清空。

@@ -171,6 +171,68 @@ public final class IndependentFeatureBVerifier {
                     result.put("rejected", new TreeMap<>(generated.rejected()));
                     result.put("nativeStructureReads", generated.nativeStructureReads());
                 } else {
+                    ProtoChunk retained = null;
+                    FeatureStableSnapshot retainedBefore = null;
+                    if (Boolean.getBoolean("featureb.retainedTerrain")) {
+                        try (var sourceContext =
+                                        IsolatedGenerationContext.create(
+                                                IsolatedGenerationMode.ISOLATED_MOSAIC,
+                                                level,
+                                                fixture.seed(),
+                                                active.target,
+                                                MosaicWorldProfile.targetOnly());
+                                var sources =
+                                        io.github.recrivenvi.randomnibble6plus24generator.worldgen
+                                                .structure.ScopedStructureSources.create(
+                                                sourceContext)) {
+                            var structures =
+                                    io.github.recrivenvi.randomnibble6plus24generator.worldgen
+                                            .structure.CompactStructureInputs.resolve(
+                                            sourceContext, sources);
+                            retained =
+                                    io.github.recrivenvi.randomnibble6plus24generator.worldgen
+                                            .materialization.DetachedTerrainInputs.generate(
+                                                    sourceContext, structures, (stage, input) -> {})
+                                            .target();
+                        }
+                        if (Boolean.getBoolean("featureb.retainedTerrainReload")) {
+                            var serialized =
+                                    net.minecraft.world.level.chunk.storage.SerializableChunkData
+                                            .copyOf(level, retained)
+                                            .write();
+                            var path = output.resolve("terrain-disk-input.nbt.gz");
+                            net.minecraft.nbt.NbtIo.writeCompressed(serialized, path);
+                            var disk =
+                                    net.minecraft.nbt.NbtIo.readCompressed(
+                                            path, net.minecraft.nbt.NbtAccounter.unlimitedHeap());
+                            var parsed =
+                                    net.minecraft.world.level.chunk.storage.SerializableChunkData
+                                            .parse(level, level.palettedContainerFactory(), disk);
+                            require(parsed != null, "Native TERRAIN parser rejected disk input");
+                            retained =
+                                    parsed.read(
+                                            level,
+                                            level.getPoiManager(),
+                                            new net.minecraft.world.level.chunk.storage
+                                                    .RegionStorageInfo(
+                                                    "retained-terrain-control", dimension, "chunk"),
+                                            active.target);
+                            retained.setAllStarts(
+                                    io.github.recrivenvi.randomnibble6plus24generator.mixin
+                                            .SerializableChunkDataInvoker
+                                            .randomnibble6plus24generator$unpackStructureStarts(
+                                                    StructurePieceSerializationContext.fromLevel(
+                                                            level),
+                                                    disk.getCompoundOrEmpty("structures"),
+                                                    fixture.seed()));
+                        }
+                        retainedBefore =
+                                FeatureStableSnapshot.capture(
+                                        dimension.identifier().toString(),
+                                        retained,
+                                        level.registryAccess());
+                        retainedBefore.write(output.resolve("terrain-input.bin.gz"));
+                    }
                     try (var context =
                             IsolatedGenerationContext.create(
                                     IsolatedGenerationMode.ISOLATED_MOSAIC,
@@ -179,8 +241,36 @@ public final class IndependentFeatureBVerifier {
                                     active.target,
                                     MosaicWorldProfile.targetOnly())) {
                         var prepared =
-                                BFeaturePreparation.generate(
-                                        context, MosaicWorldProfile.targetOnly());
+                                retained == null
+                                        ? BFeaturePreparation.generate(
+                                                context, MosaicWorldProfile.targetOnly())
+                                        : BFeaturePreparation.generateFromTerrain(
+                                                context, MosaicWorldProfile.targetOnly(), retained);
+                        if (retained != null) {
+                            require(
+                                    prepared.retainedTerrain(),
+                                    "Detached TERRAIN unexpectedly fell back instead of exercising the copy");
+                            require(
+                                    retainedBefore
+                                            .diff(
+                                                    FeatureStableSnapshot.capture(
+                                                            dimension.identifier().toString(),
+                                                            retained,
+                                                            level.registryAccess()))
+                                            .equivalent(),
+                                    "Decoration mutated the original physical TERRAIN input");
+                            result.put(
+                                    "retainedTerrain",
+                                    Map.of(
+                                            "nativeDiskReload",
+                                            Boolean.getBoolean("featureb.retainedTerrainReload"),
+                                            "copied",
+                                            true,
+                                            "sourceUnchanged",
+                                            true,
+                                            "sourceHash",
+                                            retainedBefore.hash()));
+                        }
                         chunk = (ProtoChunk) prepared.run().targetChunk();
                         starts = prepared.externalStarts();
                         var trace = prepared.run().featureTrace();

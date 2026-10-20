@@ -14,7 +14,7 @@ H121-R 有限环与 H121-T 缩锁是否能单独改善正常物理前沿？必�
 
 ## 发现
 
-[固定证据与比较文件](../../validations/performance-worldgen/result/legacy_frontier_cold/1.21.1-neoforge/overworld/v8/screen/comparison.json)核对同条件、相同指纹、不同 PID/runIdentity，保存每组条件、原始 summary 和 JFR 分析的 SHA-256。它是一次筛选，不是三组交错配对验收。
+固定证据与比较文件（本机证据：`../../validations/performance-worldgen/result/legacy_frontier_cold/1.21.1-neoforge/overworld/v8/screen/comparison.json`）核对同条件、相同指纹、不同 PID/runIdentity，保存每组条件、原始 summary 和 JFR 分析的 SHA-256。它是一次筛选，不是三组交错配对验收。
 
 | 指标 | Vanilla | 默认 B | 有限环 B | 有限环加缩锁 B |
 | --- | --- | --- | --- | --- |

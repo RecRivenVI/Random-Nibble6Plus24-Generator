@@ -294,14 +294,17 @@ public final class Phase3C2ProductionVerification {
         if (!reload && !mode.equals("biomes-first"))
             throw new IllegalArgumentException("Unknown partial biome lifecycle mode");
         var pos = target();
+        ChunkStatus partialStage =
+                Boolean.getBoolean(PREFIX + "partialTerrain")
+                        ? ChunkStatus.TERRAIN
+                        : ChunkStatus.BIOMES;
         io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization
-                .PhysicalBiomePreparation.observeForVerification(level, pos);
+                .PhysicalPreFeaturesPreparation.observeForVerification(level, pos, partialStage);
         long artifactsBefore = MosaicPhysicalMaterializer.artifactCaptures(level, pos);
         List<CompletableFuture<ChunkResult<ChunkAccess>>> requests = new ArrayList<>();
         for (int i = 0; i < 16; i++)
             requests.add(
-                    level.getChunkSource()
-                            .getChunkFuture(pos.x(), pos.z(), ChunkStatus.BIOMES, true));
+                    level.getChunkSource().getChunkFuture(pos.x(), pos.z(), partialStage, true));
         server.managedBlock(() -> requests.stream().allMatch(CompletableFuture::isDone));
         var chunk =
                 requests.getFirst()
@@ -314,7 +317,7 @@ public final class Phase3C2ProductionVerification {
                     != chunk)
                 throw new IllegalStateException(
                         "Concurrent BIOMES requests published different chunks");
-        if (chunk.getPersistedStatus() != ChunkStatus.BIOMES
+        if (chunk.getPersistedStatus() != partialStage
                 || MosaicPhysicalMaterializer.artifactCaptures(level, pos) != artifactsBefore)
             throw new IllegalStateException("BIOMES-only request generated full canonical terrain");
         long local =
@@ -339,7 +342,7 @@ public final class Phase3C2ProductionVerification {
                             "Reloaded BIOMES differs from native-load control: "
                                     + expected.diff(capture));
                 if (io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization
-                                .PhysicalBiomePreparation.builds(level, pos)
+                                .PhysicalPreFeaturesPreparation.builds(level, pos, partialStage)
                         != 0L)
                     throw new IllegalStateException("Partial reload rebuilt BIOMES inputs");
             } else {
@@ -380,7 +383,7 @@ public final class Phase3C2ProductionVerification {
                                 System.getProperty(PREFIX + "output")
                                         + ".native-load-control.nbt.gz"));
                 if (io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization
-                                .PhysicalBiomePreparation.builds(level, pos)
+                                .PhysicalPreFeaturesPreparation.builds(level, pos, partialStage)
                         != 1L)
                     throw new IllegalStateException("Native partial preparation was not exercised");
             }
@@ -405,7 +408,7 @@ public final class Phase3C2ProductionVerification {
             var racePos = new ChunkPos(pos.x() + 32, pos.z());
             var initial =
                     level.getChunkSource()
-                            .getChunkFuture(racePos.x(), racePos.z(), ChunkStatus.BIOMES, true);
+                            .getChunkFuture(racePos.x(), racePos.z(), partialStage, true);
             List<CompletableFuture<ChunkResult<ChunkAccess>>> upgrades = new ArrayList<>();
             for (int i = 0; i < 16; i++) upgrades.add(request(level, racePos));
             server.managedBlock(
@@ -434,7 +437,7 @@ public final class Phase3C2ProductionVerification {
             if (initial.join()
                     .orElseThrow(() -> new IllegalStateException("Upgrade race lost BIOMES"))
                     .getPersistedStatus()
-                    .isBefore(ChunkStatus.BIOMES))
+                    .isBefore(partialStage))
                 throw new IllegalStateException("Upgrade race exposed an empty palette");
             result.addProperty("concurrentUpgradeExactlyOneArtifact", true);
         }
@@ -442,7 +445,7 @@ public final class Phase3C2ProductionVerification {
                 "partialBiomes",
                 map(
                         io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization
-                                .PhysicalBiomePreparation.metrics()));
+                                .PhysicalPreFeaturesPreparation.metrics(partialStage)));
         write(result);
         server.halt(false);
     }

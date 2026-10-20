@@ -10,7 +10,7 @@
 
 固定输入 1EA12F079FCA02DC86A46521A746B48D6F88F50F8DDC502CF68FB9EC99848BC6，1.20.1 Forge、Java 17、主世界种子 123456789、起点 Chunk (125,-37)、8/8、四逻辑 CPU、低优先级、单游戏 JVM。四组各自 fresh save，第 15/30 秒沿 X 各移动两 Chunk，观察 60 秒；不与正确性队列、其它游戏或构建重叠。
 
-使用实际 DistanceManager PLAYER 票据、原生 ChunkMap 范围和 promotion future；send-ready 指本版 getTickingChunk，不是网络包、玩家出生或客户端画面。四个进程、运行身份、配置与源码指纹通过工具严格合并和 CheckOnly，原始时间线、JFR 和资源条件在[固定四组证据](../../validations/performance-legacy_frontier/result/legacy_frontier_cold_rotation_safe/1.20.1-forge/overworld/v8/screen)。
+使用实际 DistanceManager PLAYER 票据、原生 ChunkMap 范围和 promotion future；send-ready 指本版 getTickingChunk，不是网络包、玩家出生或客户端画面。四个进程、运行身份、配置与源码指纹通过工具严格合并和 CheckOnly，原始时间线、JFR 和资源条件在固定四组证据（本机证据：`../../validations/performance-legacy_frontier/result/legacy_frontier_cold_rotation_safe/1.20.1-forge/overworld/v8/screen`）。
 
 ## 发现
 

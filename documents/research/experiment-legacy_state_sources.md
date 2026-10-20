@@ -24,11 +24,11 @@
 
 | 范围 | 结果与证据 |
 | --- | --- |
-| 六阶段装饰前冒烟 | [四项、八 JVM](../../validations/conformance-prefeatures/result/source_reuse_narrow_locks_ring_scope_physical_biomes_smoke_source_state/1.21.1-neoforge)，原生阶段数据、逐 bit 密度、Beardifier、stored palettes 相同 |
-| 装饰前结构 | [十八项、三十六 JVM](../../validations/conformance-prefeatures/result/source_reuse_narrow_locks_ring_scope_physical_biomes_structures_source_state/1.21.1-neoforge)，七类结构、邻区起点和地形适配相同 |
-| 完整 B 冒烟 | [四项、十六 JVM](../../validations/integration-world_identity/result/smoke-shared-handoff-ring-scope-narrow-locks-source-reuse-source_state/1.21.1-neoforge)，三维度和 EndSpike 实体 |
-| 完整 B 结构与 Artifact | [十八项、七十二 JVM](../../validations/integration-world_identity/result/structures-shared-handoff-ring-scope-narrow-locks-source-reuse-source_state/1.21.1-neoforge)，十八份 PRODUCED、五十四份 PASS |
-| 原生潜影贝因果重放 | [四个 fresh JVM](../../validations/integration-world_identity/result/end-yaw-ring-scope-source_state/1.21.1-neoforge)，沿用已有有限验收规则，不新增忽略字段 |
+| 六阶段装饰前冒烟 | 四项、八 JVM（本机证据：`../../validations/conformance-prefeatures/result/source_reuse_narrow_locks_ring_scope_physical_biomes_smoke_source_state/1.21.1-neoforge`），原生阶段数据、逐 bit 密度、Beardifier、stored palettes 相同 |
+| 装饰前结构 | 十八项、三十六 JVM（本机证据：`../../validations/conformance-prefeatures/result/source_reuse_narrow_locks_ring_scope_physical_biomes_structures_source_state/1.21.1-neoforge`），七类结构、邻区起点和地形适配相同 |
+| 完整 B 冒烟 | 四项、十六 JVM（本机证据：`../../validations/integration-world_identity/result/smoke-shared-handoff-ring-scope-narrow-locks-source-reuse-source_state/1.21.1-neoforge`），三维度和 EndSpike 实体 |
+| 完整 B 结构与 Artifact | 十八项、七十二 JVM（本机证据：`../../validations/integration-world_identity/result/structures-shared-handoff-ring-scope-narrow-locks-source-reuse-source_state/1.21.1-neoforge`），十八份 PRODUCED、五十四份 PASS |
+| 原生潜影贝因果重放 | 四个 fresh JVM（本机证据：`../../validations/integration-world_identity/result/end-yaw-ring-scope-source_state/1.21.1-neoforge`），沿用已有有限验收规则，不新增忽略字段 |
 
 有限环组件另有 1,536 个正例零漏检。完整 B 严格核对目标状态、FEATURES 随机调用、可见群系、九份装饰前输入、额外读取和拒绝副作用。36 个结构宿主 consumer 的可变目标图均独占，返回时 scope closed、resident 为零，物理宿主副作用与绑定清理检查通过。原生状态重放确实执行，不是适配失效后静默回退。
 
@@ -38,7 +38,7 @@
 
 同 seed、主世界目标 `(125,-37)`、8/8、四逻辑 CPU、低优先级、单实例，分别使用 fresh save/JVM。原生玩家 ticket 前沿在第 15/30 秒各向 X 移动两 Chunk；没有真实玩家、网络 packet 或渲染验收。原生控制未进入 Mosaic 路径，构造 ticket token 后所有维度 loaded chunk 为零。
 
-[标准 60 秒组](../../validations/performance-worldgen/result/legacy_frontier_cold/1.21.1-neoforge/overworld/v8/source_screen/comparison.json)的 canonical 为 0→38，但两侧 FULL/send-ready 都为零，无法据此判断端到端收益。随后只增加一次固定 180 秒观察，保持两次移动和全部请求规则不变，不修改正确性超时或生产调度。其[独立结果](../../validations/performance-worldgen/result/legacy_frontier_cold/1.21.1-neoforge/overworld/v8/source_observe-duration180/comparison.json)为：
+标准 60 秒组（本机证据：`../../validations/performance-worldgen/result/legacy_frontier_cold/1.21.1-neoforge/overworld/v8/source_screen/comparison.json`）的 canonical 为 0→38，但两侧 FULL/send-ready 都为零，无法据此判断端到端收益。随后只增加一次固定 180 秒观察，保持两次移动和全部请求规则不变，不修改正确性超时或生产调度。其独立结果（本机证据：`../../validations/performance-worldgen/result/legacy_frontier_cold/1.21.1-neoforge/overworld/v8/source_observe-duration180/comparison.json`）为：
 
 | 180 秒窗口 | 缩锁 B | 状态安全复用 B | Vanilla |
 | --- | --- | --- | --- |

@@ -16,7 +16,7 @@
 
 原循环以 y 小于 floorDiv(getMaxY,4) 结束，主世界每 Chunk 只读 1520 格而非 1536，下界／末地只读 1008 格而非 1024。每个 Chunk 恰少十六格，即最顶层 4×4 的 quart 平面。
 
-原批次 [all_owner_biomes](../../validations/integration-production_lifecycle/result/current/26.3-fabric/phase3c2-production/vanilla-control/runtime-proof/minecraft-overworld/all_owner_biomes)共留下九份结果：主世界和下界 Vanilla/B fresh/reload 各四份，以及末地 Vanilla fresh 一份。raw status 均为 PASS，但新增覆盖门禁拒绝它们；没有末地重载或 B 结果，不计完整套件通过。原始条件指纹为 81ABB06D5390214A627FCB34B169AB19B88A398DC288561FB2FCFE5FFFA89295。原结果、日志与未完成世界保留。
+原批次 all_owner_biomes（本机证据：`../../validations/integration-production_lifecycle/result/current/26.3-fabric/phase3c2-production/vanilla-control/runtime-proof/minecraft-overworld/all_owner_biomes`）共留下九份结果：主世界和下界 Vanilla/B fresh/reload 各四份，以及末地 Vanilla fresh 一份。raw status 均为 PASS，但新增覆盖门禁拒绝它们；没有末地重载或 B 结果，不计完整套件通过。原始条件指纹为 81ABB06D5390214A627FCB34B169AB19B88A398DC288561FB2FCFE5FFFA89295。原结果、日志与未完成世界保留。
 
 修正后包括 floorDiv(getMaxY,4) 本身，并独立累计实际 section 数。每个 section 有 64 个 biome cells，消费者要求 physicalBiomeCells 等于 physicalBiomeSections × 64，且 biomeQuartCoverageVersion 为 1；不再以正计数充当全量覆盖。旧批次在显式原输入只读复核时被特定的 Incomplete physical biome quart coverage 拒绝，原 schema-1 证据则仍能以自身输入和明确范围复核。
 

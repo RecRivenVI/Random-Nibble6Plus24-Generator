@@ -23,7 +23,8 @@ public final class BFeaturePreparation {
             TerrainBiomeInputs.Counters biomeReuse,
             Map<String, Long> levelEscapes,
             long preparationNanos,
-            long decorationNanos) {}
+            long decorationNanos,
+            boolean retainedTerrain) {}
 
     public static Result generate(IsolatedGenerationContext context, MosaicWorldProfile profile) {
         return generatePrepared(context, profile, true);
@@ -33,6 +34,21 @@ public final class BFeaturePreparation {
             IsolatedGenerationContext context,
             MosaicWorldProfile profile,
             boolean reuseStructures) {
+        return generateInput(context, profile, reuseStructures, null);
+    }
+
+    public static Result generateFromTerrain(
+            IsolatedGenerationContext context,
+            MosaicWorldProfile profile,
+            net.minecraft.world.level.chunk.ProtoChunk source) {
+        return generateInput(context, profile, true, Objects.requireNonNull(source));
+    }
+
+    private static Result generateInput(
+            IsolatedGenerationContext context,
+            MosaicWorldProfile profile,
+            boolean reuseStructures,
+            net.minecraft.world.level.chunk.ProtoChunk source) {
         if (profile.featureOrderingAlgorithmVersion()
                 != MosaicWorldProfile.FEATURE_ORDERING_TARGET_ONLY)
             throw new IllegalArgumentException("B development handoff requires Ordering 2");
@@ -42,10 +58,8 @@ public final class BFeaturePreparation {
         context.beginStandaloneFeatures();
         LightweightFeatureBaseline.Result result;
         try {
-            result =
-                    LightweightFeatureBaseline.generateForHandoff(
-                            context,
-                            new LocalFeatureInputs.Observer() {},
+            java.util.function.BiConsumer<StrictFeatureRegion, LocalFeatureInputs>
+                    prepareDecoration =
                             (region, inputs) -> {
                                 context.recordFeatureWorldSeed(region.getSeed());
                                 var biomes =
@@ -78,8 +92,19 @@ public final class BFeaturePreparation {
                                                 context.worldSeed(),
                                                 profile,
                                                 inputs::storedBiomeInput));
-                            },
-                            reuseStructures);
+                            };
+            result =
+                    source == null
+                            ? LightweightFeatureBaseline.generateForHandoff(
+                                    context,
+                                    new LocalFeatureInputs.Observer() {},
+                                    prepareDecoration,
+                                    reuseStructures)
+                            : LightweightFeatureBaseline.generateFromTerrain(
+                                    context,
+                                    new LocalFeatureInputs.Observer() {},
+                                    prepareDecoration,
+                                    source);
         } finally {
             context.completeFeatureWriter(context.target());
         }
@@ -117,6 +142,7 @@ public final class BFeaturePreparation {
                 result.inputs().biomeReuseCounters().orElse(null),
                 result.region().levelEscapeCounts(),
                 result.preparationNanos(),
-                result.decorationNanos());
+                result.decorationNanos(),
+                result.retainedTerrain());
     }
 }

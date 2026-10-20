@@ -10,7 +10,7 @@
 
 使用 `Run-ForgePhysical.ps1 -Dimension overworld -RingScope`，原生控制与 B 分别建立 fresh world，并各自重新启动 JVM 重载。只调用普通 `getChunkFuture(FULL)`，目标为 `(125,-37)`，Mosaic master seed 为 123456789、local seed 为 -5161763991829980711；不手工驱动阶段，不延长 300 秒预算。显式 opt-in 在实际游戏内记录，普通物理 StructureState 始终没有有限 scope。
 
-两个正确性队列各四逻辑 CPU、低优先级、独立实例和端口；因此此次 elapsed 只记录正确性工作负载，不作为正式单实例配对、send-ready 或玩家出生性能。原始[四 JVM/save 证据](../../validations/integration-legacy_physical/result/ring_scope/1.20.1-forge)绑定输入指纹 `29CF837192253E66666555A548B30B6AC4906DAB46337C01771C605682C5C8B3`，完成后另做只读 CheckOnly。
+两个正确性队列各四逻辑 CPU、低优先级、独立实例和端口；因此此次 elapsed 只记录正确性工作负载，不作为正式单实例配对、send-ready 或玩家出生性能。原始四 JVM/save 证据（本机证据：`../../validations/integration-legacy_physical/result/ring_scope/1.20.1-forge`）绑定输入指纹 `29CF837192253E66666555A548B30B6AC4906DAB46337C01771C605682C5C8B3`，完成后另做只读 CheckOnly。
 
 ## 发现
 

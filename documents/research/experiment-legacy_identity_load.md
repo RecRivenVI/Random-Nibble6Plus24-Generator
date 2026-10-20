@@ -18,7 +18,7 @@
 
 输入指纹 `2F40AAD2F3F966C312FC181438F0B7A9E12B9AA7C265ED97AAE15BACD0390E40`，游戏 PID 108392，四逻辑 CPU、低优先级。实际三维度加载、cache 替换后 fail-closed、显式重验和关闭均通过；停止事件后 server 查询拒绝，三份 level 身份已关闭，探针持有 level 引用清零。所有正常维度保存完成，无新崩溃报告。
 
-结果固定在 [world-load-identity](../../validations/conformance-seed/result/world-load-identity/1.20.1-forge/native-seed.json)，完整日志同目录；独立 CheckOnly 再次通过。原组件证据在 runtime-identity 保留，没有覆盖其旧指纹。
+结果固定在 world-load-identity（本机证据：`../../validations/conformance-seed/result/world-load-identity/1.20.1-forge/native-seed.json`），完整日志同目录；独立 CheckOnly 再次通过。原组件证据在 runtime-identity 保留，没有覆盖其旧指纹。
 
 工具从 validation.toml 读取专用端口，支持独立四 CPU 队列，不共享运行目录；结果 FAIL 时先保全世界/日志，不在检查失败证据前回收它。编译期缺少 WrapMethod 的错误不是游戏崩溃，最终使用原生 Forge 事件完成适配。
 

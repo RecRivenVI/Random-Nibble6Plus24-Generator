@@ -5,6 +5,7 @@ import csv
 import hashlib
 import json
 from pathlib import Path
+import statistics
 
 from summarize_legacy_performance import latency_bounds
 
@@ -98,6 +99,9 @@ def read_run(path, view=8, seconds=60):
                   finalNativeDemand=cohort(chunks, wanted, end),
                   withdrawnDemand=len(ever - wanted),
                   afterGcHeapUsed=jfr.get("afterGcHeapUsed"),
+                  machineCpuPercentSamples=summary.get("machineCpuPercentSamples"),
+                  fullCohortWork=summary.get("fullCohortWork"),
+                  windowWorkPerFull=summary.get("windowWorkPerFull"),
                   allocationWeightedBytes=jfr.get("allocationWeightedBytesTotal"),
                   monitorBlockedMsTop=jfr.get("monitorBlockedMsTop"),
                   provenance={name: hashlib.sha256((path / name).read_bytes()).hexdigest()
@@ -132,18 +136,53 @@ def compare(vanilla_path, b_path, view=8, seconds=60):
             "versusVanillaPercent": ratios}
 
 
+def paired_summary(rows):
+    if len(rows) != 3 or any(row["conditions"] != rows[0]["conditions"] for row in rows):
+        raise ValueError("Need three same-input controlled pairs")
+    identities = [row[side]["runIdentity"] for row in rows for side in ("vanilla", "b")]
+    pids = [row[side]["processId"] for row in rows for side in ("vanilla", "b")]
+    if len(set(identities)) != 6 or len(set(pids)) != 6:
+        raise ValueError("Paired controls reused a process or world identity")
+    return {"status": "MEASURED_NOT_OPTIMIZATION_ACCEPTANCE",
+            "scope": "THREE_INTERLEAVED_VANILLA_B_PAIRS",
+            "sendReady": "Server-side readiness, not packet delivery or visual acceptance",
+            "latency": "Per-pair censoring intervals retained; never replaced by completed-only values",
+            "medianVersusVanillaPercent": {
+                key: statistics.median(row["versusVanillaPercent"][key] for row in rows)
+                for key in ("fullPerSecond", "sendReadyPerSecond")},
+            "pairs": rows}
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("root", type=Path)
     parser.add_argument("--view", type=int, choices=(8, 12, 16), default=8)
     parser.add_argument("--seconds", type=int, choices=(45, 60), default=60)
+    parser.add_argument("--dimension", choices=("overworld", "the_nether", "the_end"))
+    parser.add_argument("--pair-labels", nargs=3)
     options = parser.parse_args()
+    if options.pair_labels:
+        if not options.dimension or len(set(options.pair_labels)) != 3 or any(
+                Path(label).name != label for label in options.pair_labels):
+            raise ValueError("Paired reduction needs a dimension and three distinct local labels")
+        suffix = "" if options.dimension == "overworld" else "-" + options.dimension
+        if options.seconds != 60:
+            suffix += f"-duration{options.seconds}"
+        rows = [compare(options.root / label / f"vanilla{suffix}-v{options.view}-s{options.view}",
+                        options.root / label / f"b{suffix}-v{options.view}-s{options.view}",
+                        options.view, options.seconds) for label in options.pair_labels]
+        result = paired_summary(rows)
+        (options.root / f"vanilla-paired-v{options.view}-{options.dimension}.json").write_text(
+            json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        print(json.dumps(result["medianVersusVanillaPercent"]))
+        return
+    dimensions = (options.dimension,) if options.dimension else ("overworld", "the_nether", "the_end")
     result = {"status": "MEASURED_NOT_OPTIMIZATION_ACCEPTANCE",
-              "scope": f"THREE_DIMENSION_SINGLE_PAIRS_4_CPU_{options.view}_{options.view}_{options.seconds}_SECONDS",
+              "scope": f"{'SINGLE' if options.dimension else 'THREE'}_DIMENSION_SINGLE_PAIRS_4_CPU_{options.view}_{options.view}_{options.seconds}_SECONDS",
               "sendReady": "Server-side first readiness, not packet delivery or client rendering",
               "censoring": "All native requests retained; unfinished latency is an interval, not zero",
               "dimensions": {}}
-    for dimension in ("overworld", "the_nether", "the_end"):
+    for dimension in dimensions:
         suffix = "" if dimension == "overworld" else "-" + dimension
         if options.seconds != 60:
             suffix += f"-duration{options.seconds}"
@@ -156,9 +195,11 @@ def main():
     rows = list(result["dimensions"].values())
     identities = [row[pipeline]["runIdentity"] for row in rows for pipeline in ("vanilla", "b")]
     pids = [row[pipeline]["processId"] for row in rows for pipeline in ("vanilla", "b")]
-    if len(set(identities)) != 6 or len(set(pids)) != 6 or len({row["conditions"]["inputHash"] for row in rows}) != 1:
+    if len(set(identities)) != 2*len(dimensions) or len(set(pids)) != 2*len(dimensions) or len({row["conditions"]["inputHash"] for row in rows}) != 1:
         raise ValueError("Reused process/world or changed source across dimensions")
     name = "vanilla-comparison.json" if options.view == 8 and options.seconds == 60 else f"vanilla-comparison-v{options.view}-duration{options.seconds}.json"
+    if options.dimension:
+        name = name.removesuffix(".json") + "-" + options.dimension + ".json"
     (options.root / name).write_text(
         json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps({dimension: row["versusVanillaPercent"]

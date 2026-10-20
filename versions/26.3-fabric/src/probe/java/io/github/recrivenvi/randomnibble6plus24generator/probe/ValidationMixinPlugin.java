@@ -57,7 +57,11 @@ public final class ValidationMixinPlugin implements IMixinConfigPlugin {
                             io.github.recrivenvi.randomnibble6plus24generator.ModConstants.MOD_ID
                                     + ".clientLifecycle.enabled")
                     && (mixinClassName.contains(".PlayerLifecycle")
+                            || mixinClassName.endsWith("PlayerPortalEvidenceMixin")
+                            || mixinClassName.endsWith("PlayerEndCreditsEvidenceMixin")
                             || mixinClassName.endsWith("ClientLifecycleTickMixin"));
+        if (mixinClassName.endsWith("PlayerPortalEvidenceMixin")
+                || mixinClassName.endsWith("PlayerEndCreditsEvidenceMixin")) return false;
         if (mixinClassName.endsWith("ClientLifecycleTickMixin")) return false;
         if (mixinClassName.endsWith("PerfStructureReuseAuditMixin")
                 || mixinClassName.endsWith("PerfNativeBiomeStateAccessor"))

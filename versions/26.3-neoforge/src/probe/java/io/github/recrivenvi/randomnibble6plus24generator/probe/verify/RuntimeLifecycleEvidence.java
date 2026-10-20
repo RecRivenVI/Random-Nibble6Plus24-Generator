@@ -71,6 +71,7 @@ public final class RuntimeLifecycleEvidence {
 
     public static void tick(MinecraftServer server, Runnable request) {
         if (finished) return;
+        NaturalRuntimeEvidence.checkFailure();
         if (!server.isSameThread()) throw new IllegalStateException("Off-thread runtime probe");
         if (began == 0) {
             began = System.nanoTime();
@@ -150,6 +151,7 @@ public final class RuntimeLifecycleEvidence {
             return;
         }
         if (simulationStart < 0) {
+            if (!NaturalRuntimeEvidence.ready(level, owner)) return;
             installFixtures();
             simulationStart = level.getGameTime();
             return;
@@ -237,6 +239,7 @@ public final class RuntimeLifecycleEvidence {
         proof.add("finalDevelopmentB", gson.toJsonTree(BDevelopmentWorld.metrics(server)));
         proof.addProperty("generationBindings", GenerationContextRegistry.bindingCount());
         proof.addProperty("spawnBindings", MosaicSpawnContextRegistry.bindingCount());
+        if (NaturalRuntimeEvidence.enabled()) proof.add("natural", NaturalRuntimeEvidence.finish());
         baseline.add("runtimeProof", proof);
         baseline.addProperty("status", "PASS");
         try {

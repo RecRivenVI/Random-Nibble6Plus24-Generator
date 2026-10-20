@@ -56,12 +56,14 @@ public record MosaicPhysicalGenerationPlan(
         requirements.merge(requestedPos, requestedStatus, MosaicPhysicalGenerationPlan::later);
 
         if (requestedStatus.isOrBefore(ChunkStatus.FEATURES)) {
-            // Legacy requests retain the complete Artifact. A validated B capability may answer
-            // just BIOMES with native S(C) data; terrain/features still require the whole Artifact.
+            // Legacy requests retain the complete Artifact. Validated B prerequisites stop at
+            // their actual native stage; FEATURES still requires the complete B Artifact.
             obligations.put(
                     requestedPos,
-                    partialBiomes && requestedStatus == ChunkStatus.BIOMES
-                            ? ChunkStatus.BIOMES
+                    partialBiomes
+                                    && (requestedStatus == ChunkStatus.BIOMES
+                                            || requestedStatus == ChunkStatus.TERRAIN)
+                            ? requestedStatus
                             : ChunkStatus.FEATURES);
         } else if (requestedStatus.isOrBefore(ChunkStatus.LIGHT)) {
             for (int radius = 0; radius <= dependencies.getRadius(); radius++) {

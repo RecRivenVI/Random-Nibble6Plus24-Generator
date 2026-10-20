@@ -15,7 +15,7 @@ StructureGenerationContext 仅在显式候选属性开启、能力判定 NONE �
 ## 发现
 
 - 当前指纹 07159AC5B3512A9DBC523AD26E3380BCEF443AB7953CD1C8DB6546BEAEC3D722。1,536 个环组件正例零漏检，原生槽位 196,608、实际候选搜索 1,536；组件对照口径同[首次筛选](experiment-legacy_finite_rings.md)，不冒充独立物理 Oracle。
-- [联合 smoke 四项](../../validations/conformance-prefeatures/result/ring_scope_physical_biomes_smoke/1.21.1-neoforge)覆盖主世界两个样本、下界和末地，八个 fresh JVM/save；原生六阶段完整 NBT/密度/结构/群系与轻量消费者严格一致。脱离式物理 BIOMES 在 owner 关闭后完整 NBT 与原生 BIOMES 相同，四个消费者 physicalBiomesOwnerClosed 均为真；正常和异常绑定清空。
+- 联合 smoke 四项（本机证据：`../../validations/conformance-prefeatures/result/ring_scope_physical_biomes_smoke/1.21.1-neoforge`）覆盖主世界两个样本、下界和末地，八个 fresh JVM/save；原生六阶段完整 NBT/密度/结构/群系与轻量消费者严格一致。脱离式物理 BIOMES 在 owner 关闭后完整 NBT 与原生 BIOMES 相同，四个消费者 physicalBiomesOwnerClosed 均为真；正常和异常绑定清空。
 - 探针运行与独立 CheckOnly 均通过。针对 Target 的 check/verifyRelease、验证工具的二十一个 Python 测试与五十二份 PowerShell 解析通过；这不是根目录完整 check/verifyRelease 收口。
 - 首轮 7BA 指纹的十八项结构、四项 B 与 117.9 秒 FULL 筛选不倒填为新指纹的当前完整门禁。新源码尚缺 72 项、结构正例、完整 B、物理运行期与配对性能；未知第三方组合没有本轮实际运行证据。
 

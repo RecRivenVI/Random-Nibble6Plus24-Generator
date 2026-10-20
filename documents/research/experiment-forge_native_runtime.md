@@ -22,17 +22,17 @@
 | 末地 | PASS / PASS | PASS，79.441 s | PASS，12.087 s |
 | 主世界 | PASS / PASS | 原 300 s FULL 预算未完成，FAIL | 未运行，不计通过 |
 
-上表正确性运行与另一验证队列并行，不作为性能 A/B；相对原版的正式探索比值仍见[单实例性能记录](../research/experiment-forge_dimension_frontiers.md)。原始运行在[固定 runtime_current 目录](../../validations/integration-legacy_physical/result/runtime_current/1.20.1-forge)，下界和末地的 CheckOnly 绑定当前源码通过。
+上表正确性运行与另一验证队列并行，不作为性能 A/B；相对原版的正式探索比值仍见[单实例性能记录](../research/experiment-forge_dimension_frontiers.md)。原始运行在固定 runtime_current 目录（本机证据：`../../validations/integration-legacy_physical/result/runtime_current/1.20.1-forge`），下界和末地的 CheckOnly 绑定当前源码通过。
 
 两个通过的 B fresh 均实际 generation/publication/POI 169 次、LIGHT/SPAWN/FULL 49 次；reload 均 generation/publication/POI/SPAWN 为零，49 个 FULL 正常加载。49 个 stored biome owner、标记方块和完整结构 NBT 保持，fresh 的 169 个原生 biome 依赖与 reload 的 49 个 FULL 依赖均检查。
 
 四个 B 运行均观察到 220 次 item 实体自然 tick、一次实体注册、真实跨物理 seam、一次 scheduled block tick、正向 fluid tick/跨界与 220 次熔炉回调并完成烧炼。owner 与相邻 Chunk local seed 不同，运行期间 generation scope 为零、物理生成指标不再增长；全部受检回调在原生 server thread，退出时票据、worker 和 in-flight 清除。普通 Vanilla 四个运行使用相同设施，Mosaic generation/publication/SPAWN 为零。
 
-主世界 B 进程 53504 的最初异常为 NativePhysicalProbe.tick 报告 Native physical FULL observation exceeded 300 seconds；它没有到达自然模拟检查。原始 console.log 保留完整调用链，失败存档和日志同时保全在[首次失败](../../validations/integration-legacy_physical/result/first_failure/runtime_current/1.20.1-forge/b/minecraft-overworld)。本次不是新的生成结果不等价证据，也不证明主世界生命周期通过；它与该 Target 已测的严重准备成本一致。
+主世界 B 进程 53504 的最初异常为 NativePhysicalProbe.tick 报告 Native physical FULL observation exceeded 300 seconds；它没有到达自然模拟检查。原始 console.log 保留完整调用链，失败存档和日志同时保全在首次失败（本机证据：`../../validations/integration-legacy_physical/result/first_failure/runtime_current/1.20.1-forge/b/minecraft-overworld`）。本次不是新的生成结果不等价证据，也不证明主世界生命周期通过；它与该 Target 已测的严重准备成本一致。
 
 探针的 stopped 分支随后将摘要 failure 覆盖为 Native stop followed an incomplete/failed request。这个次要诊断不能代替主异常：原始摘要不改写，判断以完整原始日志为准；报告链需要单独保留首错并记录停服次错。进程已经终止，不将一次观察等待误当成重启理由，也不重跑本次失败以挑选通过样本。
 
-[当前四项默认 eager 六阶段 smoke](../../validations/conformance-legacy_terrain/result/legacy_terrain_smoke_runtime_probe/1.20.1-forge)通过当前源码只读复核。构建、发行和严格合规检查通过；这些不提升主世界门禁，也不把旧完整 72/15 的其它指纹倒填为当前全量。
+当前四项默认 eager 六阶段 smoke（本机证据：`../../validations/conformance-legacy_terrain/result/legacy_terrain_smoke_runtime_probe/1.20.1-forge`）通过当前源码只读复核。构建、发行和严格合规检查通过；这些不提升主世界门禁，也不把旧完整 72/15 的其它指纹倒填为当前全量。
 
 ## 结论
 

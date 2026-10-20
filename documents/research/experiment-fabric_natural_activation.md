@@ -24,13 +24,13 @@
 
 第一版探针错误地把所有 NBT 都交给 BlockEntity.loadStatic。硫磺模板产生的两个真实 pending 标签使用 id=DUMMY，并非注册的方块实体 ID。实际 26.3 LevelChunk.promotePendingBlockEntity 对 DUMMY 走 EntityBlock.newBlockEntity(pos,state)，普通标签才调用 loadStatic；随后才进入 setLevel 和 addAndRegisterBlockEntity。这是原版定义的占位符激活，不是忽略损坏数据的许可。
 
-[原始失败](../../validations/integration-production_lifecycle/result/current/26.3-fabric/phase3c2-production/features-2/development-b/runtime-proof/minecraft-overworld/natural_worldgen_sulfur_template/first_runtime_failure)保留 C990 输入、两个 DUMMY 原始 NBT、日志、180 秒超时报告和世界。异常来自验证控制对象的错误加载，不据此断言生产硫磺数据损坏。服务器进入关闭后仍等待未完成区块；保存等待栈已采集，确认进程归属后终止专用 PID 116240，不把该次当作正常退出通过，也不改写为重试成功。
+原始失败（本机证据：`../../validations/integration-production_lifecycle/result/current/26.3-fabric/phase3c2-production/features-2/development-b/runtime-proof/minecraft-overworld/natural_worldgen_sulfur_template/first_runtime_failure`）保留 C990 输入、两个 DUMMY 原始 NBT、日志、180 秒超时报告和世界。异常来自验证控制对象的错误加载，不据此断言生产硫磺数据损坏。服务器进入关闭后仍等待未完成区块；保存等待栈已采集，确认进程归属后终止专用 PID 116240，不把该次当作正常退出通过，也不改写为重试成功。
 
 探针按原生两个分支修正，并把异步捕获异常在下一次探针 tick 直接暴露，避免只留下后续超时。新证据域独立运行；原先三个 C990 正例和失败均保留。本次没有在 production 增加 DUMMY 特判或异常吞并。
 
 ### 自然正例
 
-证据位于 [runtime-proof](../../validations/integration-production_lifecycle/result/current/26.3-fabric/phase3c2-production/features-2/development-b/runtime-proof) 各维度的 native_pending_activation 前缀目录。
+证据位于 runtime-proof（本机证据：`../../validations/integration-production_lifecycle/result/current/26.3-fabric/phase3c2-production/features-2/development-b/runtime-proof`） 各维度的 native_pending_activation 前缀目录。
 
 | 正例 | 主种子 / 维度 / ChunkPos | 新生成 PID | 重载 PID | 实体 | BE / 真正 pending |
 | --- | --- | --- | --- | --- | --- |

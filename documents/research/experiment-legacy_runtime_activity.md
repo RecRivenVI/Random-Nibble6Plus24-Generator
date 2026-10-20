@@ -14,11 +14,11 @@
 
 ## 发现
 
-- B [下界](../../validations/integration-production_lifecycle/result/current/1.21.1-neoforge/phase3c2-production/features-2/development-b/lazy-rings/runtime-proof-frontier/minecraft-the_nether/ticking_activity)和[末地](../../validations/integration-production_lifecycle/result/current/1.21.1-neoforge/phase3c2-production/features-2/development-b/lazy-rings/runtime-proof-frontier/minecraft-the_end/ticking_activity)的 fresh/reload 均 PASS。下界安装设施前 emptyTime 已为 1472，重置后实际获得 220 次实体和熔炉回调，证明原休眠条件确实影响测试，而非用静态推演豁免失败。
+- B 下界（本机证据：`../../validations/integration-production_lifecycle/result/current/1.21.1-neoforge/phase3c2-production/features-2/development-b/lazy-rings/runtime-proof-frontier/minecraft-the_nether/ticking_activity`）和末地（本机证据：`../../validations/integration-production_lifecycle/result/current/1.21.1-neoforge/phase3c2-production/features-2/development-b/lazy-rings/runtime-proof-frontier/minecraft-the_end/ticking_activity`）的 fresh/reload 均 PASS。下界安装设施前 emptyTime 已为 1472，重置后实际获得 220 次实体和熔炉回调，证明原休眠条件确实影响测试，而非用静态推演豁免失败。
 - 两维度 fresh 均完成 121 个 Artifact/发布、48 份部分 BIOMES/发布、81 次 POI、49 次 LIGHT/SPAWN/FULL；实际检查所有 49 个 owner 的生成依赖，共 2401 次 BIOMES-or-later 读取。重载改按加载图检查 441 次，Artifact、部分 BIOMES 和 SPAWN 均为零，修改方块保留。自然模拟期间各生成计数不变，in-flight 和作用域清空。
 - 掉落物各只有一次实体管理器注册，并按真实物理运动跨入相邻不同 S(C) Chunk；block/fluid callback、下界岩浆/末地水传播和熔炉烧炼均实际发生。设施来自探针，不冒充自然生成副作用覆盖。
 - 普通 Vanilla 的主世界、下界、末地共六个 fresh/reload JVM 均完成相同自然检查，实际 MosaicPhysicalLevelState 创建数为零；没有用虚构的新版本 materializer 指标证明零侵入。
-- B [主世界首次失败现场](../../validations/integration-production_lifecycle/result/current/1.21.1-neoforge/phase3c2-production/features-2/development-b/lazy-rings/runtime-proof-frontier/minecraft-overworld/ticking_activity/first_runtime_failure)在原 180 秒预算耗尽时仍为 Artifact 0、BIOMES 准备 0、in-flight 81，尚未进入设施阶段。这里不是重置计时器后再次停止实体 tick，也不是通过的自然运行期结果。
+- B 主世界首次失败现场（本机证据：`../../validations/integration-production_lifecycle/result/current/1.21.1-neoforge/phase3c2-production/features-2/development-b/lazy-rings/runtime-proof-frontier/minecraft-overworld/ticking_activity/first_runtime_failure`）在原 180 秒预算耗尽时仍为 Artifact 0、BIOMES 准备 0、in-flight 81，尚未进入设施阶段。这里不是重置计时器后再次停止实体 tick，也不是通过的自然运行期结果。
 - 主世界两份只读线程快照保存在 build/mosaic-121-runtime-overworld-threads.txt 和对应 threads-late.txt。首份有 61 个 Worker-Main，其中 38 个等待同一个 StructureTemplateManager monitor；持锁线程正在 Jigsaw 的 getBaseHeight → iterateNoiseColumn → Aquifer/密度计算。后份持锁线程已改变，29 个 worker 仍在等待模板锁，说明至少发生了锁释放/转移，不能直接称为死锁。
 - 同一进程的后期堆观测约使用 575 MiB、提交 664 MiB、上限 3 GiB，未出现 OOM；这不等于已经测量 GC 占比。线程数、累积 CPU 时间或阻塞线程数量都不能当作墙钟占比、CPU 热点百分比或正式 Vanilla 比值。
 

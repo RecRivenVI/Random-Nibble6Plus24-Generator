@@ -9,10 +9,12 @@ import org.spongepowered.asm.mixin.extensibility.IMixinInfo;
 
 public final class ValidationMixinPlugin implements IMixinConfigPlugin {
     private boolean enabled;
+    private boolean mcpOnly;
 
     @Override
     public void onLoad(String mixinPackage) {
         String name = System.getProperty("validation.name", "");
+        mcpOnly = name.equals("integration-mcp_alpha");
         enabled =
                 (mixinPackage.endsWith("featurebtest.mixin")
                                 && name.equals("conformance-feature_b"))
@@ -21,11 +23,34 @@ public final class ValidationMixinPlugin implements IMixinConfigPlugin {
                         || (mixinPackage.endsWith("performance.mixin")
                                 && name.equals("performance-worldgen"))
                         || (mixinPackage.endsWith("productiontest.mixin")
-                                && name.equals("integration-production_lifecycle"));
+                                && (name.equals("integration-production_lifecycle") || mcpOnly));
     }
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
+        if (mcpOnly)
+            return enabled
+                    && (mixinClassName.endsWith("ClientLaunchExportMixin")
+                            ? Boolean.getBoolean("mosaic.mcp.launchExport")
+                            : Boolean.getBoolean(ModConstants.MOD_ID + ".clientLifecycle.enabled")
+                                    && (mixinClassName.contains(".PlayerLifecycle")
+                                            || mixinClassName.endsWith("ClientLifecycleTickMixin")
+                                            || mixinClassName.endsWith("PlayerPortalEvidenceMixin")
+                                            || mixinClassName.endsWith(
+                                                    "PlayerEndCreditsEvidenceMixin")));
+        if (mixinClassName.endsWith("ClientLaunchExportMixin")
+                || mixinClassName.endsWith("ClientLifecycleTickMixin")
+                || mixinClassName.contains(".PlayerLifecycle")
+                || mixinClassName.endsWith("PlayerPortalEvidenceMixin")
+                || mixinClassName.endsWith("PlayerEndCreditsEvidenceMixin")) return false;
+        if (mixinClassName.contains(".Natural"))
+            return enabled
+                    && !System.getProperty(
+                                    ModConstants.MOD_ID + ".phase3c2.production.naturalProof", "")
+                            .isEmpty();
+        if (mixinClassName.contains("featurebtest.mixin")
+                && Boolean.getBoolean("featureb.sessions"))
+            return enabled && mixinClassName.endsWith("IndependentBServerMixin");
         if (mixinClassName.endsWith("NativeRequestEvidenceMixin"))
             return enabled
                     && Boolean.getBoolean(

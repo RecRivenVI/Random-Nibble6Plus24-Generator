@@ -10,7 +10,7 @@
 
 使用 1.20.1 Forge、Java 17、输入 1EA12F079FCA02DC86A46521A746B48D6F88F50F8DDC502CF68FB9EC99848BC6；每组独立 fresh JVM/save，四逻辑 CPU、低优先级、3 GiB 堆、8/8、60 秒。起点 Chunk (125,-37)、世界种子 123456789，第 15/30 秒沿 X 各移动两 Chunk。单实例运行，不与正确性或构建重叠；B 不启用有限环、窄锁、source 复用或禁用结构诊断模式。
 
-原始条件、JFR、时间线及两组严格归并结果见[固定维度基线](../../validations/performance-legacy_frontier/result/legacy_frontier_cold_base_dimensions/1.20.1-forge)。本轮结束后增加了运行期 probe，故后续只读复核明确指定上述历史指纹，不伪装成新增 probe 后的当前源码验收。
+原始条件、JFR、时间线及两组严格归并结果见固定维度基线（本机证据：`../../validations/performance-legacy_frontier/result/legacy_frontier_cold_base_dimensions/1.20.1-forge`）。本轮结束后增加了运行期 probe，故后续只读复核明确指定上述历史指纹，不伪装成新增 probe 后的当前源码验收。
 
 ## 发现
 

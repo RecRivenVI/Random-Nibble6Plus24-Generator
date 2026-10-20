@@ -16,7 +16,7 @@
 
 ## 发现
 
-输入指纹 `991D222CE74021AA676540082F3685756E01673DADF2DD47BD73E2CE33FC06E3` 的[三十六项原生比较](../../validations/conformance-seed/result/native-plan-binding/1.20.1-forge/native-plan.json)全部通过，原[四十五项种子与存档合同断言](../../validations/conformance-seed/result/current/1.20.1-forge/native-seed.json)重新运行并复核通过，包含十八个冻结 seed vector。结果没有执行 physical Mosaic 生成。
+输入指纹 `991D222CE74021AA676540082F3685756E01673DADF2DD47BD73E2CE33FC06E3` 的三十六项原生比较（本机证据：`../../validations/conformance-seed/result/native-plan-binding/1.20.1-forge/native-plan.json`）全部通过，原四十五项种子与存档合同断言（本机证据：`../../validations/conformance-seed/result/current/1.20.1-forge/native-seed.json`）重新运行并复核通过，包含十八个冻结 seed vector。结果没有执行 physical Mosaic 生成。
 
 | 请求状态 | 依赖闭包坐标数 | 当前保守 Artifact 数据义务数 |
 | --- | --- | --- |
@@ -29,7 +29,7 @@
 
 这里只是原生依赖与数据义务规划，不等于会计算同样数量的完整地形，也不表示外圈 metadata 已真实提供。后续接线不能用改 status 或空数据冒充履约，必须继续复用已验证 Artifact，并正确区分磁盘已有与缺失数据。
 
-初次元数据运行因 conformance-seed 没有加载新增的 private-method Invoker，发生 ClassCastException，零项比较；[原始失败](../../validations/conformance-seed/result/native-plan/1.20.1-forge/native-plan.json)与原世界、崩溃报告保留。独立的 `mosaic-native-plan-test.mixins.json` 只加载该 Invoker，随后新 `binding` 结果通过，没有加载整套结构诊断或把旧失败改写为 PASS。
+初次元数据运行因 conformance-seed 没有加载新增的 private-method Invoker，发生 ClassCastException，零项比较；原始失败（本机证据：`../../validations/conformance-seed/result/native-plan/1.20.1-forge/native-plan.json`）与原世界、崩溃报告保留。独立的 `mosaic-native-plan-test.mixins.json` 只加载该 Invoker，随后新 `binding` 结果通过，没有加载整套结构诊断或把旧失败改写为 PASS。
 
 ## 结论
 

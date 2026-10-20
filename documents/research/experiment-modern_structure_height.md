@@ -6,7 +6,7 @@
 
 [结构密度覆盖调查](incident-beardifier_height_coverage.md)指出，两端验证循环漏掉 getMaxY 包含的最高一层。旧证据保留，但不能继续证明完整高度的直接 Beardifier 输入等价。修正不得改变生产地形、结构算法或以补零修补历史结果。
 
-该调查记录关于“验证配置端口为 0”和“full_height 仍在运行”的两条现场判断不成立，本文更正：模板 2.0.2 的实例配置端口只接受 1–65535，两个启动尝试实际在 Gradle 配置时失败，游戏尚未开始。原始失败分别在 [NeoForge export](../../validations/conformance-prefeatures/result/structure_reuse_structures_climate_state_full_height/26.3-neoforge/export.log) 与 [Fabric export](../../validations/conformance-prefeatures/result/structure_reuse_structures_climate_state_full_height/26.3-fabric/export.log)，不计生成失败或 Oracle 通过，不改写旧记录。
+该调查记录关于“验证配置端口为 0”和“full_height 仍在运行”的两条现场判断不成立，本文更正：模板 2.0.2 的实例配置端口只接受 1–65535，两个启动尝试实际在 Gradle 配置时失败，游戏尚未开始。原始失败分别在 NeoForge export（本机证据：`../../validations/conformance-prefeatures/result/structure_reuse_structures_climate_state_full_height/26.3-neoforge/export.log`） 与 Fabric export（本机证据：`../../validations/conformance-prefeatures/result/structure_reuse_structures_climate_state_full_height/26.3-fabric/export.log`），不计生成失败或 Oracle 通过，不改写旧记录。
 
 ## 方法
 
@@ -20,12 +20,12 @@
 
 | Target | 完整高度结果 | 独立 JVM／save | 实际密度样本总数（两角色） | 本次源码指纹 |
 | --- | --- | --- | --- | --- |
-| 26.3-fabric | [18/18 PASS](../../validations/conformance-prefeatures/result/structure_reuse_structures_climate_state_complete_height/26.3-fabric) | 36／36 | 3276800 | 79C2C17E9D9A8A09CABF4540B4E77672FA48811F4EE4B981803E0BEE5809333C |
-| 26.3-neoforge | [18/18 PASS](../../validations/conformance-prefeatures/result/structure_reuse_structures_climate_state_complete_height/26.3-neoforge) | 36／36 | 3276800 | 7172EA749A0F0F9FFA4F57A2BE4B3C9C6424480EB22CD7A16C487820B83A5073 |
+| 26.3-fabric | 18/18 PASS（本机证据：`../../validations/conformance-prefeatures/result/structure_reuse_structures_climate_state_complete_height/26.3-fabric`） | 36／36 | 3276800 | 79C2C17E9D9A8A09CABF4540B4E77672FA48811F4EE4B981803E0BEE5809333C |
+| 26.3-neoforge | 18/18 PASS（本机证据：`../../validations/conformance-prefeatures/result/structure_reuse_structures_climate_state_complete_height/26.3-neoforge`） | 36／36 | 3276800 | 7172EA749A0F0F9FFA4F57A2BE4B3C9C6424480EB22CD7A16C487820B83A5073 |
 
 每端包含 Village、Mineshaft、Trial Chambers、Ocean Monument、Fortress、End City、Stronghold 的 start／邻区正例、两个地形适配 halo，以及实际 Mosaic origin／non-origin。每个指定原生 start 都有 pieces，halo 有非零原生密度样本。村庄样本实际为 98304 个 float、393216 字节；原始密度 hash 两侧一致，不再仅信任声明样本数。
 
-两端正常完成并退出，随后 spotlessApply 没有改变这两份输入，当前源码 CheckOnly 仍通过。[完整构建日志](../../build/research/modern-full-height-final-gates-stdout.log)记录 spotlessApply、check、verifyRelease、verifyCompliance --strict 全部成功，3 分 28 秒、217 个任务，其中 39 个执行；六个 Target 发行 JAR 均检查探针排除。严格合规为零失败、零警告，158 份 Markdown 检查通过。Gradle 未来版本弃用提示与 JOML Unsafe 提示保留，不冒充合规警告。
+两端正常完成并退出，随后 spotlessApply 没有改变这两份输入，当前源码 CheckOnly 仍通过。完整构建日志（本机证据：`../../build/research/modern-full-height-final-gates-stdout.log`）记录 spotlessApply、check、verifyRelease、verifyCompliance --strict 全部成功，3 分 28 秒、217 个任务，其中 39 个执行；六个 Target 发行 JAR 均检查探针排除。严格合规为零失败、零警告，158 份 Markdown 检查通过。Gradle 未来版本弃用提示与 JOML Unsafe 提示保留，不冒充合规警告。
 
 独占参数复制已从两个验证入口提取到同一个工具函数，没有改变已验证 B 的启动语义；工具回归包含两种加载器的实际参数复制、源文件不变及外部路径拒绝，目标布局工具四十三项通过。原始旧密度证据被新检查拒绝，失败日志保留。
 
@@ -33,9 +33,9 @@
 
 [状态守卫调查](incident-neoforge_source_climate_state.md)对应输入 75875AB13693D240BB2738FAD7BD6E0AAAA8858C7F958CC57B9910CA25E38BE7。本轮以该显式历史指纹只读重验，不改其证据或世界：
 
-- [装饰前矩阵](../../validations/conformance-prefeatures/result/structure_reuse_matrix_climate_state/26.3-neoforge)：72/72，主世界 40、下界 16、末地 16；FEATURES 为零。
-- [完整 B](../../validations/conformance-feature_b/result/climate_state_full/independent/26.3-neoforge)：19/19，76 个 fresh JVM／save，两次原生与无关宿主 17／23；自然数据包括 8 BE、2 pending BE、6 实体、1280 block ticks、292 fluid ticks、1856 后处理位置。
-- [运行重载](../../build/research/neoforge-climate-runtime-recheck.log)：三维度各有 Vanilla／B 的 fresh 与 reload，共十二 JVM；49 FULL 物理前沿、ENTITY_TICKING、220 tick、真实跨边界实体／流体、熔炉及保存标记通过，已保存 FULL 不重建 Artifact／SPAWN，Vanilla 不进入 Mosaic。
+- 装饰前矩阵（本机证据：`../../validations/conformance-prefeatures/result/structure_reuse_matrix_climate_state/26.3-neoforge`）：72/72，主世界 40、下界 16、末地 16；FEATURES 为零。
+- 完整 B（本机证据：`../../validations/conformance-feature_b/result/climate_state_full/independent/26.3-neoforge`）：19/19，76 个 fresh JVM／save，两次原生与无关宿主 17／23；自然数据包括 8 BE、2 pending BE、6 实体、1280 block ticks、292 fluid ticks、1856 后处理位置。
+- 运行重载（本机证据：`../../build/research/neoforge-climate-runtime-recheck.log`）：三维度各有 Vanilla／B 的 fresh 与 reload，共十二 JVM；49 FULL 物理前沿、ENTITY_TICKING、220 tick、真实跨边界实体／流体、熔炉及保存标记通过，已保存 FULL 不重建 Artifact／SPAWN，Vanilla 不进入 Mosaic。
 
 这里的 NeoForge physicalBiomeChecks 只证明 BIOMES 依赖就绪，不证明逐值扫描全部 owner palette；自然生成正例与运行期测试设施也分别计量。最高层修正仅影响 structures 专用 probe 分支，不能据其新指纹倒填以上不同输入，但也不据此否定它们未受影响的门禁。
 

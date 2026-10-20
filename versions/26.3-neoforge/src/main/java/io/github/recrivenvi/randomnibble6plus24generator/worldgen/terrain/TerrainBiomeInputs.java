@@ -137,6 +137,18 @@ public final class TerrainBiomeInputs implements AutoCloseable {
         paletteCount++;
     }
 
+    public void rememberDetachedTarget(IsolatedGenerationContext context, ProtoChunk target) {
+        requireCompatible(context);
+        if (!context.target().equals(target.getPos())
+                || palettes.containsKey(target.getPos().pack()))
+            throw new IllegalArgumentException("Duplicate/foreign detached biome input");
+        palettes.put(
+                target.getPos().pack(),
+                BiomePaletteChunk.snapshot(target, owner.hostLevel().palettedContainerFactory()));
+        targetCopies++;
+        paletteCount++;
+    }
+
     public Prepared prepare(IsolatedGenerationContext context, ChunkPos position) {
         requireCompatible(context);
         if (Math.abs((long) position.x() - owner.target().x()) > radius - biomeRadius()

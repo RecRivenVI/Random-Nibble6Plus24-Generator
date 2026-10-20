@@ -18,7 +18,7 @@ GenerationChunkHolder 的非异步 handle 可以在注册线程执行。原候�
 
 - JVM 59072 于 17:52:05 在 Worker-Main-1 抛出 Artifact publication lost holder/thread ownership。实际链为 MosaicPhysicalLevelState.published → GenerationChunkHolder.completeFuture → 原生 lambda$applyStep$0 → CompletableFuture.uniHandle/uniHandleStage → worldgen 调用线程，直接复现同步晚注册路径的风险。
 - 该轮尚未输出 focus 的 input-complete-before-handle 标记，不能说指定 focus 的受控时序已经执行。其它 holder 的真实越权本身仍是有效失败，不能因没有 focus 标记忽略。
-- 普通 FULL 在 17:54:36 达到原预算并产生 server crash report；保存关闭未结束后只终止了命令行明确属于本验证的 JVM 59072，不把强制终止说成正常保存。原始现场在 [completion-order 首次失败](../../validations/integration-production_lifecycle/result/current/1.21.1-neoforge/phase3c2-production/features-2/development-b/completion-order/first_runtime_failure)。
+- 普通 FULL 在 17:54:36 达到原预算并产生 server crash report；保存关闭未结束后只终止了命令行明确属于本验证的 JVM 59072，不把强制终止说成正常保存。原始现场在 completion-order 首次失败（本机证据：`../../validations/integration-production_lifecycle/result/current/1.21.1-neoforge/phase3c2-production/features-2/development-b/completion-order/first_runtime_failure`）。
 - 候选修正把 Mosaic holder 的完成 handler 本身派发到原生 ChunkMap 主线程 executor，并把元数据发布移至 native completeFuture 释放消费者之前。普通 Vanilla 的原始 handle 分支不改；只有属于该世界关闭的 cancellation 可正常终止，真正准备或发布异常仍进入原生 fatal 路径。
 - 已证明的 detached BIOMES 仅在本 Target 的原生模组集合下启用，未知模组或显式 exactFallback 仍用完整 Artifact；不扩大 BOP 能力。完整与部分交接均在准备 owner 关闭后发生，世界归属、原生 palette、结构数据和升级需求保持检查。
 - 修正候选重新编译并实际执行十九项单测通过。JVM 62100 的后续 FULL 仍在 18:02:47 达到 180 秒，没有再次出现同一发布越权，但也没有 focus 完成标记或成功 FULL 证据。该轮随后正常保存所有维度并退出，不再出现此前关闭 watchdog。

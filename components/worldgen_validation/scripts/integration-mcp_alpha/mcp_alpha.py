@@ -20,8 +20,11 @@ import zipfile
 ROOT = Path(__file__).resolve().parents[4]
 VALIDATION = ROOT / "validations/integration-mcp_alpha"
 CONFIGURATION = tomllib.loads((VALIDATION / "validation.toml").read_text(encoding="utf-8"))
-TARGET, = CONFIGURATION["targets"]
-INPUT = tomllib.loads((ROOT / "inputs.toml").read_text(encoding="utf-8"))[CONFIGURATION["alpha"]["input"]]
+TARGET = os.environ.get("MOSAIC_MCP_TARGET", CONFIGURATION["targets"][0])
+if TARGET not in CONFIGURATION["targets"]:
+    raise ValueError("Unregistered MCP Target")
+INPUT = tomllib.loads((ROOT / "inputs.toml").read_text(encoding="utf-8"))[
+    CONFIGURATION["alpha"]["neoforge-input" if TARGET.endswith("-neoforge") else "input"]]
 SOURCE = Path(INPUT["source"])
 SNAPSHOT = SOURCE.name
 BUNDLE = ROOT / "build/artifacts/minecraft_protocol" / SNAPSHOT
@@ -84,7 +87,7 @@ def pin(mode):
     tool = Path("D:/Workspaces/Repositories/GitHub/RecRivenVI/Mine-Craft-Protocol/components/validation_tools/regression-v1_release/task/Publish-AlphaSnapshot.ps1")
     value = json.loads(subprocess.check_output([
         "pwsh", "-NoProfile", "-File", str(tool), "-Mode", mode,
-        "-Snapshot", str(SOURCE), "-Consumer", "random_nibble_01a044d0"], encoding="utf-8"))
+        "-Snapshot", str(SOURCE), "-Consumer", "random_nibble_01a044d0" + ("_neoforge" if TARGET.endswith("-neoforge") else "")], encoding="utf-8"))
     if value["inUse"] != (mode == "Pin"):
         raise RuntimeError("Alpha usage registration did not match requested lifecycle")
     return value
@@ -119,6 +122,10 @@ def library_file(installation, relative, url, checksum=None, algorithm="sha1"):
 
 
 def prepare(stage):
+    if TARGET.endswith("-neoforge"):
+        from neoforge_client import prepare_native
+        prepare_native(stage)
+        return
     artifact = bundle()
     pin("Pin")
     for candidate in (VALIDATION / "instance" / TARGET).glob("*/minecraft-protocol/endpoint.json"):
@@ -289,8 +296,9 @@ def launch(instance):
         process = subprocess.Popen([settings["java"], "@" + str(args_file)], cwd=instance,
                                    stdout=output, stderr=subprocess.STDOUT,
                                    creationflags=subprocess.BELOW_NORMAL_PRIORITY_CLASS)
+    affinity = 61440 if TARGET.endswith("-neoforge") else 3840
     subprocess.run(["pwsh", "-NoProfile", "-Command",
-                    f"(Get-Process -Id {process.pid}).ProcessorAffinity=[IntPtr]3840"], check=True)
+                    f"(Get-Process -Id {process.pid}).ProcessorAffinity=[IntPtr]{affinity}"], check=True)
     save(instance / "automation-process.json", {"pid": process.pid, "instance": str(instance),
                                               "launchedAt": time.time(), "snapshot": SNAPSHOT})
     save(instance / "automation-binding.json", {"unboundLaunchPid": process.pid})

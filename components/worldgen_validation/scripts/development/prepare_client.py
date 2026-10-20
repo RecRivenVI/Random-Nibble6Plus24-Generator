@@ -39,13 +39,31 @@ def owned_client_running(commands, repository, directory):
     return False
 
 
-def client_directory(repository, target, mode, validation):
+def instance_directory(repository, target, variant):
     if Path(target).name != target or not (repository / "versions" / target / "target.properties").is_file():
         raise ValueError("Unregistered target")
+    if Path(variant).name != variant:
+        raise ValueError("Expected a registered instance name")
+    if variant in ("client", "client-multiplayer", "server"):
+        base = variant
+    else:
+        settings = tomllib.loads((repository / "instances.toml").read_text(encoding="utf-8"))
+        base = settings.get("variants", {}).get(variant, {}).get("base")
+        if base not in ("client", "client-multiplayer", "server"):
+            raise ValueError("Unregistered shared instance")
+    return repository / "instances" / target / variant, base
+
+
+def client_directory(repository, target, mode, validation, variant="client"):
+    directory, base = instance_directory(repository, target, variant)
     if mode == "acceptance":
         if validation:
             raise ValueError("Acceptance must not reuse an automatic validation instance")
-        return repository / "instances" / target / "client"
+        if base == "server":
+            raise ValueError("Client preferences require a client instance")
+        return directory
+    if variant != "client":
+        raise ValueError("Automatic clients use their declared validation role")
     if not validation or Path(validation).name != validation:
         raise ValueError("Automatic clients require a validation name")
     specification = repository / "validations" / validation / "validation.toml"
@@ -61,9 +79,10 @@ def main():
     parser.add_argument("--target", required=True)
     parser.add_argument("--mode", required=True, choices=("automatic", "acceptance"))
     parser.add_argument("--validation")
+    parser.add_argument("--variant", default="client")
     args = parser.parse_args()
     repository = Path(__file__).resolve().parents[4]
-    directory = client_directory(repository, args.target, args.mode, args.validation).resolve()
+    directory = client_directory(repository, args.target, args.mode, args.validation, args.variant).resolve()
     if not directory.is_relative_to(repository) or any(path.is_symlink() for path in directory.parents):
         raise ValueError("Refusing linked or external instance")
     # The game writes options on exit; changing a live client's file would race that save.

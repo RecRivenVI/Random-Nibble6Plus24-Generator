@@ -14,9 +14,9 @@
 
 ## 发现
 
-[十五项、60 个独立 JVM/save](../../validations/conformance-legacy_b/result/structures-handoff-ring-scope-climate_tail/1.20.1-forge)全部完成，15 个原生 producer 为 PRODUCED，45 个 repeat/consumer 为 PASS；结束后 CheckOnly 再次通过。完整目标快照、装饰 RNG/可见群系、结构数据、越界拒绝、物理宿主不变，以及 owner 关闭后的 detached Artifact 与八邻区 SPAWN 输入均按工具原有标准比较。
+十五项、60 个独立 JVM/save（本机证据：`../../validations/conformance-legacy_b/result/structures-handoff-ring-scope-climate_tail/1.20.1-forge`）全部完成，15 个原生 producer 为 PRODUCED，45 个 repeat/consumer 为 PASS；结束后 CheckOnly 再次通过。完整目标快照、装饰 RNG/可见群系、结构数据、越界拒绝、物理宿主不变，以及 owner 关闭后的 detached Artifact 与八邻区 SPAWN 输入均按工具原有标准比较。
 
-[原生构造熵控制](../../validations/conformance-legacy_b/result/end-yaw-ring-scope-climate_tail/1.20.1-forge)的双向比较是完整 UUID-only 原生重放，不将它冒充 B parity，也不改变生产随机源。全部实际候选 scope 结束时没有 active supplier；未知配置的回退、父 RNG 与 continuation 的更广组件范围见[尾查询实验](experiment-legacy_ring_tail.md)。
+原生构造熵控制（本机证据：`../../validations/conformance-legacy_b/result/end-yaw-ring-scope-climate_tail/1.20.1-forge`）的双向比较是完整 UUID-only 原生重放，不将它冒充 B parity，也不改变生产随机源。全部实际候选 scope 结束时没有 active supplier；未知配置的回退、父 RNG 与 continuation 的更广组件范围见[尾查询实验](experiment-legacy_ring_tail.md)。
 
 双队列正确性耗时不能当作性能改善。实际主世界 FULL 的有限结论见[物理实验](experiment-legacy_ring_physical.md)，它没有验证玩家出生或完整自然运行期。装饰前 72 项与十五项结构六阶段套件另行绑定各自结果，不能由本套件代替。
 

@@ -18,10 +18,10 @@ ClientLifecycleEvidence 不创建、移动、重生或手工 tick 玩家，不�
 
 | 对照 | JVM PID | 检查点 | 本次证据 |
 | --- | --- | --- | --- |
-| 普通 Vanilla：fresh／死亡重生／下界与末地往返／保存重进 | 110716 | 8，两个 integrated server 实例 | [只读复核 PASS](../../validations/integration-mcp_alpha/result/client-lifecycle/lifecycle_vanilla/native_roundtrip_diagnostics/check.json) |
-| 普通 Vanilla：客户端冷重启，同一已保存 owner | 53568 | 1，新 server 与新 JVM | [只读复核 PASS](../../validations/integration-mcp_alpha/result/client-lifecycle/lifecycle_vanilla/native_cold_restart/check.json) |
-| B：fresh／死亡重生／下界与末地往返／保存重进 | 113260 | 8，两个 integrated server 实例 | [只读复核 PASS](../../validations/integration-mcp_alpha/result/client-lifecycle/lifecycle_b/native_roundtrip/check.json) |
-| B：客户端冷重启，同一已保存 owner | 88516 | 1，新 server 与新 JVM | [只读复核 PASS](../../validations/integration-mcp_alpha/result/client-lifecycle/lifecycle_b/native_cold_restart/check.json) |
+| 普通 Vanilla：fresh／死亡重生／下界与末地往返／保存重进 | 110716 | 8，两个 integrated server 实例 | 只读复核 PASS（本机证据：`../../validations/integration-mcp_alpha/result/client-lifecycle/lifecycle_vanilla/native_roundtrip_diagnostics/check.json`） |
+| 普通 Vanilla：客户端冷重启，同一已保存 owner | 53568 | 1，新 server 与新 JVM | 只读复核 PASS（本机证据：`../../validations/integration-mcp_alpha/result/client-lifecycle/lifecycle_vanilla/native_cold_restart/check.json`） |
+| B：fresh／死亡重生／下界与末地往返／保存重进 | 113260 | 8，两个 integrated server 实例 | 只读复核 PASS（本机证据：`../../validations/integration-mcp_alpha/result/client-lifecycle/lifecycle_b/native_roundtrip/check.json`） |
+| B：客户端冷重启，同一已保存 owner | 88516 | 1，新 server 与新 JVM | 只读复核 PASS（本机证据：`../../validations/integration-mcp_alpha/result/client-lifecycle/lifecycle_b/native_cold_restart/check.json`） |
 
 十八个检查点均通过。两类世界首次各一次出生搜索，死亡／原生重生再触发一次；真实 ServerPlayer 对象替换一次、UUID 保持，实体管理器与 PlayerList 始终对应唯一玩家。保存重进和冷重启出生搜索均为零，目标 Artifact 捕获为零；B 初次进入三个维度的目标各捕获一次。B 九邻区保留不同 local seed，普通 Vanilla 九邻区均为自己的 world seed，没有 Mosaic Artifact 工作。
 

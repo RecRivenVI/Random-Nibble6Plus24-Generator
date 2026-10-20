@@ -1,5 +1,8 @@
-param([ValidateSet('26.3-fabric','26.3-neoforge','26.1.2-neoforge')][string]$Target = '26.3-fabric', [switch]$CheckOnly, [switch]$Smoke, [switch]$Handoff, [ValidatePattern('^[a-z0-9_-]*$')][string]$FixtureId = '', [ValidatePattern('^[a-z0-9_]*$')][string]$EvidenceLabel='', [ValidatePattern('^[A-Fa-f0-9]{64}$')][string]$ExpectedInputHash='', [long]$CpuAffinity=3840, [switch]$AttributeCaptureOnly, [string]$AttributeReplaySource='')
+param([ValidateSet('26.3-fabric','26.3-neoforge','26.1.2-neoforge')][string]$Target = '26.3-fabric', [switch]$CheckOnly, [switch]$Smoke, [switch]$Handoff, [switch]$RetainedTerrain, [switch]$RetainedTerrainReload, [string]$BootstrapLauncher='', [ValidatePattern('^[a-z0-9_-]*$')][string]$FixtureId = '', [ValidatePattern('^[a-z0-9_]*$')][string]$EvidenceLabel='', [ValidatePattern('^[A-Fa-f0-9]{64}$')][string]$ExpectedInputHash='', [long]$CpuAffinity=3840, [switch]$AttributeCaptureOnly, [string]$AttributeReplaySource='')
 $ErrorActionPreference = 'Stop'
+if ($RetainedTerrainReload -and !$RetainedTerrain) { throw 'Native disk reload requires detached TERRAIN verification' }
+if ($BootstrapLauncher -and ($Target -ne '26.3-neoforge' -or !$EvidenceLabel -or $CheckOnly)) { throw 'Current native loader bootstrap requires a new labelled NeoForge Oracle' }
+if ($RetainedTerrain -and ($Target -notin @('26.3-fabric','26.3-neoforge') -or !$EvidenceLabel -or $Handoff -or $AttributeCaptureOnly -or $AttributeReplaySource)) { throw 'Detached TERRAIN reuse requires an independent scoped native B Oracle' }
 if ($Smoke -and $FixtureId) { throw 'Choose smoke or one diagnostic fixture, not both' }
 if($FixtureId -ceq 'nether-chests' -and $Target -ne '26.3-fabric'){throw 'Natural Nether diagnostic has only been adapted to native 26.3 Fabric'}
 if ($Handoff -and $Target -ne '26.1.2-neoforge') { throw 'Detached handoff verification is currently adapted only to 26.1.2 NeoForge' }
@@ -33,6 +36,8 @@ function Get-InputHash {
 $inputHash=if($ExpectedInputHash){$ExpectedInputHash.ToUpperInvariant()}else{Get-InputHash}
 if ($CheckOnly) {
     $selection = Get-Content $selectionPath -Raw | ConvertFrom-Json
+    if ([bool]$selection.retainedTerrain -ne [bool]$RetainedTerrain) { throw 'Detached TERRAIN acceptance control changed' }
+    if ([bool]$selection.retainedTerrainReload -ne [bool]$RetainedTerrainReload) { throw 'Native TERRAIN reload acceptance control changed' }
     if($selection.inputHash -cne $inputHash){throw 'Independent B evidence belongs to another source input'}
     if($EvidenceLabel){
         $nativeConfig=Get-Content (Join-Path $resultRoot 'native-launch-config.json') -Raw|ConvertFrom-Json
@@ -57,6 +62,8 @@ if ($CheckOnly) {
             }
             $folder = Join-Path $resultRoot "$($fixture.id)/$role"
             $row = Get-Content (Join-Path $folder 'summary.json') -Raw | ConvertFrom-Json
+            if ($RetainedTerrain -and !$role.StartsWith('native_') -and (!$row.retainedTerrain.copied -or !$row.retainedTerrain.sourceUnchanged -or !$row.retainedTerrain.sourceHash)) { throw 'Detached TERRAIN copy/aliasing proof is missing' }
+            if ($RetainedTerrainReload -and !$role.StartsWith('native_') -and !$row.retainedTerrain.nativeDiskReload) { throw 'Native disk TERRAIN reload was not exercised' }
             if($EvidenceLabel){
                 $execution=Get-Content (Join-Path $resultRoot "$($fixture.id)-$role.log.execution.json") -Raw|ConvertFrom-Json
                 $expectedWorld="independent-b-$($fixture.id)-$role$worldSuffix"
@@ -134,6 +141,8 @@ if (Test-Path $crashDirectory) {
     Get-ChildItem $crashDirectory -File | ForEach-Object { $oldCrashes[$_.Name] = (Get-FileHash $_.FullName).Hash }
 }
 $smokeFlag = if ($Smoke) { ' -Dfeatureb.smoke=true' } else { '' }
+if ($RetainedTerrain) { $smokeFlag += ' -Dfeatureb.retainedTerrain=true' }
+if ($RetainedTerrainReload) { $smokeFlag += ' -Dfeatureb.retainedTerrainReload=true' }
 if($FixtureId -ceq 'nether-chests'){$smokeFlag+=' -Dfeatureb.naturalNether=true'}
 if($AttributeCaptureOnly){$smokeFlag+=' -Dfeatureb.attributeOrder=true'}
 if($AttributeReplaySource){$smokeFlag+=' "-Dfeatureb.attributeReplay='+$AttributeReplaySource+'"'}
@@ -236,7 +245,23 @@ try {
     if ($Target -eq '26.3-fabric') { $launchArguments += '--args=nogui --world independent-b-export --port 0' }
     if($EvidenceLabel){
         # Reuse only the template task's launch configuration. Export fixtures in a NEW JVM/save.
-        $bootstrap=Get-Content (Join-Path $defaultResultBase "$mode/$validationTarget/launcher.json") -Raw|ConvertFrom-Json
+        $bootstrapPath=if($BootstrapLauncher){[IO.Path]::GetFullPath($BootstrapLauncher)}else{Join-Path $defaultResultBase "$mode/$validationTarget/launcher.json"}
+        $bootstrap=Get-Content $bootstrapPath -Raw|ConvertFrom-Json
+        if($BootstrapLauncher){
+            $ownedRoot=[IO.Path]::GetFullPath((Join-Path $validationRepository "validations/conformance-prefeatures/result"))+[IO.Path]::DirectorySeparatorChar
+            $sourceDirectory=[IO.Path]::GetFullPath((Join-Path $validationRepository "validations/conformance-prefeatures/instance/$Target/server"))
+            if(!$bootstrapPath.StartsWith($ownedRoot,[StringComparison]::OrdinalIgnoreCase) -or
+                    [IO.Path]::GetFileName($bootstrapPath) -cne 'launcher.json' -or
+                    [IO.Path]::GetFullPath($bootstrap.directory) -cne $sourceDirectory -or
+                    $bootstrap.jvmArguments -cnotcontains "-Dvalidation.target=$Target" -or
+                    $bootstrap.jvmArguments -cnotcontains '-Dvalidation.name=conformance-prefeatures') { throw 'Foreign native loader bootstrap' }
+            $facts=ConvertFrom-StringData ([IO.File]::ReadAllText((Join-Path $validationRepository "versions/$Target/target.properties")))
+            if($bootstrap.classpath -notmatch ('[\\/]neoforge[\\/]'+[regex]::Escape($facts.loader_version)+'[\\/]')) { throw 'Native bootstrap has stale loader binaries' }
+            # Retain the template's actual native loader/classpath; change only this probe role.
+            [IO.File]::WriteAllText((Join-Path $resultRoot 'bootstrap-source.json'),(@{path=$bootstrapPath;sha256=(Get-FileHash $bootstrapPath).Hash;loader=$facts.loader_version}|ConvertTo-Json)+"`n")
+            $bootstrap.directory=$validationServer
+            $bootstrap.jvmArguments=@($bootstrap.jvmArguments|Where-Object{!$_.StartsWith('-Dvalidation.')})+@("-Dvalidation.name=conformance-feature_b","-Dvalidation.target=$Target",'-Dvalidation.role=server',"-Dvalidation.task=$($validationRepository.Replace('\','/'))/validations/conformance-feature_b/task")
+        }
         $portIndex=[Array]::IndexOf(@($bootstrap.gameArguments),'--port')
         if($Target -eq '26.3-neoforge'){
             if([IO.Path]::GetFullPath($bootstrap.directory) -cne [IO.Path]::GetFullPath($validationServer) -or $bootstrap.main -cne 'net.neoforged.devlaunch.Main' -or
@@ -263,7 +288,7 @@ try {
         $fixtures = @($fixtures | Where-Object id -CEQ $FixtureId)
         if ($fixtures.Count -ne 1) { throw 'Unknown diagnostic B fixture' }
     }
-    [IO.File]::WriteAllText($selectionPath, (@{smoke=[bool]$Smoke;handoff=[bool]$Handoff;requestedFixture=$FixtureId;fixtures=$fixtures;inputHash=$inputHash;attributeCaptureOnly=[bool]$AttributeCaptureOnly;attributeReplaySource=$AttributeReplaySource} | ConvertTo-Json -Depth 8) + "`n", [Text.UTF8Encoding]::new($false))
+    [IO.File]::WriteAllText($selectionPath, (@{smoke=[bool]$Smoke;handoff=[bool]$Handoff;retainedTerrain=[bool]$RetainedTerrain;retainedTerrainReload=[bool]$RetainedTerrainReload;requestedFixture=$FixtureId;fixtures=$fixtures;inputHash=$inputHash;attributeCaptureOnly=[bool]$AttributeCaptureOnly;attributeReplaySource=$AttributeReplaySource} | ConvertTo-Json -Depth 8) + "`n", [Text.UTF8Encoding]::new($false))
     foreach ($fixture in $fixtures) {
         foreach ($role in $roles) {
             $world = "independent-b-$($fixture.id)-$role$worldSuffix"
@@ -297,4 +322,4 @@ try {
     $process.PriorityClass = $oldPriority
     $process.ProcessorAffinity = $oldAffinity
 }
-& $PSCommandPath -Target $Target -CheckOnly -Smoke:$Smoke -Handoff:$Handoff -FixtureId $FixtureId -EvidenceLabel $EvidenceLabel -CpuAffinity $CpuAffinity -AttributeCaptureOnly:$AttributeCaptureOnly -AttributeReplaySource $AttributeReplaySource
+& $PSCommandPath -Target $Target -CheckOnly -Smoke:$Smoke -Handoff:$Handoff -RetainedTerrain:$RetainedTerrain -RetainedTerrainReload:$RetainedTerrainReload -FixtureId $FixtureId -EvidenceLabel $EvidenceLabel -CpuAffinity $CpuAffinity -AttributeCaptureOnly:$AttributeCaptureOnly -AttributeReplaySource $AttributeReplaySource

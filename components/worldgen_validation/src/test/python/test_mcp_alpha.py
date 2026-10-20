@@ -18,9 +18,21 @@ sys.path.insert(0, str(Path(MCP.__file__).parent))
 LIFECYCLE_SPEC = importlib.util.spec_from_file_location("client_lifecycle", Path(MCP.__file__).with_name("client_lifecycle.py"))
 LIFECYCLE = importlib.util.module_from_spec(LIFECYCLE_SPEC)
 LIFECYCLE_SPEC.loader.exec_module(LIFECYCLE)
+import neoforge_client as NEOFORGE
 
 
 class McpAlphaTests(unittest.TestCase):
+    def test_native_loader_mod_list_excludes_header_and_retains_unknown_mods(self):
+        log = "\tName Version (Mod Id)\n\tMinecraft 26.3 (minecraft)\n\tOther 1 (unexpected_mod)\n"
+        self.assertEqual({"minecraft", "unexpected_mod"}, NEOFORGE.native_mod_ids(log))
+    def test_first_credits_is_only_valid_for_observed_end_return(self):
+        event = {"source": "minecraft:the_end", "portalType": "net.minecraft.world.level.block.EndPortalBlock",
+                 "route": "END_CREDITS_NATIVE_RESPAWN"}
+        LIFECYCLE.validate_portal_event(event, "minecraft:the_end", "minecraft:overworld", "EndPortalBlock")
+        with self.assertRaisesRegex(RuntimeError, "another portal route"):
+            LIFECYCLE.validate_portal_event(event, "minecraft:the_end", "minecraft:the_nether", "EndPortalBlock")
+        with self.assertRaisesRegex(RuntimeError, "resolver"):
+            LIFECYCLE.validate_portal_event({**event, "route": "unknown"}, "minecraft:the_end", "minecraft:overworld", "EndPortalBlock")
     def test_native_library_os_rules(self):
         self.assertTrue(MCP.allowed({}))
         self.assertTrue(MCP.allowed({"rules": [{"action": "allow", "os": {"name": "windows"}}]}))
@@ -66,6 +78,15 @@ class McpAlphaTests(unittest.TestCase):
             with patch.object(LIFECYCLE.alpha, "VALIDATION", directory):
                 LIFECYCLE.alpha.save(directory / "result/client-lifecycle/lifecycle_b/fake/summary.json",
                                      {"status": "PASS", "inputReleased": True, "checkpoints": []})
+                with self.assertRaisesRegex(RuntimeError, "coverage differs"):
+                    LIFECYCLE.check("lifecycle_b", "fake")
+
+    def test_portal_pass_label_requires_its_actual_roundtrip_checkpoints(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary)
+            with patch.object(LIFECYCLE.alpha, "VALIDATION", directory):
+                LIFECYCLE.alpha.save(directory / "result/client-lifecycle/lifecycle_b/fake/summary.json",
+                                     {"status": "PASS", "kind": "native_portals", "inputReleased": True, "checkpoints": []})
                 with self.assertRaisesRegex(RuntimeError, "coverage differs"):
                     LIFECYCLE.check("lifecycle_b", "fake")
 

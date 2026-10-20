@@ -24,7 +24,7 @@
 
 所有 reload 各检查 441 个 loading 依赖，修改方块保留，实体注册唯一，所有自然回调成功，generation/spawn 绑定及 in-flight 为零。普通 Vanilla 的 Artifact、计划、生成器路由与 B 生成计数均为零。Check-NeoRuntime 核对当前输入、十二个不同 PID、六份不同 run identity 和全部场景字段后 PASS。
 
-证据分别在 [B runtime-proof-frontier](../../validations/integration-production_lifecycle/result/current/26.3-neoforge/phase3c2-production/features-2/development-b/runtime-proof-frontier/)与[普通 Vanilla 控制](../../validations/integration-production_lifecycle/result/current/26.3-neoforge/phase3c2-production/vanilla-control/runtime-proof-frontier/)，各维度子目录为 native_frontier。
+证据分别在 B runtime-proof-frontier（本机证据：`../../validations/integration-production_lifecycle/result/current/26.3-neoforge/phase3c2-production/features-2/development-b/runtime-proof-frontier/`）与普通 Vanilla 控制（本机证据：`../../validations/integration-production_lifecycle/result/current/26.3-neoforge/phase3c2-production/vanilla-control/runtime-proof-frontier/`），各维度子目录为 native_frontier。
 
 首次移植编译发现本 Target 没有 Fabric 的 PhysicalBiomePreparation，删除对不存在模块的计数引用，不伪造零计数。首轮无标签场景的游戏完成，但独立复核因没有 conditions 指纹文件而拒绝，原始无标签数据保留；没有事后补写指纹，而是另建固定 native_frontier 场景完整重跑。Windows OSHI Perflib 009 的可选系统报告告警之后游戏继续正常运行，不归类为生成崩溃，也未修改系统注册表。
 

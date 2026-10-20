@@ -14,7 +14,7 @@
 
 ## 发现
 
-[完整矩阵](../../validations/conformance-legacy_terrain/result/ring_scope_matrix_climate_tail/1.20.1-forge)共 144 个独立 JVM/save：主世界 40/40、下界 16/16、末地 16/16，全部通过。只读复核明确输出 CURRENT_SOURCE，并核对全部原始文件哈希。没有增加比较例外，没有用浮点容差、近似高度或默认邻区值通过。
+完整矩阵（本机证据：`../../validations/conformance-legacy_terrain/result/ring_scope_matrix_climate_tail/1.20.1-forge`）共 144 个独立 JVM/save：主世界 40/40、下界 16/16、末地 16/16，全部通过。只读复核明确输出 CURRENT_SOURCE，并核对全部原始文件哈希。没有增加比较例外，没有用浮点容差、近似高度或默认邻区值通过。
 
 每个装饰前消费者保留一个完整目标、八份 biome-only 载体、289 个 carver 配置源和零 generation holder，FEATURES 未执行；这不表示完整 B 已取消八份完整邻区地形。scope 的父随机流、边界和气候续流组件见[尾查询实验](experiment-legacy_ring_tail.md)，独立完整 B/交接见[结构交接实验](experiment-legacy_ring_handoff.md)。
 

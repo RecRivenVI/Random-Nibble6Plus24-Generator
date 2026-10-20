@@ -14,7 +14,7 @@
 
 ## 发现
 
-[60 秒三组](../../validations/performance-legacy_frontier/result/legacy_frontier_cold/1.20.1-forge/overworld/v8/screen/comparison.json)和[180 秒三组](../../validations/performance-legacy_frontier/result/legacy_frontier_cold/1.20.1-forge/overworld/v8/screen-duration180/comparison.json)均完成采样、正常保存退出与只读归并；六个 PID、run identity、源码与资源条件由工具核对，普通 Vanilla 的 Mosaic context/work 全为零。初次探针写错 loader 标签的原始失败保全于 result/native_api_initial，不改写、不计入正式对照。
+60 秒三组（本机证据：`../../validations/performance-legacy_frontier/result/legacy_frontier_cold/1.20.1-forge/overworld/v8/screen/comparison.json`）和180 秒三组（本机证据：`../../validations/performance-legacy_frontier/result/legacy_frontier_cold/1.20.1-forge/overworld/v8/screen-duration180/comparison.json`）均完成采样、正常保存退出与只读归并；六个 PID、run identity、源码与资源条件由工具核对，普通 Vanilla 的 Mosaic context/work 全为零。初次探针写错 loader 标签的原始失败保全于 result/native_api_initial，不改写、不计入正式对照。
 
 | 固定窗口 | Pipeline | canonical 完成 | FULL / send-ready 完成 | FULL / send 吞吐相对 Vanilla | 当前视野就绪 |
 | --- | --- | --- | --- | --- | --- |

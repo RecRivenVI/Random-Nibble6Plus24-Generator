@@ -55,6 +55,37 @@ public final class ClientLifecycleEvidence {
             state(level.getServer()).postProcessCalls++;
     }
 
+    public static void portal(
+            ServerLevel source,
+            ServerPlayer player,
+            net.minecraft.world.level.block.Portal portal,
+            net.minecraft.world.level.portal.TeleportTransition transition) {
+        if (!enabled()) return;
+        state(source.getServer())
+                .portals
+                .add(
+                        Map.of(
+                                "source", source.dimension().identifier().toString(),
+                                "destination",
+                                        transition.newLevel().dimension().identifier().toString(),
+                                "portalType", portal.getClass().getName(),
+                                "playerUuid", player.getUUID().toString(),
+                                "gameTime", source.getGameTime()));
+    }
+
+    public static void endCredits(ServerLevel source, ServerPlayer player) {
+        if (!enabled()) return;
+        state(source.getServer())
+                .portals
+                .add(
+                        Map.of(
+                                "source", source.dimension().identifier().toString(),
+                                "route", "END_CREDITS_NATIVE_RESPAWN",
+                                "portalType", "net.minecraft.world.level.block.EndPortalBlock",
+                                "playerUuid", player.getUUID().toString(),
+                                "gameTime", source.getGameTime()));
+    }
+
     public static void tick(MinecraftServer server) {
         if (!enabled()) return;
         var observer = state(server);
@@ -96,6 +127,7 @@ public final class ClientLifecycleEvidence {
         final Map<String, Object> report = new LinkedHashMap<>();
         final Map<String, Integer> tickets = new TreeMap<>();
         final List<Map<String, Object>> records = new ArrayList<>();
+        final List<Map<String, Object>> portals = new ArrayList<>();
         final long initialCaptures = MosaicPhysicalMaterializer.metrics().artifactCaptureCount();
         final Map<String, CompoundTag> structures = new TreeMap<>();
         ServerPlayer player;
@@ -231,6 +263,8 @@ public final class ClientLifecycleEvidence {
             record.put("respawns", respawns);
             record.put("findSpawnCalls", findSpawnCalls);
             record.put("postProcessCalls", postProcessCalls);
+            record.put("portalCooldown", actual.getPortalCooldown());
+            record.put("nativePortals", List.copyOf(portals));
             if (input.has("marker")) {
                 var marker = input.getAsJsonArray("marker");
                 var location =

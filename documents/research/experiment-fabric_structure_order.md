@@ -18,7 +18,7 @@
 
 ## 发现
 
-[原始结果](../../validations/conformance-feature_b/result/climate_state_order/structure_reuse/26.3-fabric)中，导出 PID 78116，宿主 17 为 21700，宿主 23 为 105768；三者均使用独立 fresh save 和 port 0。两个宿主均通过十八项串行、二十四项逆序/并发、两种物理前沿条件，峰值活跃目标五个，bindings 为零。十八项包括主世界十三项、下界两项、末地三项；完整结构包含七类及邻区 start。
+原始结果（本机证据：`../../validations/conformance-feature_b/result/climate_state_order/structure_reuse/26.3-fabric`）中，导出 PID 78116，宿主 17 为 21700，宿主 23 为 105768；三者均使用独立 fresh save 和 port 0。两个宿主均通过十八项串行、二十四项逆序/并发、两种物理前沿条件，峰值活跃目标五个，bindings 为零。十八项包括主世界十三项、下界两项、末地三项；完整结构包含七类及邻区 start。
 
 | 每宿主门禁 | 实际结果 |
 | --- | --- |

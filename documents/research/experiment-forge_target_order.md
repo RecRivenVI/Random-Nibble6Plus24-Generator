@@ -20,7 +20,7 @@
 
 ### 观察范围纠正与原始失败
 
-08C83DD95BF09C3F1909FC875AA77DF003D4D2226E3B8C9B0AC0C09780BBEF66 输入的原始[逆序失败](../../validations/integration-legacy_physical/result/targets_reverse/1.20.1-forge/b/minecraft-the_nether/fresh/summary.json)保留 FAIL。进程 85108 已完成五个实际 FULL、五次 SPAWN 和 LIGHT，随后 NativePhysicalProbe.verifyPhysicalBiomes 报 Unready native BIOMES input [123, -35]；停止后任务、worker 与绑定均为零。
+08C83DD95BF09C3F1909FC875AA77DF003D4D2226E3B8C9B0AC0C09780BBEF66 输入的原始逆序失败（本机证据：`../../validations/integration-legacy_physical/result/targets_reverse/1.20.1-forge/b/minecraft-the_nether/fresh/summary.json`）保留 FAIL。进程 85108 已完成五个实际 FULL、五次 SPAWN 和 LIGHT，随后 NativePhysicalProbe.verifyPhysicalBiomes 报 Unready native BIOMES input [123, -35]；停止后任务、worker 与绑定均为零。
 
 探针在所有目标完成后仍按中心的单目标 generation plan 读取临时 dependency future。原版 getFutureIfPresentUnchecked 只返回该 status 的实际 future 或 UNLOADED_CHUNK_FUTURE；getNow 又将尚未完成者映射成同一默认值。这条异常本身不能区分 future 缺失、未完成或已不可用，更不能据此认定生成区块被错误卸载。它发生在所有五个实际 FULL 已通过检查之后，不是生成函数异常。
 
@@ -28,7 +28,7 @@ held_full 改为逐一校验自己持票、成功返回的五个真实 FULL 引�
 
 ### 实际结果与工作量
 
-三组完整证据分别为 [forward](../../validations/integration-legacy_physical/result/targets_forward_held_full/1.20.1-forge)、[reverse](../../validations/integration-legacy_physical/result/targets_reverse_held_full/1.20.1-forge) 和 [parallel](../../validations/integration-legacy_physical/result/targets_parallel_held_full/1.20.1-forge)。两个维度都通过当前源码 CheckOnly 与 Check-ForgeTargetOrder。
+三组完整证据分别为 forward（本机证据：`../../validations/integration-legacy_physical/result/targets_forward_held_full/1.20.1-forge`）、reverse（本机证据：`../../validations/integration-legacy_physical/result/targets_reverse_held_full/1.20.1-forge`） 和 parallel（本机证据：`../../validations/integration-legacy_physical/result/targets_parallel_held_full/1.20.1-forge`）。两个维度都通过当前源码 CheckOnly 与 Check-ForgeTargetOrder。
 
 | B 维度 | 模式 | fresh canonical / 物化 / POI | LIGHT / SPAWN / FULL | pending 峰值 | stored biome 单元 |
 | --- | --- | --- | --- | --- | --- |
@@ -49,7 +49,7 @@ held_full 改为逐一校验自己持票、成功返回的五个真实 FULL 引�
 
 本代表组的 Artifact 实体与 BlockEntity 数据为空，不提供其正例并发覆盖；没有扩大任何 canonical 随机字段例外。文件一致不能提升为实体或 BlockEntity 已发生且只激活一次。票据仅保证 FULL，不把本项提升为 BLOCK_TICKING、ENTITY_TICKING、玩家入口或包发送验收。普通 Vanilla 的自然多 writer 结果不要求跨请求顺序相同；B 没有使用该豁免。
 
-当前输入的[四项独立六阶段回归](../../validations/conformance-legacy_terrain/result/legacy_terrain_smoke_held_targets_probe/1.20.1-forge)与当前源码 CheckOnly 通过，覆盖主世界原点、非原点、下界、末地。不倒填其它指纹的完整 72 项或结构套件。
+当前输入的四项独立六阶段回归（本机证据：`../../validations/conformance-legacy_terrain/result/legacy_terrain_smoke_held_targets_probe/1.20.1-forge`）与当前源码 CheckOnly 通过，覆盖主世界原点、非原点、下界、末地。不倒填其它指纹的完整 72 项或结构套件。
 
 ## 结论
 

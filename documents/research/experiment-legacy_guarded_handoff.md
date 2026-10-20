@@ -14,8 +14,8 @@
 
 ## 发现
 
-- [完整 B/交接](../../validations/integration-world_identity/result/structures-shared-handoff-ring-scope-guarded/1.21.1-neoforge)为十八项、18 PRODUCED 加 54 PASS，72 个独立 JVM/save；再次 CheckOnly 通过。包含七类结构、start/邻区/地形适配、原点与原 blocker。
-- [原生因果控制](../../validations/integration-world_identity/result/end-yaw-ring-scope-guarded/1.21.1-neoforge)四项完成，两个方向按完整 UUID-only NBT 精确重现；完整 B 只使用已有的有限版本专属实体规则，不增加忽略字段。
+- 完整 B/交接（本机证据：`../../validations/integration-world_identity/result/structures-shared-handoff-ring-scope-guarded/1.21.1-neoforge`）为十八项、18 PRODUCED 加 54 PASS，72 个独立 JVM/save；再次 CheckOnly 通过。包含七类结构、start/邻区/地形适配、原点与原 blocker。
+- 原生因果控制（本机证据：`../../validations/integration-world_identity/result/end-yaw-ring-scope-guarded/1.21.1-neoforge`）四项完成，两个方向按完整 UUID-only NBT 精确重现；完整 B 只使用已有的有限版本专属实体规则，不增加忽略字段。
 - 按 host_17 的十八项目标计，实体 4、BlockEntity union 2、block ticks 779、fluid ticks 1,895、后处理 17,396。实例化与 pending BE 各为 2，属于同位置数据，不能相加成四个。宿主 23 同样严格通过。
 - 两个宿主各记录 22 次环准备、仅 2 次实际群系搜索。此计数来自消费者 context；原生控制的这组 context 计数为零，不能解释成原生没有计算，也不据此补造性能 A/B。
 - 每个交接均验证 owner 已关闭、Artifact roundtrip 与八邻区 stored palette；结构加载的 seed 与 S(C) 严格核对，正常/异常绑定和 live context 清空。Stronghold start 正例结构加载一次、seed 为 0，完整 NBT 与原生控制一致。

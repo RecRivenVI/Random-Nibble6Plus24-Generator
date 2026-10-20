@@ -6,6 +6,14 @@
 
 ## 运行
 
+精确部分 TERRAIN 的私有副本复用另使用独立标签；以下对照包含实际压缩 NBT 写盘、原生解析／加载，再执行完整 B，并保持原始输入不变。
+
+```powershell
+pwsh -NoProfile -File components/worldgen_validation/scripts/conformance-feature_b/Run-IndependentB.ps1 -Target 26.3-fabric -Smoke -RetainedTerrain -RetainedTerrainReload -EvidenceLabel retained_terrain_disk_reload
+```
+
+NeoForge 支持相同 detached 输入测试。依赖升级后旧 launcher 仍引用旧 Loader 时，使用 `-BootstrapLauncher` 显式指定本仓库已有的同 Target 装饰前 `launcher.json`；工具核对当前 Loader，沿用原生 classpath，仅切换验证角色，不覆盖历史 launcher 或旧失败证据。
+
 ```powershell
 pwsh -NoProfile -File components/worldgen_validation/scripts/conformance-feature_b/Run-FeatureB.ps1
 pwsh -NoProfile -File components/worldgen_validation/scripts/conformance-feature_b/Run-FeatureB.ps1 -Lightweight
@@ -28,7 +36,13 @@ pwsh -NoProfile -File components/worldgen_validation/scripts/conformance-feature
 pwsh -NoProfile -File components/worldgen_validation/scripts/conformance-feature_b/Run-IndependentB.ps1 -Target 26.1.2-neoforge
 pwsh -NoProfile -File components/worldgen_validation/scripts/conformance-feature_b/Run-IndependentB.ps1 -Target 26.1.2-neoforge -Handoff -Smoke
 pwsh -NoProfile -File components/worldgen_validation/scripts/conformance-feature_b/Run-IndependentB.ps1 -Target 26.1.2-neoforge -Handoff
+pwsh -NoProfile -File components/worldgen_validation/scripts/conformance-feature_b/Run-IndependentB.ps1 -Target 26.3-fabric -Smoke -RetainedTerrain -EvidenceLabel retained_terrain_smoke
+pwsh -NoProfile -File components/worldgen_validation/scripts/conformance-feature_b/Run-BSessions.ps1 -Target 26.3-neoforge
 ```
+
+`-RetainedTerrain` 的消费者先生成并关闭独立的精确 TERRAIN 准备，再在新上下文中复制输入、执行完整 B。四角色继续比较原生装饰随机序列、装饰前 hash、群系集合、最终完整数据与原有有限实体验收；副本必须实际被使用，源 TERRAIN 在装饰后保持不变。不共享物理方块存储或 mutable StructureStart，也不据此声明已接生产。
+
+NeoForge 的 sessions 验证在一个普通宿主中执行五目标串行、逆序及五会话并发；覆盖三维度、原点与负坐标，比较完整目标、引用结构、八份 stored SPAWN palettes、装饰可见群系及 feature seed 流。只沿用 UUID-only 快照规则，未知差异不接受。物理实体、ticks、已加载区块与 context 必须没有副作用／残留；不是玩家、保存重载或性能证明。
 
 两个独立宿主进程串行运行，宿主种子分别为 17、23；四 logical CPU、低优先级、单个高负载 JVM。运行只使用自己的 instance/result，不读取日常实例；服务端需要已明确接受 EULA。固定结果在 `result/current/26.3-fabric/host_0/` 与 `host_1/`，正常生成的验证世界结束后移入回收站。
 

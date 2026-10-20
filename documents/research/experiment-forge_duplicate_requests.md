@@ -20,7 +20,7 @@
 
 ### 请求与阶段次数
 
-证据在 [requests_1](../../validations/integration-legacy_physical/result/requests_1/1.20.1-forge) 与 [requests_32](../../validations/integration-legacy_physical/result/requests_32/1.20.1-forge)，两维度均完成最终对照和当前源码 CheckOnly。
+证据在 requests_1（本机证据：`../../validations/integration-legacy_physical/result/requests_1/1.20.1-forge`） 与 requests_32（本机证据：`../../validations/integration-legacy_physical/result/requests_32/1.20.1-forge`），两维度均完成最终对照和当前源码 CheckOnly。
 
 | B 维度 | 请求数 | fresh peak pending | 目标 canonical 次数 | 全部依赖 canonical / 物化 / POI | LIGHT / SPAWN / FULL |
 | --- | --- | --- | --- | --- | --- |
@@ -39,7 +39,7 @@
 
 两个代表目标的原始 Artifact payload 中 entity 与 block_entities 均为零。本项没有实体/BlockEntity 正例，也没有将 payload 比较提升为独立 pending/实例化 sidecar 的并发证明；相关正例门禁仍需分别覆盖。原始 payload 不删除字段或扩大 canonical 例外。
 
-当前输入的[四项六阶段独立原生/轻量回归](../../validations/conformance-legacy_terrain/result/legacy_terrain_smoke_request_burst_probe/1.20.1-forge)通过及 CheckOnly，覆盖 origin/non-origin、下界、末地；不提升为完整 72 项。成功世界由验证工具移入回收站，证据保留。
+当前输入的四项六阶段独立原生/轻量回归（本机证据：`../../validations/conformance-legacy_terrain/result/legacy_terrain_smoke_request_burst_probe/1.20.1-forge`）通过及 CheckOnly，覆盖 origin/non-origin、下界、末地；不提升为完整 72 项。成功世界由验证工具移入回收站，证据保留。
 
 ## 结论
 

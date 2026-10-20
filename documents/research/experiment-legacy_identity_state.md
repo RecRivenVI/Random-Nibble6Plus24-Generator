@@ -14,7 +14,7 @@
 
 ## 发现
 
-输入指纹 `15CCFEDD63D38466A8540D0246C13E517845494E115E045BFFB306DCBAFC91C9` 的[独立结果](../../validations/conformance-seed/result/runtime-identity/1.20.1-forge/native-seed.json)为 PASS，包含原 45 项种子/格式断言和新增 17 项检查。
+输入指纹 `15CCFEDD63D38466A8540D0246C13E517845494E115E045BFFB306DCBAFC91C9` 的独立结果（本机证据：`../../validations/conformance-seed/result/runtime-identity/1.20.1-forge/native-seed.json`）为 PASS，包含原 45 项种子/格式断言和新增 17 项检查。
 
 新检查确认服务端原生维度生成器注册表可用；一万次查询复用同一 context；普通已验证世界没有 Mosaic authority；同 seed 的另一 WorldOptions 对象不能冒充原 authority；替换、跨 world、关闭和新服务器状态彼此隔离；三维度种子域不同且保留主维度原点；本版 save(CompoundTag)/load(CompoundTag) 的 profile NBT 往返一致。
 

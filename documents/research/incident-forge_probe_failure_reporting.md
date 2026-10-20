@@ -14,7 +14,7 @@
 
 ## 发现
 
-当前输入 DB8BFDE6D9DD8D1FD02A767527CC7920E0990661BADE2A1898A4106D7E1E4810，证据在 [observation_failure_section_probe](../../validations/integration-legacy_physical/result/observation_failure_section_probe/1.20.1-forge)，运行与当前源码 CheckOnly 均完成。
+当前输入 DB8BFDE6D9DD8D1FD02A767527CC7920E0990661BADE2A1898A4106D7E1E4810，证据在 observation_failure_section_probe（本机证据：`../../validations/integration-legacy_physical/result/observation_failure_section_probe/1.20.1-forge`），运行与当前源码 CheckOnly 均完成。
 
 | 控制 | 独立 PID | 原始状态 | 首错 | 次生错误 | 关闭后 in-flight / worker / binding |
 | --- | --- | --- | --- | --- | --- |

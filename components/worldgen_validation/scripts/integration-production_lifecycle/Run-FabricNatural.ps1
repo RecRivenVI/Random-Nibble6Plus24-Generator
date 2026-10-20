@@ -1,4 +1,5 @@
 param(
+    [ValidateSet('26.3-fabric','26.3-neoforge')][string]$Target='26.3-fabric',
     [ValidateSet('all','end_spike','monster_room','trial','sulfur_template','nether_chests')][string]$Fixture='all',
     [ValidatePattern('^[a-z0-9_]+$')][string]$EvidenceLabel='natural_worldgen',
     [switch]$CheckOnly,
@@ -10,7 +11,6 @@ Set-StrictMode -Version Latest
 if($ExpectedInputHash -and !$CheckOnly){throw 'Historical source identity is read-only'}
 if($CpuAffinity -le 0 -or [Numerics.BitOperations]::PopCount([ulong]$CpuAffinity) -ne 4){throw 'Four logical CPUs required'}
 $repo=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../../../..'))
-$target='26.3-fabric'
 $cases=@(
     @{id='sulfur_template';master=123456789;dimension='minecraft:overworld';x=129;z=-42;proof='block_entities'},
     @{id='end_spike';master=123456789;dimension='minecraft:the_end';x=2;z=0;proof='entities'},
@@ -34,7 +34,8 @@ $body+=[IO.File]::ReadAllText((Join-Path $repo "versions/$target/target.properti
 $hash=if($ExpectedInputHash){$ExpectedInputHash.ToUpperInvariant()}else{[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($body)))}
 $pids=[Collections.Generic.HashSet[long]]::new()
 foreach($case in $cases){
-    $folder=Join-Path $repo "validations/integration-production_lifecycle/result/current/$target/phase3c2-production/features-2/development-b/runtime-proof/$($case.dimension.Replace(':','-'))/$($EvidenceLabel+'_'+$case.id)"
+    $runtimeFolder=if($Target -ceq '26.3-neoforge'){'runtime-proof-frontier'}else{'runtime-proof'}
+    $folder=Join-Path $repo "validations/integration-production_lifecycle/result/current/$target/phase3c2-production/features-2/development-b/$runtimeFolder/$($case.dimension.Replace(':','-'))/$($EvidenceLabel+'_'+$case.id)"
     $conditions=Get-Content (Join-Path $folder "conditions-full-$($case.x)-$($case.z).json") -Raw|ConvertFrom-Json
     if($conditions.inputHash -cne $hash -or $conditions.target -cne $target -or $conditions.dimension -cne $case.dimension -or
             $conditions.masterSeed -ne $case.master -or $conditions.x -ne $case.x -or $conditions.z -ne $case.z -or $conditions.naturalProof -cne $case.proof -or
@@ -47,13 +48,15 @@ foreach($case in $cases){
         if($row.status -cne 'PASS' -or $row.mode -cne $mode -or $row.dimension -cne $case.dimension -or $row.worldSeed -ne $case.master -or
                 $row.target -cne "[$($case.x), $($case.z)]" -or $row.fullStatus -cne 'minecraft:full' -or !$row.lightCorrect -or !$row.markerPresent -or
                 !$pids.Add([long]$row.runtimeProof.pid) -or $row.runtimeProof.schema -ne 2 -or $row.runtimeProof.simulationTicks -lt 220 -or
-                $row.runtimeProof.targetFullChunkStatus -cne 'ENTITY_TICKING' -or $row.runtimeProof.physicalBiomeCells -ne $row.runtimeProof.physicalBiomeSections*64 -or
+                $row.runtimeProof.targetFullChunkStatus -cne 'ENTITY_TICKING' -or
                 $row.runtimeProof.generationBindings -ne 0 -or $row.runtimeProof.spawnBindings -ne 0 -or $row.runtimeProof.finalMaterializer.inFlightCount -ne 0 -or
                 $natural.schema -ne 1 -or $natural.inputHash -cne $hash -or $natural.probeCreatedPhysicalEntitiesOrBlockEntities -or !$natural.nativeBlockEntityLoadControlExact -or
                 $natural.sourceEntities -ne $natural.liveEntities -or $natural.sourceBlockEntities -ne $natural.liveBlockEntities -or
                 $natural.scope -cne 'NATURAL_INPUT_ACTIVATION_AND_IDENTITY_NOT_RUNTIME_NBT_IMMUTABILITY' -or
                 !$close.completed -or $close.inputHash -cne $hash -or $close.pid -ne $row.runtimeProof.pid -or $close.retainedEntities -ne 0 -or
                 $close.retainedBlockEntities -ne 0 -or $close.sourceRetained -or $close.levelRetained -or $close.serverRetained){throw 'Incomplete natural activation/tick/native-save/cleanup proof'}
+        if($Target -ceq '26.3-fabric' -and $row.runtimeProof.physicalBiomeCells -ne $row.runtimeProof.physicalBiomeSections*64){throw 'Incomplete Fabric stored-biome cells proof'}
+        if($Target -ceq '26.3-neoforge' -and $row.runtimeProof.physicalBiomeChecks -le 0){throw 'Missing NeoForge physical biome dependency proof'}
         if(($case.proof -ceq 'entities' -and ($natural.sourceEntities -le 0 -or $natural.actualEndCrystalTicks -le 0)) -or
                 ($case.proof -ceq 'block_entities' -and $natural.sourceBlockEntities -le 0)){throw 'Natural positive was not hit'}
         if($case.id -ceq 'sulfur_template' -and $natural.sourcePendingBlockEntities -le 0){throw 'Natural pending BE positive was not hit'}

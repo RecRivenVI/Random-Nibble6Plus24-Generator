@@ -56,8 +56,10 @@ val runtimeRefmap =
 
 tasks.named<Jar>("jar") {
     filesMatching("mosaic-worldgen.refmap.json") { duplicatesStrategy = DuplicatesStrategy.EXCLUDE }
+    val generatedRefmap = mainRefmap.get().asFile
+    val copiedRefmap = runtimeRefmap.get()
     doFirst {
-        check(mainRefmap.get().asFile.readBytes().contentEquals(runtimeRefmap.get().readBytes())) {
+        check(generatedRefmap.readBytes().contentEquals(copiedRefmap.readBytes())) {
             "Development and packaged Mixin refmaps differ"
         }
     }

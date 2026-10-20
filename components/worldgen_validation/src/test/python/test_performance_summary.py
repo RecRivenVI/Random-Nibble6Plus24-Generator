@@ -13,7 +13,7 @@ SCRIPT = Path(__file__).resolve().parents[3] / "scripts/performance-worldgen/sum
 
 
 class PerformanceSummaryTests(unittest.TestCase):
-    def reduce(self, dimension, chunks_dimension=None, extra_dimension=None, legacy=False, pipeline="b"):
+    def reduce(self, dimension, chunks_dimension=None, extra_dimension=None, legacy=False, pipeline="b", machine_loads=None, work_counters=None, unfinished_work=None):
         with tempfile.TemporaryDirectory(prefix="mosaic-summary-test-") as directory:
             root = Path(directory)
             def chunk(owner):
@@ -27,6 +27,12 @@ class PerformanceSummaryTests(unittest.TestCase):
             chunks = [chunk(chunks_dimension or dimension)]
             if extra_dimension:
                 chunks.append(chunk(extra_dimension))
+            if unfinished_work is not None:
+                unfinished = chunk(dimension)
+                unfinished["key"] = dimension + ":126,-37"
+                for phase in ("STAGE_FULL_END", "READY_TO_SEND", "ENTITY_TICKING_READY"):
+                    del unfinished["firstNanos"][phase]
+                chunks.append(unfinished)
             data = {"chunks": chunks, "samples": [
                 {"seconds": 2, "processCpuLoad": .1, "queuedPrepare": 0,
                  "activePrepare": 1, "heapUsed": 1000}], "structureExperiment": {}}
@@ -36,6 +42,8 @@ class PerformanceSummaryTests(unittest.TestCase):
                 conditions["dimension"] = dimension
             jfr = {"exclusiveCpuBuckets": {"other": 1}, "cpuSamples": 1,
                    "gcPauseMs": 0, "maxGcPauseMs": 0}
+            if machine_loads is not None:
+                jfr["cpuLoadSamples"] = [{"machineTotal": value} for value in machine_loads]
             for name, value in (("checkpoint-timeline.json", data),
                                 ("conditions.json", conditions), ("jfr-analysis.json", jfr)):
                 (root / name).write_text(json.dumps(value), encoding="utf-8")
@@ -46,6 +54,10 @@ class PerformanceSummaryTests(unittest.TestCase):
                                   (2_000_000_000, chunks[0]["key"], "VIEW_DEMAND", "", "Server thread"),
                                   (5_000_000_000, chunks[0]["key"], "READY_TO_SEND", "", "Server thread"),
                                   (21_000_000_000, "WORKLOAD", "WORKLOAD_END", "", "Server thread")))
+                if work_counters is not None:
+                    writer.writerow((3_000_000_000, chunks[0]["key"], "B_WORK_METRICS", json.dumps(work_counters), "Worker"))
+                if unfinished_work is not None:
+                    writer.writerow((3_000_000_000, dimension + ":126,-37", "B_WORK_METRICS", json.dumps(unfinished_work), "Worker"))
             (root / "console.log").write_text("MOSAIC PROFILE MARKER WORKLOAD_END\n", encoding="utf-8")
             process = subprocess.run([sys.executable, str(SCRIPT), directory], capture_output=True, text=True)
             summary = json.loads((root / "isolation-summary.json").read_text()) if process.returncode == 0 else None
@@ -81,6 +93,29 @@ class PerformanceSummaryTests(unittest.TestCase):
         process, _ = self.reduce("minecraft:overworld", pipeline="vanilla")
         self.assertNotEqual(process.returncode, 0)
         self.assertIn("Vanilla control entered Mosaic", process.stderr)
+
+    def test_machine_load_is_distinct_from_the_game_process(self):
+        process, summary = self.reduce("minecraft:overworld", machine_loads=[.25, .75])
+        self.assertEqual(0, process.returncode, process.stderr)
+        self.assertEqual(50, summary["machineCpuPercentSamples"]["mean"])
+        self.assertEqual(75, summary["machineCpuPercentSamples"]["maximum"])
+        self.assertEqual(10, summary["processCpuPercent"])
+        process, summary = self.reduce("minecraft:overworld")
+        self.assertEqual(0, process.returncode, process.stderr)
+        self.assertIsNone(summary["machineCpuPercentSamples"])
+
+    def test_completed_full_cost_does_not_charge_unfinished_targets(self):
+        process, summary = self.reduce("minecraft:overworld",
+            work_counters={"schema": 1, "retainedTerrain": True, "biomeReuse": {"nativeBuilds": 3}},
+            unfinished_work={"schema": 1, "retainedTerrain": True, "biomeReuse": {"nativeBuilds": 99}})
+        self.assertEqual(0, process.returncode, process.stderr)
+        work = summary["fullCohortWork"]
+        self.assertEqual(1, work["fullOwners"])
+        self.assertEqual(1, work["observedOwners"])
+        self.assertEqual(1, work["retainedTerrainOwners"])
+        self.assertEqual([], work["missingOwners"])
+        self.assertEqual(3, work["metrics"]["biomeReuse.nativeBuilds"]["mean"])
+        self.assertEqual(2, summary["windowWorkPerFull"]["canonical"])
 
 
 if __name__ == "__main__":

@@ -8,6 +8,8 @@ param(
     [switch]$ReferenceStructures,
     [switch]$ReferenceBiomes,
     [switch]$ReferencePhysicalBiomes,
+    [switch]$ReferencePhysicalTerrain,
+    [switch]$ReferenceBiomeLocks,
     [switch]$StructureReuseAudit,
     [ValidatePattern('^[a-z0-9_]*$')][string]$EvidenceLabel = ''
 )
@@ -17,9 +19,13 @@ $env:MOSAIC_VALIDATION_TARGET = $Target
 . (Join-Path $PSScriptRoot '../Validation-Environment.ps1')
 if ($ReferenceStructures -and $Pipeline -ne 'b') { throw 'Reference source evaluation is only a B comparison' }
 if ($ReferenceBiomes -and ($Pipeline -ne 'b' -or $ReferenceStructures)) { throw 'Choose a single B reference control' }
-if ($ReferencePhysicalBiomes -and ($Target -ne '26.3-fabric' -or $Pipeline -ne 'b' -or $ReferenceStructures -or $ReferenceBiomes)) { throw 'Physical BIOMES A/B is a separate Vanilla 26.3 Fabric B candidate' }
+if ($ReferencePhysicalBiomes -and ($Pipeline -ne 'b' -or $ReferenceStructures -or $ReferenceBiomes)) { throw 'Physical BIOMES A/B is a separate Vanilla 26.3 B candidate' }
+if ($ReferencePhysicalTerrain -and ($Pipeline -ne 'b' -or $ReferenceStructures -or $ReferenceBiomes -or $ReferencePhysicalBiomes -or $ReferenceBiomeLocks -or $StructureReuseAudit)) { throw 'Physical TERRAIN A/B is a separate native 26.3 preparation candidate' }
+if ($ReferenceBiomeLocks -and ($Target -ne '26.3-fabric' -or $Pipeline -ne 'b' -or $ReferenceStructures -or $ReferenceBiomes -or $ReferencePhysicalBiomes -or $StructureReuseAudit)) { throw 'Physical biome lock control is a separate Fabric B measurement' }
 $label = if ($ReferencePhysicalBiomes) { 'b-physical-biome-reference' } elseif ($ReferenceBiomes) { 'b-biome-reference' } elseif ($ReferenceStructures) { 'b-source-reference' } else { $Pipeline }
 if ($StructureReuseAudit) { $label = 'b-source-audit' }
+if ($ReferenceBiomeLocks) { $label = 'b-biome-lock-reference' }
+if ($ReferencePhysicalTerrain) { $label = 'b-physical-terrain-reference' }
 if ($Dimension -ne 'overworld') { $label += "-$Dimension" }
 if ($Seconds -ne 60) { $label += "-duration$Seconds" }
 $output = Join-Path $validationRepository "validations/performance-worldgen/result/b_milestone/$validationTarget/$label-v$View-s$Simulation"
@@ -74,6 +80,8 @@ try {
     $conditions = [ordered]@{ pipeline=$Pipeline; dimension="minecraft:$Dimension"; referenceStructureSources=$ReferenceStructures.IsPresent; referenceBiomes=$ReferenceBiomes.IsPresent; structures='baseline'; masterSeed=123456789; x=125; z=-37; view=$View; simulation=$Simulation; seconds=$Seconds; moves=2; moveSeconds=15; moveChunks=2; cpu=4; affinity=3840; priority='BelowNormal'; cliFrontierNotPlayerSpawn=$true }
     $conditions.target = $validationTarget
     $conditions.referencePhysicalBiomes = $ReferencePhysicalBiomes.IsPresent
+    if ($ReferencePhysicalTerrain) { $conditions.referencePhysicalTerrain = $true }
+    if ($ReferenceBiomeLocks) { $conditions.referenceBiomeLocks = $true }
     if ($StructureReuseAudit) { $conditions.structureReuseAudit = $true }
     $conditions.runIdentity = [Guid]::NewGuid().ToString('D')
     $conditions.inputHash = $inputHash
@@ -85,6 +93,8 @@ try {
     if ($ReferenceStructures) { $flags += '-Dmosaic.profile.bReferenceStructures=true' }
     if ($ReferenceBiomes) { $flags += '-Dmosaic.profile.bReferenceBiomes=true' }
     if ($ReferencePhysicalBiomes) { $flags += '-Dmosaic.profile.bReferencePhysicalBiomes=true' }
+    if ($ReferencePhysicalTerrain) { $flags += '-Dmosaic.profile.bReferencePhysicalTerrain=true' }
+    if ($ReferenceBiomeLocks) { $flags += '-Dmosaic.profile.referenceBiomeLocks=true' }
     if ($StructureReuseAudit) { $flags += '-Dmosaic.profile.structureReuseAudit=true' }
     $env:JAVA_TOOL_OPTIONS = $flags -join ' '
     $runArguments = @('--max-workers=1', '--no-daemon', '--no-configuration-cache', '-Dorg.gradle.jvmargs=-Xmx2G -Dfile.encoding=UTF-8 -XX:ActiveProcessorCount=4')

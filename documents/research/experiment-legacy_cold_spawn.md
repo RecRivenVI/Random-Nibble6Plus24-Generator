@@ -12,7 +12,7 @@ SPAWN 的八来源 biome/collision 输入平时从 canonical preparation 脱离�
 
 探针挂起选定目标真正尚未执行的 SPAWN future，断言实际状态为 LIGHT 且光照正确，正常关闭时只对该 future 完成一次生命周期取消。第二个独立 JVM 读取同一真实存档，经普通 FULL 请求恢复；不改写磁盘状态或复制旧快照。
 
-源码输入指纹为 `0C2991DC8BCDC40A9A4AD31CAB0FE9200C79D2D4D0670993E6AFE4F5CA0DBB73`；[固定证据入口](../../validations/integration-production_lifecycle/result/current/1.21.1-neoforge/phase3c2-production/features-2/development-b/lazy-rings/narrow-locks/cold-spawn/minecraft-overworld/light_restart_idempotent/)包含条件、warm-inputs、stage、resume 和原始日志。后续增加的运行期观测器改变 probe 指纹，不回写本次条件。
+源码输入指纹为 `0C2991DC8BCDC40A9A4AD31CAB0FE9200C79D2D4D0670993E6AFE4F5CA0DBB73`；固定证据入口（本机证据：`../../validations/integration-production_lifecycle/result/current/1.21.1-neoforge/phase3c2-production/features-2/development-b/lazy-rings/narrow-locks/cold-spawn/minecraft-overworld/light_restart_idempotent/`）包含条件、warm-inputs、stage、resume 和原始日志。后续增加的运行期观测器改变 probe 指纹，不回写本次条件。
 
 ## 发现
 
@@ -22,7 +22,7 @@ stage/resume 的 PID 分别为 81108/97732，两次均在原生 level close 后�
 
 本 fixture 的原版 population 自然越界碰撞读取为零。额外八次读取在 population 返回后执行，证据明确标记 `POST_POPULATION_COMPONENT_READS_NOT_NATURAL_BOUNDARY_COVERAGE`，不能用组件命中数冒充自然正例。先前独立前沿的十二次自然读取仍由其原始证据承担。
 
-最初探针把重复 close 通知的第二次 future completion 返回 false 误写成取消失败。该轮已正常保存后的原始 FAIL、日志和世界保留在 [light_restart/first_runtime_failure](../../validations/integration-production_lifecycle/result/current/1.21.1-neoforge/phase3c2-production/features-2/development-b/lazy-rings/narrow-locks/cold-spawn/minecraft-overworld/light_restart/first_runtime_failure/)。修正只使探针完成计数幂等，不改变生产取消规则。编译期的 final-class/interface Mixin cast 与外层两 CPU 限制不含四 CPU 游戏掩码的启动拒绝均发生在游戏前，不归类为游戏崩溃。
+最初探针把重复 close 通知的第二次 future completion 返回 false 误写成取消失败。该轮已正常保存后的原始 FAIL、日志和世界保留在 light_restart/first_runtime_failure（本机证据：`../../validations/integration-production_lifecycle/result/current/1.21.1-neoforge/phase3c2-production/features-2/development-b/lazy-rings/narrow-locks/cold-spawn/minecraft-overworld/light_restart/first_runtime_failure/`）。修正只使探针完成计数幂等，不改变生产取消规则。编译期的 final-class/interface Mixin cast 与外层两 CPU 限制不含四 CPU 游戏掩码的启动拒绝均发生在游戏前，不归类为游戏崩溃。
 
 ## 结论
 

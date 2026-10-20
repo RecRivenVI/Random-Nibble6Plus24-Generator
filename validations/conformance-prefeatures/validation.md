@@ -16,6 +16,12 @@
 
 ## 运行
 
+物理 BIOMES 缩锁候选先用四个独立原版／候选样本验证结构输入、真实 stored palette 与关闭后可序列化数据；只改变候选准备的锁入口，不改 native Oracle。标签防止覆盖已验结果，完整结构矩阵在冻结候选时统一执行。
+
+```powershell
+& components/worldgen_validation/scripts/conformance-prefeatures/Run-PreFeatures.ps1 -Target 26.3-fabric -Suite smoke -BiomeOnly -EvidenceLabel biome_lock_scope -Offline
+```
+
 26.3 Fabric 的受控环续流使用真实原生 generateRingPositions、RandomSource.fork 与群系读取，在两个 fresh JVM/save 中固定一种合法的单 worker FIFO 条件。仅 probe 可替换该组件的 executor、重放由原生前缀实际到达的气候 token；不进入生产 scheduler。四种种子、两个前缀和普通／真实要塞目标共十六组，每组检查原生 128 次 fork、目标范围位置、根随机源的两次后续抽取，以及 1445 个独立 native quart 读取。不同出口下的首个群系差异必须双向重现并保持未通过；有限负面证据不证明全部调度或参数表。
 
 ```powershell
@@ -142,13 +148,17 @@ NeoForge 入口只支持本轮原版验证，BOP 尚不启用。首次由模板�
 
 ## 通过标准
 
-26.3 Fabric 另有 H1 的未接生产候选：`-BiomeOnly` 仅执行原生 starts/references/BIOMES，返回一个真实原生 ProtoChunk。Native 控制在 BIOMES 停止，消费者使用无关宿主；不运行地形、FEATURES 或 Artifact，不以 uncached climate 覆盖 palette。26.3 原生 doCreateBiomes 自行创建/释放密度缓存池，ChunkAccess 没有旧版的 NoiseChunk 字段，因此不额外复制第二个 Chunk。验证还在关闭 owner 后重读完整快照和原生序列化数据、检查原生部分区块 codec 精确往返，核对不保留 live sampler、virtual holders 为零。codec 往返不是服务器重启重载；该模块不改变任何物理 scheduler 或旧存档分流，通过不等于 H1 已有端到端收益。
+两个 26.3 Target 的 `-BiomeOnly` 仅执行原生 starts/references/BIOMES，返回一个真实原生 ProtoChunk。Native 控制在 BIOMES 停止，消费者使用无关宿主；不运行地形、FEATURES 或 Artifact，不以 uncached climate 覆盖 palette。26.3 原生 doCreateBiomes 自行创建/释放密度缓存池，ChunkAccess 没有旧版的 NoiseChunk 字段，因此不额外复制第二个 Chunk。验证还在关闭 owner 后重读完整快照和原生序列化数据、检查原生部分区块 codec 精确往返，核对不保留 live sampler、virtual holders 为零。原生 references 复制保留实际容器遍历与独立所有权。codec 往返不是服务器重启重载；生产分流另由部分阶段生命周期验证，不以组件通过代替端到端收益。
 
 ```powershell
 & components/worldgen_validation/scripts/conformance-prefeatures/Run-PreFeatures.ps1 -Target 26.3-fabric -Suite smoke -BiomeOnly
 & components/worldgen_validation/scripts/conformance-prefeatures/Run-PreFeatures.ps1 -Target 26.3-fabric -Suite structures -BiomeOnly
 & components/worldgen_validation/scripts/conformance-prefeatures/Run-PreFeatures.ps1 -Target 26.3-fabric -Suite matrix -BiomeOnly
+& components/worldgen_validation/scripts/conformance-prefeatures/Run-PreFeatures.ps1 -Target 26.3-neoforge -Suite smoke -BiomeOnly -EvidenceLabel native_detached_biomes
+& components/worldgen_validation/scripts/conformance-prefeatures/Run-PreFeatures.ps1 -Target 26.3-fabric -Suite smoke -Lightweight -NativeTerrain -EvidenceLabel native_detached_terrain
 ```
+
+Fabric 的 `-NativeTerrain` 是精确部分 TERRAIN 准备的独立对照：仍通过原版 buildTerrain 与九份 stored palette，另外保留原生 references 容器遍历，比较完整原生 NBT、既有密度／表面／洞穴内部证据和关闭后的数据稳定性。它不执行 FEATURES；没有通过组件、普通请求与保存重载前，不视为生产收益已证明。
 
 - 完整矩阵含 Overworld origin 8、non-origin 32、Nether 16、End 16，共 72 项；每项有独立 native producer 和 unrelated-host reference consumer。
 - 四个检查点按原版状态顺序捕获且严格一致；任何不一致给出阶段、首个数据差异、方块差异数量、首个不同结构的完整 NBT 及具体字段路径。

@@ -1,1 +1,25 @@
 # 日常实例使用模板默认值；个人偏好只写入 local.toml。
+
+[variants.b-review-server]
+base = "server"
+
+[variants.b-review-client]
+base = "client"
+
+[b-review-server]
+memory-min = "256M"
+memory-max = "3G"
+jvm-args = ["-Drandomnibble6plus24generator.developmentB=true"]
+game-args = ["--world", "mosaic-b-review"]
+
+[targets."26.3-fabric".b-review-server]
+port = 25595
+
+[targets."26.3-neoforge".b-review-server]
+port = 25596
+
+[targets."26.3-fabric".b-review-client]
+game-args = ["--quickPlayMultiplayer", "127.0.0.1:25595"]
+
+[targets."26.3-neoforge".b-review-client]
+game-args = ["--quickPlayMultiplayer", "127.0.0.1:25596"]

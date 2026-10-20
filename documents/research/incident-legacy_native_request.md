@@ -20,19 +20,19 @@
 
 实际加载的 MinecraftServer 在新增第二个 Mixin 字段初始化后没有写入 identity 字段，而另一个集合初始化仍存在。编译后的 Mixin 本身含有两次赋值，因此不能用编译通过排除注入问题。改为构造器 RETURN 显式初始化每个实例的 owner，ServerLevel 的两个临时 owner 采用同一明确边界；没有静态跨世界缓存。
 
-修复后的普通 Vanilla 新建与新 JVM 重载均完成 FULL。另一个独立原生游戏通过 16 项真实身份加载/替换/关闭、17 项上下文归属和 45 项种子/格式检查，证据在 [physical_owner](../../validations/conformance-seed/result/world-load-identity-physical_owner/1.20.1-forge)。该身份结果属于其记录的输入指纹，不替代 B FULL 或后续探针源码的当前输入复核。
+修复后的普通 Vanilla 新建与新 JVM 重载均完成 FULL。另一个独立原生游戏通过 16 项真实身份加载/替换/关闭、17 项上下文归属和 45 项种子/格式检查，证据在 physical_owner（本机证据：`../../validations/conformance-seed/result/world-load-identity-physical_owner/1.20.1-forge`）。该身份结果属于其记录的输入指纹，不替代 B FULL 或后续探针源码的当前输入复核。
 
-原始身份故障在 [Vanilla first_failure](../../validations/integration-legacy_physical/result/first_failure/1.20.1-forge/vanilla/minecraft-overworld)；实际导出 class 留在该验证实例的 .mixin.out，不进入发行构件或文档证据目录。
+原始身份故障在 Vanilla first_failure（本机证据：`../../validations/integration-legacy_physical/result/first_failure/1.20.1-forge/vanilla/minecraft-overworld`）；实际导出 class 留在该验证实例的 .mixin.out，不进入发行构件或文档证据目录。
 
 ### 启动探针与看门狗
 
-本版公开 ServerChunkCache.getChunkFuture 在服务端线程调用时会执行 managedBlock。探针在 ServerStartedEvent 直接调用，B 计算超过一分钟后触发原生看门狗；异常栈精确落在 NativePhysicalProbe.started。此轮保留于 [B first_failure](../../validations/integration-legacy_physical/result/first_failure/1.20.1-forge/b/minecraft-overworld)。
+本版公开 ServerChunkCache.getChunkFuture 在服务端线程调用时会执行 managedBlock。探针在 ServerStartedEvent 直接调用，B 计算超过一分钟后触发原生看门狗；异常栈精确落在 NativePhysicalProbe.started。此轮保留于 B first_failure（本机证据：`../../validations/integration-legacy_physical/result/first_failure/1.20.1-forge/b/minecraft-overworld`）。
 
 探针改为从调用线程提交同一公开接口，再由服务端 tick 观察原生 future。未手工调用内部阶段、关闭看门狗、缩小依赖或延长预算。普通 Vanilla 对照仍使用完全相同的请求方式。
 
 ### 异步请求后的实际未通过项
 
-输入 08716C5CC8A98BCDFBC875360121AA7282627395807AE592BF985A393DBE2501 的普通 Vanilla 主世界新建与重载分别约 1.98 秒和 0.67 秒完成；B 在 300 秒内未达到 FULL，探针记录 FAIL 并请求原生停服。[当前主世界原始目录](../../validations/integration-legacy_physical/result/current/1.20.1-forge/b/minecraft-overworld)保留请求、异常、JFR 和关闭线程栈，不补造 FULL 或 send-ready 比值。
+输入 08716C5CC8A98BCDFBC875360121AA7282627395807AE592BF985A393DBE2501 的普通 Vanilla 主世界新建与重载分别约 1.98 秒和 0.67 秒完成；B 在 300 秒内未达到 FULL，探针记录 FAIL 并请求原生停服。当前主世界原始目录（本机证据：`../../validations/integration-legacy_physical/result/current/1.20.1-forge/b/minecraft-overworld`）保留请求、异常、JFR 和关闭线程栈，不补造 FULL 或 send-ready 比值。
 
 20.081 秒诊断窗口有 1,860 个 CPU 样本，其中 1,819 个（97.80%）在原生 Stronghold ring biome search 调用链。GC 暂停累计约 6.01 毫秒；这不是完整探索 A/B，也不能据此报告吞吐或最大 CPU 利用率。1.20.1 当前紧凑输入仍使用未优化的原生环准备，不能继承其它 Target 的 Lazy 正确性或性能结论。
 

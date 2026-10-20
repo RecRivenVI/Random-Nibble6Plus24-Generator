@@ -16,11 +16,11 @@
 
 ## 发现
 
-[原生村庄样本](../../validations/conformance-prefeatures/result/structure_reuse_structures_climate_state/26.3-neoforge/village_plains-start/native/beardifier.json)声明 98304 样本，但[二进制](../../validations/conformance-prefeatures/result/structure_reuse_structures_climate_state/26.3-neoforge/village_plains-start/native/beardifier.bin)只有 392192 字节，即 98048 个 float。差值正好 256 个，等于一层；应有长度为 393216 字节。旧报告中的 sha256 是对 payload 的十六进制文本再哈希，新 coverage 2 明确使用原始字节哈希，不混用两种定义。
+原生村庄样本（本机证据：`../../validations/conformance-prefeatures/result/structure_reuse_structures_climate_state/26.3-neoforge/village_plains-start/native/beardifier.json`）声明 98304 样本，但二进制（本机证据：`../../validations/conformance-prefeatures/result/structure_reuse_structures_climate_state/26.3-neoforge/village_plains-start/native/beardifier.bin`）只有 392192 字节，即 98048 个 float。差值正好 256 个，等于一层；应有长度为 393216 字节。旧报告中的 sha256 是对 payload 的十六进制文本再哈希，新 coverage 2 明确使用原始字节哈希，不混用两种定义。
 
-旧 NeoForge 十八项编排在已完成九项后主动停止，保留为 WITHDRAWN_PROBE_COVERAGE，不计完整门禁通过，也不推定生成失败。只停止已核实归属的编排进程 108108，当前子 JVM 86628 获准正常保存退出；确认它已结束后才修改本 Target 源码。未改写旧目录的状态、哈希或缺失数据。[旧数据被新检查拒绝](../../build/research/beardifier-coverage-old-rejection.log)已记录。
+旧 NeoForge 十八项编排在已完成九项后主动停止，保留为 WITHDRAWN_PROBE_COVERAGE，不计完整门禁通过，也不推定生成失败。只停止已核实归属的编排进程 108108，当前子 JVM 86628 获准正常保存退出；确认它已结束后才修改本 Target 源码。未改写旧目录的状态、哈希或缺失数据。旧数据被新检查拒绝（本机证据：`../../build/research/beardifier-coverage-old-rejection.log`）已记录。
 
-[编译和四十项工具回归](../../build/research/beardifier-coverage-compile.log)通过。两端新结构证据目录分别为 [NeoForge](../../validations/conformance-prefeatures/result/structure_reuse_structures_climate_state_full_height/26.3-neoforge) 与 [Fabric](../../validations/conformance-prefeatures/result/structure_reuse_structures_climate_state_full_height/26.3-fabric)，本文写成时仍在运行，不计通过。
+编译和四十项工具回归（本机证据：`../../build/research/beardifier-coverage-compile.log`）通过。两端新结构证据目录分别为 NeoForge（本机证据：`../../validations/conformance-prefeatures/result/structure_reuse_structures_climate_state_full_height/26.3-neoforge`） 与 Fabric（本机证据：`../../validations/conformance-prefeatures/result/structure_reuse_structures_climate_state_full_height/26.3-fabric`），本文写成时仍在运行，不计通过。
 
 装饰前 72 项不启用这个 structures 专用采集分支，其完整目标方块、群系、密度／表面／洞穴比较不由本缺口推翻；十九项完整 B 和正常运行重载也不使用该密度报告。其证据仍限定原输入与范围，不能提升为已证明完整高度的直接 Beardifier 输入对照。运行期 schema-2 的 NeoForge physicalBiomeChecks 是物理 BIOMES 依赖就绪检查，不是全部 palette 值扫描，不能借字段名宣传成全群系内容对照。
 

@@ -12,7 +12,7 @@
 
 ## 发现
 
-- [下界候选](../../validations/integration-production_lifecycle/result/current/1.21.1-neoforge/phase3c2-production/features-2/development-b/lazy-rings/narrow-locks/runtime-proof-frontier/minecraft-the_nether/template_lock)与[末地候选](../../validations/integration-production_lifecycle/result/current/1.21.1-neoforge/phase3c2-production/features-2/development-b/lazy-rings/narrow-locks/runtime-proof-frontier/minecraft-the_end/template_lock)各有两个独立 JVM/save；与各自普通 Vanilla 控制合计八 JVM，Check-LegacyRuntime 的独立只读复核通过。
+- 下界候选（本机证据：`../../validations/integration-production_lifecycle/result/current/1.21.1-neoforge/phase3c2-production/features-2/development-b/lazy-rings/narrow-locks/runtime-proof-frontier/minecraft-the_nether/template_lock`）与末地候选（本机证据：`../../validations/integration-production_lifecycle/result/current/1.21.1-neoforge/phase3c2-production/features-2/development-b/lazy-rings/narrow-locks/runtime-proof-frontier/minecraft-the_end/template_lock`）各有两个独立 JVM/save；与各自普通 Vanilla 控制合计八 JVM，Check-LegacyRuntime 的独立只读复核通过。
 - 两维度 fresh 均真实生成 121 份 Artifact，完成 49 FULL 和 SPAWN、48 次部分 BIOMES 准备/发布，实际缩锁 context 分别为 9852、9849；in-flight 和 generation binding 清空。重载 Artifact、BIOMES 准备和 SPAWN 为零，标记方块保留，实际缩锁 context 为零。
 - 跨 physical seam 的实体只注册一次，正常移动；水或岩浆跨界传播，block/fluid callback 非零，熔炉经原生 ticker 完成烧炼。检查设施是测试安装，不代替自然 worldgen 的实体/BE/tick 正例。
 - 普通 Vanilla 三维度 fresh/reload 六 JVM 全通过，实际 Mosaic state/context 创建为零；下界/末地的四个 JVM 已包含在上面八 JVM 中，不重复计数。全部成功运行共十个 JVM，主世界候选另有一个超时 FAIL。

@@ -8,7 +8,7 @@ RuntimeProof 已等到 49 个真实 FULL、两侧 ENTITY_TICKING 及生成空闲
 
 ## 方法
 
-保留 [ticking_lane 的首次失败现场](../../validations/integration-production_lifecycle/result/current/1.21.1-neoforge/phase3c2-production/features-2/development-b/lazy-rings/runtime-proof-frontier/minecraft-the_nether/ticking_lane/first_runtime_failure)，包括条件、FAIL、完整世界和 crash report。输入指纹为 283D4406003B6763C27A6C2CE1790EB8DA4B667288BAAC2B1742AEDD2A88FCCF，游戏 PID 81156，每实例四逻辑 CPU、低优先级，与另一独立正确性队列并行；不是性能 A/B。
+保留 ticking_lane 的首次失败现场（本机证据：`../../validations/integration-production_lifecycle/result/current/1.21.1-neoforge/phase3c2-production/features-2/development-b/lazy-rings/runtime-proof-frontier/minecraft-the_nether/ticking_lane/first_runtime_failure`），包括条件、FAIL、完整世界和 crash report。输入指纹为 283D4406003B6763C27A6C2CE1790EB8DA4B667288BAAC2B1742AEDD2A88FCCF，游戏 PID 81156，每实例四逻辑 CPU、低优先级，与另一独立正确性队列并行；不是性能 A/B。
 
 用本机 neoforge-21.1.262.jar 的 javap 核对 ServerLevel.tick/resetEmptyTime，读取归档世界 DIM-1/entities/r.3.-2.mca 的原始 item NBT。读取不写回存档，不给实体补 tick 或改变运动。
 

@@ -30,7 +30,7 @@ physicalBiomeChecks 是状态检查次数，不是唯一 Chunk 数。原生组�
 
 每个进程仍通过 220 个自然 tick、唯一实体注册、实体／流体跨物理边界、block/fluid callback 和熔炉烧炼；探针移除票据并恢复设施后 binding 与 in-flight 为零。重载保留测试修改，B generation、Artifact、POI、LIGHT、SPAWN 与 FULL 生成计数为零；普通 Vanilla 不进入 Mosaic 生产路径。两类数据的[验证入口](../../validations/integration-production_lifecycle/validation.md)均支持只读复核，新结果默认绑定当前源码；原缺顶层批次继续被特定检查拒绝。
 
-证据位于 [B runtime-proof](../../validations/integration-production_lifecycle/result/current/26.3-fabric/phase3c2-production/features-2/development-b/runtime-proof)与 [Vanilla runtime-proof](../../validations/integration-production_lifecycle/result/current/26.3-fabric/phase3c2-production/vanilla-control/runtime-proof) 各维度的 all_quart_biomes。当前源码 Check-FabricRuntime 复核十二个独立 PID、六份条件指纹、全部 owner 哈希和清理条件通过。
+证据位于 B runtime-proof（本机证据：`../../validations/integration-production_lifecycle/result/current/26.3-fabric/phase3c2-production/features-2/development-b/runtime-proof`）与 Vanilla runtime-proof（本机证据：`../../validations/integration-production_lifecycle/result/current/26.3-fabric/phase3c2-production/vanilla-control/runtime-proof`） 各维度的 all_quart_biomes。当前源码 Check-FabricRuntime 复核十二个独立 PID、六份条件指纹、全部 owner 哈希和清理条件通过。
 
 ## 结论
 

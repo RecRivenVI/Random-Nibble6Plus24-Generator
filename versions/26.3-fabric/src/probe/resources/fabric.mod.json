@@ -5,6 +5,7 @@
     "name": "${mod_name} development probes",
     "environment": "*",
     "mixins": [
+        "mosaic-dependency-smoke.mixins.json",
         "mosaic-bop-causal-test.mixins.json",
         "mosaic-candidate-test.mixins.json",
         "mosaic-generation-shutdown-test.mixins.json",

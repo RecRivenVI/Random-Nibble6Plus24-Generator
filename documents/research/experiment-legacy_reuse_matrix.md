@@ -22,7 +22,7 @@ CheckOnly 默认重新计算当前 Target 的 main/probe、合同源码及 targe
 | 下界 | 16 | 16/16 PASS |
 | 末地 | 16 | 16/16 PASS |
 
-输入指纹为 `C146E59F249A7186F3984CF4B97710635D3DE8E75EFD16BE3AC5CB90B5A22FB4`。完整执行与独立 CURRENT_SOURCE CheckOnly 均 PASS；[原始证据](../../validations/conformance-prefeatures/result/source_reuse_narrow_locks_ring_scope_physical_biomes_matrix_source_state/1.21.1-neoforge)保留每个角色输出。
+输入指纹为 `C146E59F249A7186F3984CF4B97710635D3DE8E75EFD16BE3AC5CB90B5A22FB4`。完整执行与独立 CURRENT_SOURCE CheckOnly 均 PASS；原始证据（本机证据：`../../validations/conformance-prefeatures/result/source_reuse_narrow_locks_ring_scope_physical_biomes_matrix_source_state/1.21.1-neoforge`）保留每个角色输出。
 
 额外传入全零历史指纹时，工具在第一份不匹配证据处明确拒绝，未启动游戏且 fixture 清单 hash 不变。这是故意的复核负例，不是生成失败。原有历史证据不重写、不倒填当前指纹。
 

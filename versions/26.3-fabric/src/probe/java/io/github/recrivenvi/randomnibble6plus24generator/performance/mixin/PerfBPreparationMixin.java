@@ -6,30 +6,41 @@ import io.github.recrivenvi.randomnibble6plus24generator.performance.PerfTrace;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.features.BFeaturePreparation;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile.MosaicWorldProfile;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.IsolatedGenerationContext;
+import net.minecraft.world.level.chunk.ProtoChunk;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.gen.Invoker;
 
 @Mixin(value = BFeaturePreparation.class, remap = false)
 abstract class PerfBPreparationMixin {
-    @Invoker("generatePrepared")
-    static BFeaturePreparation.Result referencePreparation(
-            IsolatedGenerationContext context,
-            MosaicWorldProfile profile,
-            boolean reuseStructures) {
-        throw new AssertionError("Mixin invoker not installed");
-    }
-
-    @WrapMethod(method = "generate")
+    @WrapMethod(method = "generateInput")
     private static BFeaturePreparation.Result measure(
             IsolatedGenerationContext context,
             MosaicWorldProfile profile,
+            boolean reuseStructures,
+            ProtoChunk terrain,
             Operation<BFeaturePreparation.Result> original) {
         var span = PerfTrace.begin(context.hostLevel(), context.target(), "CANONICAL");
         try {
+            boolean referenceStructures = Boolean.getBoolean("mosaic.profile.bReferenceStructures");
             var result =
-                    Boolean.getBoolean("mosaic.profile.bReferenceStructures")
-                            ? referencePreparation(context, profile, false)
-                            : original.call(context, profile);
+                    original.call(
+                            context,
+                            profile,
+                            referenceStructures ? false : reuseStructures,
+                            referenceStructures ? null : terrain);
+            PerfTrace.count("b.retainedTerrain", result.retainedTerrain() ? 1 : 0);
+            if (System.getProperty("mosaic.profile.output") != null) {
+                var json = new com.google.gson.Gson();
+                var work = new com.google.gson.JsonObject();
+                work.addProperty("schema", 1);
+                work.addProperty("retainedTerrain", result.retainedTerrain());
+                work.addProperty("preparationNanos", result.preparationNanos());
+                work.addProperty("decorationNanos", result.decorationNanos());
+                work.add("reads", json.toJsonTree(result.reads()));
+                work.add("structureReuse", json.toJsonTree(result.structureReuse()));
+                work.add("biomeReuse", json.toJsonTree(result.biomeReuse()));
+                PerfTrace.event(
+                        context.hostLevel(), context.target(), "B_WORK_METRICS", work.toString());
+            }
             PerfTrace.count("b.preparationNanos", result.preparationNanos());
             PerfTrace.count("b.decorationNanos", result.decorationNanos());
             PerfTrace.count("b.fullNeighborFallbacks", result.reads().fullNeighbors());

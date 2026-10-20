@@ -329,6 +329,25 @@ public final class CompactStructureInputs {
         chunk.setAllReferences(copy);
     }
 
+    /** Partial native serialization keeps the actual reference iterator, not just membership. */
+    public void copyNativeReferencesTo(ChunkAccess chunk) {
+        requireOwner(chunk);
+        Map<Structure, it.unimi.dsi.fastutil.longs.LongSet> copy = new HashMap<>();
+        owner.getAllReferences()
+                .forEach(
+                        (structure, positions) ->
+                                copy.put(structure, copyNativeReferenceSet(positions)));
+        chunk.setAllReferences(copy);
+    }
+
+    static LongOpenHashSet copyNativeReferenceSet(it.unimi.dsi.fastutil.longs.LongSet positions) {
+        // Re-insertion can resize the table and change native start consumption order.
+        if (positions.getClass() == LongOpenHashSet.class)
+            return ((LongOpenHashSet) positions).clone();
+        throw new UnsupportedOperationException(
+                "Unaudited partial reference set " + positions.getClass());
+    }
+
     private void requireOwner(ChunkAccess chunk) {
         if (!target.equals(chunk.getPos()))
             throw new IllegalArgumentException("Wrong compact input owner " + chunk.getPos());

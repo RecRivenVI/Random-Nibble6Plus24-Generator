@@ -16,7 +16,7 @@
 
 ## 发现
 
-[原始结果](../../validations/integration-production_lifecycle/result/current/26.3-fabric/phase3c2-production/features-2/development-b/request-proof)位于各维度的 climate_state_requests；当前源码 Run-FabricRequests -CheckOnly 通过。
+原始结果（本机证据：`../../validations/integration-production_lifecycle/result/current/26.3-fabric/phase3c2-production/features-2/development-b/request-proof`）位于各维度的 climate_state_requests；当前源码 Run-FabricRequests -CheckOnly 通过。
 
 | 维度 | 32 次同目标 PID | 相邻 pair PID | 3×3 patch PID |
 | --- | --- | --- | --- |

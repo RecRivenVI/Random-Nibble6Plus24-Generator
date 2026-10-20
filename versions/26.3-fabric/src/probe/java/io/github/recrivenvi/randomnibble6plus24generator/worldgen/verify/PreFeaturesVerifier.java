@@ -224,9 +224,12 @@ public final class PreFeaturesVerifier {
                                 .DetachedBiomeInputs.Result
                         prepared;
                 try (var context =
-                        IsolatedGenerationContext.create(
-                                IsolatedGenerationMode.ISOLATED_MOSAIC, level, local, pos)) {
-                    run.compact = CompactStructureInputs.resolve(context);
+                                IsolatedGenerationContext.create(
+                                        IsolatedGenerationMode.ISOLATED_MOSAIC, level, local, pos);
+                        var sources =
+                                io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure
+                                        .ScopedStructureSources.create(context)) {
+                    run.compact = CompactStructureInputs.resolve(context, sources);
                     result.add(
                             "compactInputs",
                             new GsonBuilder().create().toJsonTree(run.compact.metrics()));
@@ -326,20 +329,40 @@ public final class PreFeaturesVerifier {
                                     : null) {
                         // Exercise the same completed-palette copy used by a B neighbor fallback.
                         if (biomes != null) biomes.prepare(context, pos);
+                        java.util.function.BiConsumer<ChunkStatus, ChunkAccess> captureStage =
+                                (stage, chunk) ->
+                                        capture(
+                                                context.worldGenContext(),
+                                                net.minecraft.world.level.chunk.status.ChunkPyramid
+                                                        .GENERATION_PYRAMID
+                                                        .getStepTo(stage),
+                                                null,
+                                                chunk);
                         var generated =
-                                io.github.recrivenvi.randomnibble6plus24generator.worldgen.terrain
-                                        .LightweightTerrainGenerator.generate(
-                                        context,
-                                        run.compact,
-                                        (stage, chunk) ->
-                                                capture(
-                                                        context.worldGenContext(),
-                                                        net.minecraft.world.level.chunk.status
-                                                                .ChunkPyramid.GENERATION_PYRAMID
-                                                                .getStepTo(stage),
-                                                        null,
-                                                        chunk),
-                                        biomes);
+                                Boolean.getBoolean(PREFIX + "nativeTerrain")
+                                        ? io.github.recrivenvi.randomnibble6plus24generator.worldgen
+                                                .materialization.DetachedTerrainInputs.generate(
+                                                context, run.compact, captureStage)
+                                        : io.github.recrivenvi.randomnibble6plus24generator.worldgen
+                                                .terrain.LightweightTerrainGenerator.generate(
+                                                context,
+                                                run.compact,
+                                                (stage, chunk) ->
+                                                        capture(
+                                                                context.worldGenContext(),
+                                                                net.minecraft.world.level.chunk
+                                                                        .status.ChunkPyramid
+                                                                        .GENERATION_PYRAMID
+                                                                        .getStepTo(stage),
+                                                                null,
+                                                                chunk),
+                                                biomes);
+                        if (Boolean.getBoolean(PREFIX + "nativeTerrain")) {
+                            if (generated.target().getPersistedStatus() != ChunkStatus.TERRAIN)
+                                throw new IllegalStateException(
+                                        "Detached terrain escaped its native stage");
+                            run.detachedTerrain = generated.target();
+                        }
                         result.add(
                                 "lightweightTerrain",
                                 new GsonBuilder().create().toJsonTree(generated.metrics()));
@@ -353,6 +376,34 @@ public final class PreFeaturesVerifier {
                     if (TerrainProbeEvidence.virtualHolders() != 0)
                         throw new IllegalStateException("Lightweight path created holders");
                     result.addProperty("virtualChunks", 0);
+                }
+                if (Boolean.getBoolean(PREFIX + "nativeTerrain")) {
+                    var chunk = Objects.requireNonNull(run.detachedTerrain);
+                    if (!FeatureStageSnapshot.capture(
+                                    level.dimension().identifier().toString(),
+                                    chunk,
+                                    level.registryAccess())
+                            .diff(FeatureStageSnapshot.read(run.output.resolve("terrain.bin.gz")))
+                            .equivalent())
+                        throw new IllegalStateException(
+                                "Detached terrain changed after owner close");
+                    try {
+                        var raw =
+                                net.minecraft.nbt.NbtIo.readCompressed(
+                                        run.output.resolve("terrain-native.nbt.gz"),
+                                        net.minecraft.nbt.NbtAccounter.unlimitedHeap());
+                        if (!raw.equals(
+                                net.minecraft.world.level.chunk.storage.SerializableChunkData
+                                        .copyOf(level, chunk)
+                                        .write()))
+                            throw new IllegalStateException(
+                                    "Detached terrain serialization changed after owner close");
+                    } catch (IOException failure) {
+                        throw new java.io.UncheckedIOException(failure);
+                    }
+                    result.addProperty("detachedAfterClose", true);
+                    result.addProperty("serializationAfterClose", true);
+                    run.detachedTerrain = null;
                 }
             } else if (role.equals("native")) {
                 ChunkStatus boundary =
@@ -459,7 +510,9 @@ public final class PreFeaturesVerifier {
                                 chunk,
                                 run.level.registryAccess());
         JsonObject structures = structureInputs(run.level, chunk, cache);
-        if (Boolean.getBoolean(PREFIX + "biomeOnly") && status == ChunkStatus.BIOMES) {
+        if ((Boolean.getBoolean(PREFIX + "biomeOnly") && status == ChunkStatus.BIOMES)
+                || (Boolean.getBoolean(PREFIX + "nativeTerrain")
+                        && status == ChunkStatus.TERRAIN)) {
             var raw =
                     net.minecraft.world.level.chunk.storage.SerializableChunkData.copyOf(
                                     run.level, chunk)
@@ -467,14 +520,12 @@ public final class PreFeaturesVerifier {
             var parsed =
                     net.minecraft.world.level.chunk.storage.SerializableChunkData.parse(
                             run.level, run.level.palettedContainerFactory(), raw.copy());
-            if (parsed == null
-                    || parsed.chunkStatus() != ChunkStatus.BIOMES
-                    || !raw.equals(parsed.write()))
+            if (parsed == null || parsed.chunkStatus() != status || !raw.equals(parsed.write()))
                 throw new IllegalStateException(
                         "Native partial BIOMES codec did not roundtrip exactly");
             try {
                 net.minecraft.nbt.NbtIo.writeCompressed(
-                        raw, run.output.resolve("biomes-native.nbt.gz"));
+                        raw, run.output.resolve(name + "-native.nbt.gz"));
             } catch (IOException failure) {
                 throw new java.io.UncheckedIOException(failure);
             }
@@ -685,15 +736,20 @@ public final class PreFeaturesVerifier {
             throw new IllegalStateException(
                     "Control evidence is not an independent completed producer");
         JsonArray differences = new JsonArray();
-        if (Boolean.getBoolean(PREFIX + "biomeOnly")) {
+        if (Boolean.getBoolean(PREFIX + "biomeOnly")
+                || Boolean.getBoolean(PREFIX + "nativeTerrain")) {
+            String nativeName =
+                    Boolean.getBoolean(PREFIX + "biomeOnly")
+                            ? "biomes-native.nbt.gz"
+                            : "terrain-native.nbt.gz";
             try {
                 var before =
                         net.minecraft.nbt.NbtIo.readCompressed(
-                                nativeRoot.resolve("biomes-native.nbt.gz"),
+                                nativeRoot.resolve(nativeName),
                                 net.minecraft.nbt.NbtAccounter.unlimitedHeap());
                 var after =
                         net.minecraft.nbt.NbtIo.readCompressed(
-                                run.output.resolve("biomes-native.nbt.gz"),
+                                run.output.resolve(nativeName),
                                 net.minecraft.nbt.NbtAccounter.unlimitedHeap());
                 if (!before.equals(after)) {
                     var difference = new JsonObject();
@@ -1002,6 +1058,7 @@ public final class PreFeaturesVerifier {
     private static final class Run {
         final String role;
         CompactStructureInputs compact;
+        ChunkAccess detachedTerrain;
         final ServerLevel level;
         final ChunkPos target;
         final Path output;

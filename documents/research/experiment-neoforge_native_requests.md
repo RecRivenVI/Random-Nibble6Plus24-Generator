@@ -18,7 +18,7 @@
 
 ## 发现
 
-[原始结果](../../validations/integration-production_lifecycle/result/current/26.3-neoforge/phase3c2-production/features-2/development-b/request-proof)位于各维度的 native_joins；额外的单项 smoke 独立放在 native_joins_smoke，不算入九组。
+原始结果（本机证据：`../../validations/integration-production_lifecycle/result/current/26.3-neoforge/phase3c2-production/features-2/development-b/request-proof`）位于各维度的 native_joins；额外的单项 smoke 独立放在 native_joins_smoke，不算入九组。
 
 | 维度 | 32 次同目标 PID | 相邻 pair PID | 3×3 patch PID |
 | --- | --- | --- | --- |

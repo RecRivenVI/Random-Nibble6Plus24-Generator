@@ -10,7 +10,7 @@
 
 当前输入指纹为 `B9EDFD499766306E5B7C3CBCFFE070825E06F50365429E02EC25C2C3890E2D08`。每组四逻辑 CPU、BelowNormal、单游戏 JVM，视距/模拟距离 8/8，master seed 123456789、初始 Chunk (125,-37)。60 秒内第 15/30 秒各沿 X 移动两 Chunk；每维度顺序运行 Vanilla 与 B，测量期间不运行本项目的正确性队列或其它 benchmark。
 
-使用原生玩家距离票据接口，不登录玩家、不操作 GUI。JFR 与原始事件保存于[固定结果目录](../../validations/performance-worldgen/result/b_milestone/26.3-neoforge/)，完整归并入口为 vanilla-comparison.json。工具检查同源、同资源、同轨迹、六个独立 PID/world identity、相同原生请求集合及正常结束；普通 Vanilla 不得进入 Mosaic preparation。
+使用原生玩家距离票据接口，不登录玩家、不操作 GUI。JFR 与原始事件保存于固定结果目录（本机证据：`../../validations/performance-worldgen/result/b_milestone/26.3-neoforge/`），完整归并入口为 vanilla-comparison.json。工具检查同源、同资源、同轨迹、六个独立 PID/world identity、相同原生请求集合及正常结束；普通 Vanilla 不得进入 Mosaic preparation。
 
 当前视野按原生 VIEW_DEMAND/VIEW_WITHDRAWN 事件取集合，不用理论正方形代替。全部请求与最后仍需要的请求分别保留；未就绪数据按截尾区间参与 p50/p95，不只统计完成子集。这里 send-ready 只表示服务端可发送，不表示真实发包、玩家就绪或渲染。
 
