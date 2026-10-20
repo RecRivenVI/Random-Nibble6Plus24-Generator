@@ -2,7 +2,7 @@
 
 ## 目标
 
-六类真实结构的物理定位、最近/tag 筛选、替换删除与重载。
+六类真实结构的持久索引、最近/tag 内部筛选、替换删除与重载。26.3 直接检查保留的索引，并要求公开 locate 的结构、群系、POI 三个子命令全部明确拒绝；26.2 保留旧命令语义。
 
 这是 Minecraft 26.2 Fabric / 26.3 Fabric 分 Target 验证。工具属于 `worldgen_validation`，独立游戏内入口属于 `src/probe`，产品 Mixin 直接链接的默认关闭 hooks 留在产品中。
 
@@ -19,7 +19,7 @@ $env:MOSAIC_VALIDATION_TARGET = '26.3-fabric' # 旧版回归改为 26.2-fabric
 
 ## 通过标准
 
-定位真实 physical projection，不生成/加载额外 Chunk；替换/删除幂等，保存后结果一致。
+内部索引对应真实 physical projection，不生成/加载额外 Chunk；替换/删除幂等，保存后结果一致。26.3 的公开定位禁用不删除索引或改变存储格式。
 
 按输出 JSON、异常链、资源与副作用断言判断，真实错误不能被吞掉。构建通过不代替 Runtime、Functional 或 Visual 通过。
 

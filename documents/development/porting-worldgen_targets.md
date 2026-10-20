@@ -1,6 +1,6 @@
 # B 模式五 Target 适配
 
-新增四个 Target 已开始接入；26.3 Fabric 与 NeoForge 已有 B 生成路径，后者继续补完整生命周期与性能门禁。不能把其余 Target 的基础代码、登记或 Java 编译当作移植完成。范围和逐步门禁见[当前里程碑](../project/milestone-features.md)。
+26.3 Fabric 与 NeoForge 的原版 B 内容与有限生命周期已验证，性能 PARTIAL 已接受；1.20.1、1.21.1、26.1.2 首版暂缓游玩支持，保留源码和构建。不能把基础代码、登记或 Java 编译当作移植完成。范围和逐步门禁见[当前里程碑](../project/milestone-productization.md)。
 
 ## 当前适配
 
@@ -13,7 +13,7 @@
 | 1.21.1-neoforge | ChunkSerializer、ProtoChunkTicks、mainThreadMailBox 与非异步 future handle 的归属 | 显式 B codec 与生产接线已存在；有限环候选默认关闭，其独立证明和剩余生命周期见里程碑 |
 | 1.20.1-forge | 旧包 ChunkStatus 的 GenerationTask/LoadingTask、Either future 与 getRange/getDependencyStatus；没有 GenerationChunkHolder | 独立 B、脱离式 Artifact、stored SPAWN 输入及原生 Either 调度已接线；显式 B codec 不公开，下界/末地 FULL/save/reload 有独立证据；完整状态见里程碑 |
 
-所有 Target 的当前验收计数、源码指纹与证据只在[里程碑状态矩阵](../project/milestone-features.md)维护，不在本页另建验收账本。26.1.2 与 1.21.1 已注册显式 development_b codec、marker 与 Ordering 2 身份；current()/旧参考合同仍保留 Ordering 1，不把缺少新身份的世界静默分派 B。1.20.1 只注册要求匹配 profile、marker 与显式 opt-in 的 development_b codec；不提供公开 preset。26.3 NeoForge 不加载 Fabric API 或 BOP 因果入口，不用其它 Target 的通过替代本加载器验证；任何未收口 Target 都不能当作正式可用版本。
+所有 Target 的当前验收计数、源码指纹与证据只在[里程碑状态矩阵](../project/milestone-productization.md)维护，不在本页另建验收账本。26.1.2 与 1.21.1 已注册显式 development_b codec、marker 与 Ordering 2 身份；current()/旧参考合同仍保留 Ordering 1，不把缺少新身份的世界静默分派 B。1.20.1 只注册要求匹配 profile、marker 与显式 opt-in 的 development_b codec；不提供公开 preset。26.3 NeoForge 不加载 Fabric API 或 BOP 因果入口，不用其它 Target 的通过替代本加载器验证；任何未收口 Target 都不能当作正式可用版本。
 
 FML 按模块拥有 Java 包，产品与 probe 不允许 split package；NeoForge 的新验证类使用独立 probe.verify 包，工具 check 检查这项边界。开发运行还需将 product 组件二进制作为同一个模组模块的输出加载；本 Target 使用原生 ModDev sourceSet 和 Sync 展开已登记组件，与发行 JAR 使用同一来源，不复制组件源码、不修改模板。不能把编译 classpath 中可见误当作 FML 运行期可见。
 

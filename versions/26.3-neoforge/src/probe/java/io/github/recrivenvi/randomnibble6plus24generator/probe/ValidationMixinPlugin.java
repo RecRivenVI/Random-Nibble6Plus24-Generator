@@ -28,6 +28,11 @@ public final class ValidationMixinPlugin implements IMixinConfigPlugin {
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
+        if (mixinClassName.endsWith("WorldSearchServerMixin"))
+            return enabled
+                    && Boolean.getBoolean(
+                            io.github.recrivenvi.randomnibble6plus24generator.ModConstants.MOD_ID
+                                    + ".phase3c2.production.worldSearchProof");
         if (mcpOnly)
             return enabled
                     && (mixinClassName.endsWith("ClientLaunchExportMixin")

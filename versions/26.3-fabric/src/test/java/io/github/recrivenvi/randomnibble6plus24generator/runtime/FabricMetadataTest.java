@@ -35,11 +35,11 @@ class FabricMetadataTest {
     }
 
     @Test
-    void mixinConfigContainsOnlyApprovedIdentitySeedIsolationAndNativeCaptureHooks() {
+    void mixinConfigContainsOnlyApprovedProductHooksAndKeepsNativeCaptureInProbe() {
         JsonObject mixins = resourceJson("/randomnibble6plus24generator.mixins.json");
 
         assertTrue(mixins.get("required").getAsBoolean());
-        assertEquals(46, mixins.getAsJsonArray("mixins").size());
+        assertEquals(45, mixins.getAsJsonArray("mixins").size());
         for (String hook :
                 java.util.List.of(
                         "StructureGenerationMixin",
@@ -106,8 +106,12 @@ class FabricMetadataTest {
         assertTrue(
                 mixins.getAsJsonArray("mixins")
                         .contains(new com.google.gson.JsonPrimitive("ChunkStatusTasksMixin")));
-        assertTrue(
+        assertFalse(
                 mixins.getAsJsonArray("mixins")
+                        .contains(new com.google.gson.JsonPrimitive("ChunkStepMixin")));
+        assertTrue(
+                resourceJson("/mosaic-legacy-verification.mixins.json")
+                        .getAsJsonArray("mixins")
                         .contains(new com.google.gson.JsonPrimitive("ChunkStepMixin")));
         assertTrue(
                 mixins.getAsJsonArray("mixins")

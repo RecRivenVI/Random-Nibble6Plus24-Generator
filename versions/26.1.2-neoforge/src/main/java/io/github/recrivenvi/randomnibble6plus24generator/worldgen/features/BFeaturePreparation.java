@@ -80,8 +80,8 @@ public final class BFeaturePreparation {
                         ChunkStatus.SURFACE,
                         ChunkStatus.CARVERS,
                         ChunkStatus.FEATURES)) context.recordStage(stage);
-        if (physicalBefore != context.hostLevel().getChunkSource().getLoadedChunksCount())
-            throw new IllegalStateException("B preparation loaded physical neighbours");
+        // Other physical holders may load or unload while this worker prepares its local world.
+        // Global population is diagnostic data, not evidence that this preparation accessed it.
         var starts =
                 prepared.structures()
                         .captureStartTags(

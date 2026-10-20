@@ -149,4 +149,4 @@ C 的最大未证明点仍是完整 C 世界的动态物理接收、持久化交
 
 完整 TERRAIN 调用在实际生成入口计数，包含树木临时区域内的精确回退；局部列、噪声批次、biome-only 输入另作区分。因此“完整邻区为零”不是“邻区成本为零”。保留九 writer 参考仅用于展示内容取舍，和它不同是方案语义，不能把差异率等同于正确率。具体实测统一记录在生成实现状态。
 
-当前代码与证据边界见[生成实现状态](../project/status-generation.md)，整体完成条件见[里程碑 1](../project/milestone-features.md)。
+当前代码与证据边界见[生成实现状态](../project/status-generation.md)，整体完成条件见[里程碑 1](../project/milestone-productization.md)。

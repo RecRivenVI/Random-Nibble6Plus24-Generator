@@ -17,7 +17,6 @@
         "ChunkMapMixin",
         "ChunkMapInvoker",
         "ChunkStatusTasksMixin",
-        "ChunkStepMixin",
         "BlockEntityTickerTraceMixin",
         "GenerationChunkHolderMixin",
         "GenerationChunkHolderAccessor",

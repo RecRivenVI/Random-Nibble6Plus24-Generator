@@ -1,0 +1,4 @@
+{
+    "commands.randomnibble6plus24generator.seed.chunk_world_seed": "区块世界种子（%s，区块 %s %s）：%s",
+    "commands.randomnibble6plus24generator.locate.unsupported": "Mosaic 世界暂不支持定位。"
+}

@@ -240,6 +240,8 @@ public final class RuntimeLifecycleEvidence {
         proof.addProperty("generationBindings", GenerationContextRegistry.bindingCount());
         proof.addProperty("spawnBindings", MosaicSpawnContextRegistry.bindingCount());
         if (NaturalRuntimeEvidence.enabled()) proof.add("natural", NaturalRuntimeEvidence.finish());
+        if (WorldSearchEvidence.enabled())
+            proof.add("worldSearch", WorldSearchEvidence.verify(level, owner));
         baseline.add("runtimeProof", proof);
         baseline.addProperty("status", "PASS");
         try {

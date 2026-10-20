@@ -17,6 +17,7 @@ param(
     [switch]$PartialTerrain,
     [switch]$VanillaControl,
     [switch]$RuntimeProof,
+    [switch]$WorldSearchProof,
     [switch]$RequestProof,
     [switch]$PublicationInventory,
     [switch]$PlayerLifecycle,
@@ -34,6 +35,20 @@ param(
     [switch]$KeepWorld
 )
 
+
+# Direct Gradle runs share this validation's fixed listener port and mutable launch files.
+# The lease prevents the observed cross-target bind conflict and same-instance file locks.
+$directRunRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../../../..'))
+$directRunProject = if ($Bop) { 'compatibility-bop' } else { 'integration-production_lifecycle' }
+$directRunDirectory = Join-Path $directRunRoot "validations/$directRunProject/instance"
+New-Item -ItemType Directory -Path $directRunDirectory -Force | Out-Null
+try {
+    $directRunLease = [IO.File]::Open((Join-Path $directRunDirectory 'production-gradle.lock'), [IO.FileMode]::OpenOrCreate, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
+} catch {
+    throw "This validation already has a direct Gradle run; finish it before starting another Target or scenario."
+}
+try {
+
 if ($Bop) { $validationProjectOverride = 'compatibility-bop' }
 if ($PartialTerrain) { $PartialBiomes = [switch]::new($true) }
 . (Join-Path $PSScriptRoot '../Validation-Environment.ps1')
@@ -41,6 +56,9 @@ if ($PartialTerrain) { $PartialBiomes = [switch]::new($true) }
 $ErrorActionPreference = 'Stop'
 if ($PartialTerrain -and $validationTarget -notin @('26.3-fabric','26.3-neoforge')) { throw 'Partial TERRAIN lifecycle requires a 26.3 native adapter' }
 Set-StrictMode -Version Latest
+
+
+if ($WorldSearchProof -and ($validationTarget -notin @('26.3-fabric','26.3-neoforge','26.1.2-neoforge') -or !$RuntimeProof -or (!$VerifyReload -and $Mode -ne 'reload') -or !$EvidenceLabel -or $Dimension -ne 'minecraft:overworld')) { throw 'World search consumers require a separately labelled native runtime/reload proof' }
 
 if ($FeatureOrderingVersion -eq 2 -and $validationTarget -notin @('26.3-fabric','26.3-neoforge','26.1.2-neoforge','1.21.1-neoforge')) {
     throw 'Target-only FEATURES has not been adapted to this Target.'
@@ -63,7 +81,7 @@ if ($EvidenceLabel -and !$PhysicalHandoff -and !$RuntimeProof -and !$ColdSpawn -
 if ($LazyRings -and ($validationTarget -ne '1.21.1-neoforge' -or (!$PhysicalHandoff -and !$RuntimeProof -and !$ColdSpawn) -or !$DevelopmentB)) { throw 'Candidate ring scope requires an isolated 1.21.1 B physical or runtime proof' }
 if ($NarrowLocks -and ($validationTarget -ne '1.21.1-neoforge' -or !$LazyRings -or !$EvidenceLabel)) { throw 'Narrow locks require the separately labelled 1.21.1 ring candidate' }
 if ($RuntimeProof -and ($validationTarget -notin @('26.3-fabric','26.3-neoforge','26.1.2-neoforge','1.21.1-neoforge') -or $StateProof -or $PartialBiomes -or
-            $Bop -or !$VerifyReload -or $Mode -notin @('full','reload') -or
+            $Bop -or (!$VerifyReload -and $Mode -ne 'reload') -or $Mode -notin @('full','reload') -or
             (!$VanillaControl -and !$DevelopmentB))) {
     throw 'Native tick-loop evidence requires an adapted B/Vanilla FULL save/restart probe, separately from state/partial proofs'
 }
@@ -75,7 +93,7 @@ if ($PartialBiomes -and ($validationTarget -notin @('26.3-fabric','26.3-neoforge
 if ($PhysicalHandoff -and ($validationTarget -ne '1.21.1-neoforge' -or (!$DevelopmentB -and !$VanillaControl) -or $StateProof -or $RuntimeProof -or $PartialBiomes)) { throw 'Scoped physical-handoff evidence currently requires the 1.21.1 B or Vanilla native lifecycle probe' }
 if ($CompletionOrder -and ($validationTarget -ne '1.21.1-neoforge' -or !$DevelopmentB -or $VanillaControl -or $RuntimeProof -or $StateProof -or $PartialBiomes -or $Mode -ne 'full' -or $VerifyReload)) { throw 'Completed-input interleaving is a separate 1.21.1 Mosaic FULL probe, not reload/runtime evidence' }
 if ($DevelopmentB -and ($validationTarget -notin @('26.3-fabric','26.3-neoforge','26.1.2-neoforge','1.21.1-neoforge') -or $FeatureOrderingVersion -ne 2)) { throw 'Development B requires an adapted Target and explicit Ordering 2' }
-if($PlayerLifecycle -and ($validationTarget -ne '26.3-fabric' -or (!$DevelopmentB -and !$VanillaControl) -or
+if($PlayerLifecycle -and ($validationTarget -notin @('26.3-fabric','26.1.2-neoforge') -or (!$DevelopmentB -and !$VanillaControl) -or
         !$VerifyReload -or !$EvidenceLabel -or $Mode -ne 'full' -or $Dimension -ne 'minecraft:overworld' -or
         $RuntimeProof -or $StateProof -or $RequestProof -or $NaturalProof -or $PublicationInventory -or $Bop -or
         $ColdSpawn -or $PhysicalHandoff -or $PartialBiomes -or $CompletionOrder -or $LazyRings -or $NarrowLocks -or $ReuseSources)){
@@ -276,6 +294,7 @@ function Invoke-Production([string]$productionMode, [string]$output, [bool]$muta
     if ($StateProof) { $options += '-Drandomnibble6plus24generator.phase3c2.production.stateProof=true' }
     if ($VanillaControl) { $options += '-Drandomnibble6plus24generator.phase3c2.production.vanillaControl=true' }
     if ($RuntimeProof) { $options += '-Drandomnibble6plus24generator.phase3c2.production.runtimeProof=true' }
+    if ($WorldSearchProof) { $options += '-Drandomnibble6plus24generator.phase3c2.production.worldSearchProof=true' }
     if ($CompletionOrder) { $options += '-Drandomnibble6plus24generator.phase3c2.production.completionOrder=true' }
     if ($DevelopmentB) { $options += '-Drandomnibble6plus24generator.developmentB=true' }
     if ($RequestProof) {
@@ -356,6 +375,7 @@ function Invoke-Production([string]$productionMode, [string]$output, [bool]$muta
     if ($CompletionOrder -and ($result.completionHandoff.forcedCompletedInputBeforeHandle -ne 1 -or $result.completionHandoff.nativeHolderCompletions -le 0 -or $result.completionHandoff.offOwnerThreadCompletions -ne 0)) { throw 'Native late-registration completion thread ownership was not proven' }
     if ($RuntimeProof) {
         $proof=$result.runtimeProof
+        if ($WorldSearchProof -and (!$proof.worldSearch -or $proof.worldSearch.status -cne 'PASS' -or $proof.worldSearch.mosaic -eq $VanillaControl.IsPresent -or $proof.worldSearch.artifactGenerations -ne 0)) { throw 'World search native consumer proof missing' }
         $runtimeSchema = if ($validationTarget -eq '1.21.1-neoforge') { 3 } elseif ($validationTarget -in @('26.3-fabric','26.3-neoforge','26.1.2-neoforge')) { 2 } else { 1 }
         if($proof -and $validationTarget -eq '26.3-fabric' -and
                 ($proof.PSObject.Properties.Name -notcontains 'physicalBiomeSections' -or
@@ -485,7 +505,7 @@ try {
             Preserve-RuntimeFailure 'Original 1.21.1 readiness failure retained before retry; not accepted as PASS.'
         }
     }
-    if ($RuntimeProof -and (Test-Path -LiteralPath $worldPath)) {
+    if ($RuntimeProof -and $Mode -ne 'reload' -and (Test-Path -LiteralPath $worldPath)) {
         $priorReload = Join-Path $resultRoot "reload-$ChunkX-$ChunkZ.json"
         if (!(Test-Path -LiteralPath $priorReload) -or (Get-Content -LiteralPath $priorReload -Raw | ConvertFrom-Json).status -cne 'PASS') {
             Preserve-RuntimeFailure 'Prior runtime proof was incomplete; original results, logs and world retained, not accepted as PASS.'
@@ -516,6 +536,7 @@ try {
             naturalProof = $NaturalProof
             publicationInventory = $PublicationInventory.IsPresent
             playerLifecycle = $PlayerLifecycle.IsPresent
+            worldSearchProof = $WorldSearchProof.IsPresent
             partialBiomes = $PartialBiomes.IsPresent; partialTerrain = $PartialTerrain.IsPresent
             verifyReload = $VerifyReload.IsPresent; runIdentity = [Guid]::NewGuid().ToString('D')
         }
@@ -533,6 +554,7 @@ try {
     $properties = Set-Property $properties 'level-name' $worldName
     $levelType = if ($VanillaControl) { 'minecraft:normal' } else { 'randomnibble6plus24generator:phase3c2_hidden_mosaic' }
     $properties = Set-Property $properties 'level-type' $levelType
+    if ($WorldSearchProof -and $VanillaControl) { $properties = Set-Property $properties 'generate-structures' 'false' }
     # Keep the ordinary server lifecycle intact while bounding the unrelated
     # spawn-preparation frontier used by this smoke test.
     $properties = Set-Property $properties 'view-distance' '2'
@@ -596,4 +618,7 @@ try {
     $orchestrator.ProcessorAffinity = $originalAffinity
     if ($completed -and -not $KeepWorld) { Remove-World }
     Pop-Location
+}
+} finally {
+    $directRunLease.Dispose()
 }

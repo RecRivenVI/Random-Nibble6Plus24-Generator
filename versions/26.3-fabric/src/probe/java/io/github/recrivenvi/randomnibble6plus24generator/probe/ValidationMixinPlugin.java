@@ -71,6 +71,11 @@ public final class ValidationMixinPlugin implements IMixinConfigPlugin {
                     && Boolean.getBoolean(
                             io.github.recrivenvi.randomnibble6plus24generator.ModConstants.MOD_ID
                                     + ".phase3c2.production.playerLifecycle");
+        if (mixinClassName.endsWith("WorldSearchServerMixin"))
+            return enabled
+                    && Boolean.getBoolean(
+                            io.github.recrivenvi.randomnibble6plus24generator.ModConstants.MOD_ID
+                                    + ".phase3c2.production.worldSearchProof");
         if (mixinClassName.endsWith("PiglinAttributeOrderMixin"))
             return enabled && Boolean.getBoolean("featureb.attributeOrder");
         if (mixinClassName.endsWith("PublicationInventoryMixin"))

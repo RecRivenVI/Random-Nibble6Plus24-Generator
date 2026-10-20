@@ -21,11 +21,12 @@ public record MosaicWorldProfile(
         int presentationAlgorithmVersion,
         ResourceKey<Level> primaryDimension) {
 
-    public static final int FORMAT_VERSION_V2 = 2;
-    public static final int SEED_DERIVATION_ALGORITHM_V1 = 1;
-    public static final int FEATURE_ORDERING_ALGORITHM_V1 = 1;
-    public static final int FEATURE_ORDERING_TARGET_ONLY = 2;
-    public static final int PRESENTATION_ALGORITHM_V1 = 1;
+    public static final int FORMAT_VERSION_V2 = MosaicContractVersions.FORMAT_V2;
+    public static final int SEED_DERIVATION_ALGORITHM_V1 = MosaicContractVersions.SEED_V1;
+    public static final int FEATURE_ORDERING_ALGORITHM_V1 = MosaicContractVersions.ORDERING_V1;
+    public static final int FEATURE_ORDERING_TARGET_ONLY =
+            MosaicContractVersions.ORDERING_TARGET_ONLY;
+    public static final int PRESENTATION_ALGORITHM_V1 = MosaicContractVersions.PRESENTATION_V1;
 
     private static final Codec<MosaicWorldProfile> RAW_CODEC =
             RecordCodecBuilder.create(
@@ -60,18 +61,11 @@ public record MosaicWorldProfile(
                     MosaicWorldProfile::validateSupported, MosaicWorldProfile::validateSupported);
 
     public MosaicWorldProfile {
-        if (formatVersion < 1) {
-            throw new IllegalArgumentException("formatVersion must be positive");
-        }
-        if (seedDerivationAlgorithmVersion < 1) {
-            throw new IllegalArgumentException("seedDerivationAlgorithmVersion must be positive");
-        }
-        if (featureOrderingAlgorithmVersion < 1) {
-            throw new IllegalArgumentException("featureOrderingAlgorithmVersion must be positive");
-        }
-        if (presentationAlgorithmVersion < 1) {
-            throw new IllegalArgumentException("presentationAlgorithmVersion must be positive");
-        }
+        MosaicContractVersions.requirePositive(
+                formatVersion,
+                seedDerivationAlgorithmVersion,
+                featureOrderingAlgorithmVersion,
+                presentationAlgorithmVersion);
         Objects.requireNonNull(primaryDimension, "primaryDimension");
     }
 
@@ -100,29 +94,13 @@ public record MosaicWorldProfile(
     }
 
     private static DataResult<MosaicWorldProfile> validateSupported(MosaicWorldProfile profile) {
-        if (profile.formatVersion() != FORMAT_VERSION_V2) {
-            return DataResult.error(
-                    () -> "Unsupported Mosaic format version: " + profile.formatVersion());
-        }
-        if (profile.seedDerivationAlgorithmVersion() != SEED_DERIVATION_ALGORITHM_V1) {
-            return DataResult.error(
-                    () ->
-                            "Unsupported Mosaic seed derivation algorithm version: "
-                                    + profile.seedDerivationAlgorithmVersion());
-        }
-        if (profile.featureOrderingAlgorithmVersion() != FEATURE_ORDERING_ALGORITHM_V1
-                && profile.featureOrderingAlgorithmVersion() != FEATURE_ORDERING_TARGET_ONLY) {
-            return DataResult.error(
-                    () ->
-                            "Unsupported Mosaic feature ordering algorithm version: "
-                                    + profile.featureOrderingAlgorithmVersion());
-        }
-        if (profile.presentationAlgorithmVersion() != PRESENTATION_ALGORITHM_V1) {
-            return DataResult.error(
-                    () ->
-                            "Unsupported Mosaic presentation algorithm version: "
-                                    + profile.presentationAlgorithmVersion());
-        }
-        return DataResult.success(profile);
+        return MosaicContractVersions.unsupportedVersion(
+                        profile.formatVersion(),
+                        profile.seedDerivationAlgorithmVersion(),
+                        profile.featureOrderingAlgorithmVersion(),
+                        profile.presentationAlgorithmVersion(),
+                        true)
+                .<DataResult<MosaicWorldProfile>>map(message -> DataResult.error(() -> message))
+                .orElseGet(() -> DataResult.success(profile));
     }
 }

@@ -1,8 +1,8 @@
 # 开发、构建与验证
 
-项目登记 Minecraft 26.2 Fabric 与 26.3 Fabric Target，均使用 Java 25。26.3 已通过移植验收，是当前参考 Target；26.2 保留独立实现和实例。项目事实由 `gradle.properties` 提供，加载器与 API 版本由 `target.properties` 提供，通用工具与 JUnit 版本由版本目录提供。
+项目登记的 Target、Java 与加载器以[项目规范](../AGENTS.md)为准，参考端为 26.3 Fabric。项目事实由 `gradle.properties` 提供，加载器与 API 版本由 `target.properties` 提供，通用工具与 JUnit 版本由版本目录提供。
 
-开发按[当前里程碑](../project/milestone-features.md)组织，已完成能力与限制见[生成实现状态](../project/status-generation.md)。只执行当前里程碑中明确授权的工作，不从历史安排推导后续任务；未通过验收的版本或能力不写入当前支持表。
+开发按[当前里程碑](../project/milestone-productization.md)组织，已完成能力与限制见[生成实现状态](../project/status-generation.md)。只执行当前里程碑中明确授权的工作，不从历史安排推导后续任务；未通过验收的版本或能力不写入当前支持表。
 
 ## 构建与运行
 

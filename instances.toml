@@ -6,6 +6,24 @@ base = "server"
 [variants.b-review-client]
 base = "client"
 
+[variants.b-product-server]
+base = "server"
+
+[variants.b-product-client]
+base = "client"
+
+[b-product-server]
+memory-min = "256M"
+memory-max = "3G"
+jvm-args = ["-Drandomnibble6plus24generator.developmentB=true"]
+game-args = ["--world", "mosaic-b-product"]
+
+[targets."26.3-fabric".b-product-server]
+port = 25603
+
+[targets."26.3-fabric".b-product-client]
+game-args = ["--quickPlayMultiplayer", "127.0.0.1:25603"]
+
 [b-review-server]
 memory-min = "256M"
 memory-max = "3G"

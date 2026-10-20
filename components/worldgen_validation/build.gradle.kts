@@ -193,6 +193,24 @@ val testClientPreferences =
 
 tasks.check { dependsOn(testClientPreferences) }
 
+val testProductionDriverLease =
+    tasks.register<Exec>("testProductionDriverLease") {
+        group = "verification"
+        environment("PYTHONDONTWRITEBYTECODE", "1")
+        commandLine(
+            "python",
+            "-m",
+            "unittest",
+            "discover",
+            "-s",
+            "src/test/python",
+            "-p",
+            "test_production_driver_lease.py",
+        )
+    }
+
+tasks.check { dependsOn(testProductionDriverLease) }
+
 tasks.register<Exec>("verifyBopCausal") {
     group = "verification"
     description = "核验 TerraBlender 末地自然顺序的双向条件重现；不豁免原严格 B 门槛。"

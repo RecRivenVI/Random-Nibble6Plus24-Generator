@@ -5,7 +5,7 @@ if($RingScope -and $RecoverShutdown){throw 'Scoped ring recovery requires its ow
 if($RuntimeProof -and $RecoverShutdown){throw 'Runtime promotion is separate from interrupted FULL recovery'}
 if($FailureProof -and ($RecoverShutdown -or $RingScope -or $RuntimeProof -or $ExportServer -or $PartialPreLight)){throw 'Observation failure reporting is a separate bounded negative probe'}
 if($PartialPreLight -and ($RecoverShutdown -or $RingScope -or $RuntimeProof)){throw 'Partial native save uses an independent default B world'}
-if($EvidenceLabel -and !($PartialPreLight -or $FailureProof -or $TargetOrder)){throw 'Separate evidence labels only apply to the checkpoint/reporting/target probes'}
+if($EvidenceLabel -and $RecoverShutdown){throw 'Shutdown recovery must match its original owned save'}
 if($RequestProof -and ($PartialPreLight -or $FailureProof -or $RuntimeProof -or $RecoverShutdown -or $RingScope -or $EvidenceLabel)){throw 'Request burst uses a separate default production FULL fixture'}
 if(!$RequestProof -and $Requests -ne 1){throw 'Multiple requests require an explicit RequestProof'}
 if($TargetOrder -and ($PartialPreLight -or $FailureProof -or $RuntimeProof -or $RecoverShutdown -or $RingScope -or $RequestProof)){throw 'Multiple physical owners use a separate default production fixture'}

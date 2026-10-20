@@ -1,0 +1,4 @@
+{
+    "commands.randomnibble6plus24generator.seed.chunk_world_seed": "Chunk World Seed (%s, chunk %s %s): %s",
+    "commands.randomnibble6plus24generator.locate.unsupported": "Locating is temporarily unsupported in Mosaic worlds."
+}

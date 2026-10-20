@@ -7,6 +7,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
 import io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator;
+import io.github.recrivenvi.randomnibble6plus24generator.probe.verify.legacy.Phase2C1Verification;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.identity.MosaicWorldIdentity;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile.MosaicWorldProfile;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.seed.MosaicSeedResolver;
@@ -16,7 +17,6 @@ import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.Isolat
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.session.IsolatedGenerationSession;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.CompactStructureInputs;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.FeatureStageSnapshot;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase2C1Verification;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.nio.charset.StandardCharsets;

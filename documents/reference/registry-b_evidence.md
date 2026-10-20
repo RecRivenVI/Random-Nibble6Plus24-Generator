@@ -1,8 +1,12 @@
 # B 模式验收证据索引
 
-本页集中提供当前里程碑依赖的历史证据入口；每项只覆盖其记录中的版本、输入和门禁。当前范围与下一步仅由[里程碑](../project/milestone-features.md)定义，不因探针改动要求整套重跑。
+本页集中提供里程碑 1 与产品化依赖的证据入口；每项只覆盖其记录中的版本、输入和门禁。当前范围与下一步仅由[里程碑 2](../project/milestone-productization.md)定义，不因探针改动要求整套重跑。使用者已接受原版 B 的性能 PARTIAL，A/C/BOP 暂缓，既有研究原文和失败证据保留。
 
 ## 检查点
+
+[产品化边界整理](../research/audit-productization_cleanup.md)记录独立探针迁移、六个失效入口和三个临时归因文件的删除原因、共享合同边界及全端工程检查；不借此提升暂缓端的游玩状态。
+
+[产品化后单配对抽查](../research/experiment-productization_screen.md)记录 8 视距原版相对比与缺测边界，保留性能 PARTIAL，不把一次测量升级为新的优化保留或视觉验收。
 
 两端冻结组合的七十二项装饰前、十八项完整结构、十九项磁盘 B 与副作用正例见[精确部分地形冻结对照](../research/experiment-native_terrain_freeze.md)。内容矩阵已完成，不为后续仅调度或探针改动整体重跑。
 
@@ -50,13 +54,21 @@ NeoForge 五个自然保存场景为末地水晶、硫磺模板 pending BE、地
 
 ## 其余 Target
 
-本 Goal 只保留构建、单测、冒烟与 1.20.1 FULL 缺陷的要求，不扩张完整收口。
+1.20.1、1.21.1、26.1.2 首版暂缓游玩支持，保留源码、构建与原始失败，不再扩展其性能优化。研究组合的通过不冒充默认生产路径可用。
 
+- 26.1.2 的原版门禁只读复核：`conformance-prefeatures/result/terrain_matrix/26.1.2-neoforge` 为 72 项，`terrain_structures` 为 18 项；来源身份 `400DF91C` 开头的既有独立世界，不冒充本轮重新生成。完整 B 的 `conformance-feature_b/result/independent_handoff/26.1.2-neoforge` 为 18 项、72 个 fresh JVM，来源身份 `D31DCB` 开头，天然 entities／BE／block ticks／fluid ticks／post-processing 均有正例，pending 为零，不拿人工数据充数。
+- [26.1.2 玩家冷末地前沿](../research/incident-neoforge_player_cold_frontier.md)：全局加载数量的误判已修正，但真实玩家冷切换仍触发看门狗；使用者选择首版暂缓，不把内容一致提升为可玩。
 - [五 Target API 与移植边界](../development/porting-worldgen_targets.md)、[多端 Oracle 初始调查](../research/investigation-b_multitarget_oracle.md)。
 - [1.21.1 当前矩阵](../research/experiment-legacy_reuse_matrix.md)、[原生运行期](../research/experiment-legacy_reuse_runtime.md)、[冷 SPAWN](../research/experiment-legacy_cold_spawn.md)。
+- [1.21.1 默认生产前沿与首版暂缓](../research/incident-neoforge_legacy_release_deferral.md)：原预算内零完成，不自动启用未获保留的研究组合。
 - [1.20.1 原预算失败与对照](../research/experiment-forge_native_runtime.md)、[线程／前沿观察](../research/experiment-forge_dimension_frontiers.md)、[半成品恢复](../research/experiment-forge_partial_recovery.md)。
 - [1.20.1 实际任务图与 FULL 放大归因](../research/incident-forge_full_preparation.md)：原三百秒仍失败，原因与最小方案已交代，未启用生产优化。
+- [1.20.1 有限环绑定后的 FULL 复核](../research/incident-forge_release_deferral.md)：有限环确实执行，但原预算内仍未完成，自动绑定已撤回；使用者决定首版暂缓。
 
 ## 验证入口
+
+产品化的定位禁用在两个 26.3 端与保留的 26.1.2 均实际执行普通原版／Mosaic fresh 与独立 JVM reload。入口为 `integration-production_lifecycle/result/current/<target>/phase3c2-production/` 的 `vanilla-control` 和 `features-2/development-b`，场景 `productization_search`；Fabric 使用 `runtime-proof`，另两端使用 `runtime-proof-frontier`。记录真实原生眼、两类地图、三类交易与海豚消费者，没有额外 Artifact 或加载 Chunk，不以命令 mock 代替消费者。
+
+参考端内部索引的六类结构、真实锚点与幂等／删除／重载位于 `feature-structure_index/result/current/26.3-fabric/phase3c3b-locate`。fresh／reload 的 indexed entries 为 59，重载无新增 Artifact、加载数量保持 2850；公开三类 locate 命令拒绝，内部存储仍可查，不改变存档格式。
 
 [世界生成工具](../development/testing-worldgen.md)、[生产生命周期](../../validations/integration-production_lifecycle/validation.md)、[性能测量](../../validations/performance-worldgen/validation.md)、[MCP 自动化边界](../development/compatibility-mcp_alpha.md)。既有 BOP 调查保留，但正式兼容工作延期。

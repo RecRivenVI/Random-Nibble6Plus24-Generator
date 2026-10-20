@@ -28,3 +28,6 @@ config = "mosaic-production-test.mixins.json"
 
 [[mixins]]
 config = "mosaic-dependency-smoke.mixins.json"
+
+[[mixins]]
+config = "mosaic-legacy-verification.mixins.json"

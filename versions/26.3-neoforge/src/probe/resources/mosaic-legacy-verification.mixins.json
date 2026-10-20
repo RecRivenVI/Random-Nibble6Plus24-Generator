@@ -1,0 +1,11 @@
+{
+    "required": true,
+    "package": "io.github.recrivenvi.randomnibble6plus24generator.probe.legacytest.mixin",
+    "mixins": [
+        "ChunkStepMixin",
+        "LegacyServerVerificationMixin"
+    ],
+    "injectors": {
+        "defaultRequire": 1
+    }
+}

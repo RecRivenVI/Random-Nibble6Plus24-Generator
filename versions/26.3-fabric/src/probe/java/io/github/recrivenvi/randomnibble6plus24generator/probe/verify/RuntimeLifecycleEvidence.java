@@ -245,6 +245,8 @@ public final class RuntimeLifecycleEvidence {
         proof.addProperty("pid", ProcessHandle.current().pid());
         proof.addProperty("elapsedMillis", (System.nanoTime() - began) / 1_000_000);
         if (NaturalRuntimeEvidence.enabled()) proof.add("natural", NaturalRuntimeEvidence.finish());
+        if (WorldSearchEvidence.enabled())
+            proof.add("worldSearch", WorldSearchEvidence.verify(level, owner));
         marker.discard();
         originals.forEach((pos, state) -> level.setBlock(pos, state, 3));
         level.getChunkSource().removeTicketWithRadius(TicketType.PLAYER_SIMULATION, owner, 3);

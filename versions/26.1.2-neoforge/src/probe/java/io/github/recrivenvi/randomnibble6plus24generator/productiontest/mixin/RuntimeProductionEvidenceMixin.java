@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import io.github.recrivenvi.randomnibble6plus24generator.ModConstants;
+import io.github.recrivenvi.randomnibble6plus24generator.probe.verify.PlayerLifecycleEvidence;
 import io.github.recrivenvi.randomnibble6plus24generator.probe.verify.RuntimeLifecycleEvidence;
 import io.github.recrivenvi.randomnibble6plus24generator.probe.verify.VanillaLifecycleEvidence;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.verify.Phase3C2ProductionVerification;
@@ -17,7 +18,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 abstract class RuntimeProductionEvidenceMixin {
     @WrapMethod(method = "runIfRequested")
     private static void observe(MinecraftServer server, Operation<Void> original) {
-        if (RuntimeLifecycleEvidence.enabled()) {
+        if (PlayerLifecycleEvidence.enabled()) {
+            PlayerLifecycleEvidence.tick(server);
+        } else if (RuntimeLifecycleEvidence.enabled()) {
             RuntimeLifecycleEvidence.tick(server, () -> request(server, original));
         } else {
             request(server, original);

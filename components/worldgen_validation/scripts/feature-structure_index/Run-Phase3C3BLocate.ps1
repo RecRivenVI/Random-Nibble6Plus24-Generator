@@ -2,7 +2,8 @@ param(
     [long]$MasterSeed = 123456789,
     [ValidateSet('probe', 'reload')]
     [string]$Mode = 'probe',
-    [switch]$KeepWorld
+    [switch]$KeepWorld,
+    [switch]$Offline
 )
 
 . (Join-Path $PSScriptRoot '../Validation-Environment.ps1')
@@ -93,6 +94,7 @@ try {
 }
 
     $properties = Set-Property $originalProperties 'level-seed' ([string]$MasterSeed)
+    $properties = Set-Property $properties 'level-name' $worldName
     $properties = Set-Property $properties 'level-type' 'randomnibble6plus24generator:phase3c3b_hidden_mosaic'
     $properties = Set-Property $properties 'view-distance' '2'
     $properties = Set-Property $properties 'simulation-distance' '2'
@@ -111,7 +113,9 @@ try {
         $options += "-Drandomnibble6plus24generator.phase3c3b.locate.fixtureSpec=$((Get-Content -LiteralPath $previousPath -Raw | ConvertFrom-Json).fixtureSpec)"
     }
     $env:JAVA_TOOL_OPTIONS = $options -join ' '
-    & (Join-Path $repositoryRoot 'gradlew.bat') ":version:${validationTarget}:runValidationFeatureStructureIndexServer" "--args=nogui --world $worldName" | Out-Host
+    $launchOptions = @('--max-workers=1', "--args=nogui --world $worldName")
+    if ($Offline) { $launchOptions += '--offline' }
+    & (Join-Path $repositoryRoot 'gradlew.bat') ":version:${validationTarget}:runValidationFeatureStructureIndexServer" @launchOptions | Out-Host
     if ($LASTEXITCODE -ne 0) { throw "Phase 3C3B locate server failed: $LASTEXITCODE" }
     $latestLog = Join-Path $runRoot 'logs\latest.log'
     $passLog = Select-String -Path $latestLog -Pattern 'Phase 3C3B Mosaic /locate PASS' -Quiet

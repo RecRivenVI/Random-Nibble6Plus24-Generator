@@ -1,34 +1,28 @@
 package io.github.recrivenvi.randomnibble6plus24generator.command;
 
 import com.mojang.brigadier.Command;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.exceptions.SimpleCommandExceptionType;
+import io.github.recrivenvi.randomnibble6plus24generator.ModConstants;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.identity.MosaicWorldIdentity;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.Component;
 
-/** Keeps Vanilla locate success/permission handling and scopes only its Mosaic miss diagnostic. */
+/** Keeps Vanilla parsing and permissions; Mosaic never starts a locate search. */
 public final class MosaicLocateCommandIntegration {
 
-    public static final String GENERATED_AREA_NOT_FOUND_TRANSLATION_KEY =
-            "commands.randomnibble6plus24generator.locate.generated_area_not_found";
+    public static final String UNSUPPORTED_TRANSLATION_KEY =
+            "commands." + ModConstants.MOD_ID + ".locate.unsupported";
+    private static final SimpleCommandExceptionType UNSUPPORTED =
+            new SimpleCommandExceptionType(Component.translatable(UNSUPPORTED_TRANSLATION_KEY));
 
     private MosaicLocateCommandIntegration() {}
 
-    public static Command<CommandSourceStack> wrapStructureCommand(
+    public static Command<CommandSourceStack> wrapCommand(
             Command<CommandSourceStack> vanillaCommand) {
         return context -> {
-            try {
-                return vanillaCommand.run(context);
-            } catch (CommandSyntaxException exception) {
-                CommandSourceStack source = context.getSource();
-                if (MosaicWorldIdentity.isMosaicWorld(source.getLevel())) {
-                    throw new com.mojang.brigadier.exceptions.SimpleCommandExceptionType(
-                                    Component.translatable(
-                                            GENERATED_AREA_NOT_FOUND_TRANSLATION_KEY))
-                            .create();
-                }
-                throw exception;
-            }
+            if (MosaicWorldIdentity.isMosaicWorld(context.getSource().getLevel()))
+                throw UNSUPPORTED.create();
+            return vanillaCommand.run(context);
         };
     }
 }

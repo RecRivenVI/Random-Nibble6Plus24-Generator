@@ -6,8 +6,6 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import io.github.recrivenvi.randomnibble6plus24generator.RandomNibble6Plus24Generator;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.materialization.PhysicalMosaicTrace;
 import io.github.recrivenvi.randomnibble6plus24generator.worldgen.profile.MosaicWorldProfile;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.MosaicStructureIndexStore;
-import io.github.recrivenvi.randomnibble6plus24generator.worldgen.structure.MosaicStructureOverlay;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -190,9 +188,7 @@ public final class MosaicChunkGenerator extends ChunkGenerator {
             BlockPos origin,
             int radius,
             boolean skipKnownStructures) {
-        if (!MosaicStructureOverlay.active(level)) return null;
-        return MosaicStructureIndexStore.findNearest(level, structures, origin, radius)
-                .orElse(null);
+        return null;
     }
 
     @Override

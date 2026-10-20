@@ -57,7 +57,7 @@ $env:MOSAIC_VALIDATION_TARGET = '26.3-fabric'
 .\gradlew.bat :worldgen_validation:verifyCompactStructures
 ```
 
-验收包括完整结构 NBT 与 references、可持久化 start 投影、逐 bit Beardifier 密度、BIOMES 和纯 TERRAIN。Probe 不进入产品 JAR；实际结构算法与模板锁不替换，尚未将新模块接入旧世界的生产请求。结果及限制见[生成实现状态](../project/status-generation.md)，当前开发范围见[FEATURES 里程碑](../project/milestone-features.md)。
+验收包括完整结构 NBT 与 references、可持久化 start 投影、逐 bit Beardifier 密度、BIOMES 和纯 TERRAIN。Probe 不进入产品 JAR；实际结构算法与模板锁不替换，尚未将新模块接入旧世界的生产请求。结果及限制见[生成实现状态](../project/status-generation.md)，当前开发范围见[FEATURES 里程碑](../project/milestone-productization.md)。
 
 ## 轻量生物群系与地形
 
@@ -323,7 +323,7 @@ $env:JAVA_TOOL_OPTIONS = '-XX:ActiveProcessorCount=4 -Drandomnibble6plus24genera
 
 1.20.1 的独立六阶段地形入口使用[旧版地形验证](../../validations/conformance-legacy_terrain/validation.md)，与 1.21.1 的实际密度切片同样逐 bit 对照。运行脚本按 Target 选择模板验证任务，不在 Target 构建脚本中硬编码验证启动配置；本版的 15 项结构输入 PASS 不自动提升完整地形或 B 状态。
 
-1.20.1 的[B 独立 smoke](../../validations/conformance-legacy_b/validation.md)使用另外的验证实例，目标为两个 Native 重复与两个无关宿主的四项对照。保留完整原始 NBT、严格 UUID-only 视图、feature seed 序列和实际可见群系；当前源码、完整套件和有限原生例外的结论见[里程碑矩阵](../project/milestone-features.md)，不借用其它 Target 的结果。
+1.20.1 的[B 独立 smoke](../../validations/conformance-legacy_b/validation.md)使用另外的验证实例，目标为两个 Native 重复与两个无关宿主的四项对照。保留完整原始 NBT、严格 UUID-only 视图、feature seed 序列和实际可见群系；当前源码、完整套件和有限原生例外的结论见[里程碑矩阵](../project/milestone-productization.md)，不借用其它 Target 的结果。
 
 根 `spotlessMisc` 使用上述项目级提前排除规则，格式检查范围不变，不遍历本地实例和结果。模板文件不修改、不跳过任务；[输入扫描调查](../research/investigation-format_input_scan.md)记录了边界与回归。完整检查使用以下命令；单元测试、发行检查、Markdown 和严格合规均须通过。
 

@@ -27,11 +27,25 @@ public final class ValidationMixinPlugin implements IMixinConfigPlugin {
                                         || Boolean.getBoolean(
                                                 io.github.recrivenvi.randomnibble6plus24generator
                                                                 .ModConstants.MOD_ID
+                                                        + ".phase3c2.production.playerLifecycle")
+                                        || Boolean.getBoolean(
+                                                io.github.recrivenvi.randomnibble6plus24generator
+                                                                .ModConstants.MOD_ID
                                                         + ".phase3c2.production.vanillaControl"));
     }
 
     @Override
     public boolean shouldApplyMixin(String targetClassName, String mixinClassName) {
+        if (mixinClassName.contains(".PlayerLifecycle"))
+            return enabled
+                    && Boolean.getBoolean(
+                            io.github.recrivenvi.randomnibble6plus24generator.ModConstants.MOD_ID
+                                    + ".phase3c2.production.playerLifecycle");
+        if (mixinClassName.endsWith("WorldSearchServerMixin"))
+            return enabled
+                    && Boolean.getBoolean(
+                            io.github.recrivenvi.randomnibble6plus24generator.ModConstants.MOD_ID
+                                    + ".phase3c2.production.worldSearchProof");
         return enabled;
     }
 

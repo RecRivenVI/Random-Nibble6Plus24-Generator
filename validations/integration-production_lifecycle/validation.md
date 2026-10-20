@@ -2,11 +2,21 @@
 
 ## 目标
 
-通过普通服务器 Chunk 请求验证 Mosaic 从缺失 Chunk 到 FULL 的生产流程。
+通过普通服务器 Chunk 请求验证 Mosaic 从缺失 Chunk 到 FULL 的生产流程；首版交付端另验证双种子反馈、禁用定位与原生消费者的“找不到”行为。
 
 这是 Minecraft 26.2 Fabric、26.3 Fabric、26.3 NeoForge、26.1.2 NeoForge 与正在适配的 1.21.1 NeoForge 分 Target 验证。登记或新增接线不代表本版本已经运行通过。工具属于 `worldgen_validation`，独立游戏内入口属于 `src/probe`，产品 Mixin 直接链接的默认关闭 hooks 留在产品中。
 
 ## 运行
+
+定位消费者的原版对照使用普通 `generate-structures=false` 世界，取得真实“找不到”分支；Mosaic 保留结构生成。两者均实际调用末影之眼、地图函数、制图师交易与海豚目标，不改原生行为，也不把此组件证明当作客户端画面验收。此入口支持三个首版交付端，普通运行不加载它。
+
+```powershell
+$env:MOSAIC_VALIDATION_TARGET = '26.3-fabric'
+pwsh -NoProfile -File components/worldgen_validation/scripts/integration-production_lifecycle/Run-Phase3C2Production.ps1 -VanillaControl -RuntimeProof -WorldSearchProof -VerifyReload -Offline -EvidenceLabel productization_search
+pwsh -NoProfile -File components/worldgen_validation/scripts/integration-production_lifecycle/Run-Phase3C2Production.ps1 -FeatureOrderingVersion 2 -DevelopmentB -RuntimeProof -WorldSearchProof -VerifyReload -Offline -EvidenceLabel productization_search
+```
+
+上述直接 Gradle 启动共用验证配置的监听端口，逐个运行；不要跨 Target 并行。中断后只补已有存档的重载可用 `-Mode reload` 替换 `-VerifyReload`，不重建世界或重新生成已通过的 fresh 数据。
 
 26.3 两端的自然实体／方块实体保存验证共用工具入口；名称保留为 `Run-FabricNatural.ps1`，Target 参数选择独立的原生适配。以下为 NeoForge 的五个真实正例，默认四逻辑 CPU、低优先级，逐个运行。
 
